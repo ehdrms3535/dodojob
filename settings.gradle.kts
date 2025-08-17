@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "DodoJob"
+rootProject.name = "dodoJob1"
 include(":app")
