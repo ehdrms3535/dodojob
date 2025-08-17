@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.layout.BoxWithConstraints
+import com.example.dodojob.navigation.Route
 
 @Composable
 fun LoginScreen(nav: NavController) {
@@ -169,7 +170,11 @@ fun LoginScreen(nav: NavController) {
             // ⚪ 회원가입 버튼
             Spacer(Modifier.height(betweenBtns))
             OutlinedButton(
-                onClick = { /* TODO: 회원가입 */ },
+                onClick = {
+                    nav.navigate(Route.SignUp.path) {
+                        launchSingleTop = true       // 같은 화면 중복 방지 (옵션)
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(signBtnH),
