@@ -8,4 +8,6 @@ sealed class Route(val path: String) {
     data object Prefer : Route("prefer")
     data object PreferMap : Route("prefer_map")
     data object Experience : Route("experience")
+
+    data object SignUp : Route("signup")
 }
