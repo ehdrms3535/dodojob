@@ -54,7 +54,7 @@ fun SignUpIdPwScreen(nav: NavController) {
                     .padding(horizontal = 18.dp, vertical = 50.dp)
             ) {
                 Button(
-                    onClick = { if (emailOk && idOk && pwOk && pw2Ok) nav.navigate(Route.Verify.path) },
+                    onClick = { if (emailOk && idOk && pwOk && pw2Ok) nav.navigate(Route.JobType.path) },
                     enabled = emailOk && idOk && pwOk && pw2Ok,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -287,3 +287,6 @@ private fun CheckDot(state: CheckState) {
         }
     }
 }
+
+
+
