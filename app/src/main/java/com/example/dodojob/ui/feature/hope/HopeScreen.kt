@@ -87,7 +87,9 @@ fun HopeWorkFilterScreen(nav: NavController) {
                 ) { Text("초기화", fontSize = 20.sp, color = Color.Black) }
 
                 Button(
-                    onClick = { /* TODO: 적용 후 이동/저장 */ },
+                    onClick = {
+                        nav.navigate(Route.Experience.path)
+                    },
                     enabled = canApply,
                     modifier = Modifier.weight(2f).height(54.dp),
                     shape = RoundedCornerShape(10.dp),
