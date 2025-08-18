@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.tooling.preview.Preview
 import com.example.dodojob.navigation.Route
 
 @Composable
@@ -54,7 +55,7 @@ fun SignUpIdPwScreen(nav: NavController) {
                     .padding(horizontal = 18.dp, vertical = 50.dp)
             ) {
                 Button(
-                    onClick = { if (emailOk && idOk && pwOk && pw2Ok) nav.navigate(Route.JobType.path) },
+                    onClick = { if (emailOk && idOk && pwOk && pw2Ok) nav.navigate(Route.SignUpComplete.path) },
                     enabled = emailOk && idOk && pwOk && pw2Ok,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -287,6 +288,4 @@ private fun CheckDot(state: CheckState) {
         }
     }
 }
-
-
 
