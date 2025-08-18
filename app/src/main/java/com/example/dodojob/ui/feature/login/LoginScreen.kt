@@ -1,5 +1,7 @@
 package com.example.dodojob.ui.feature.login
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.example.dodojob.navigation.Route
 
 @Composable
@@ -26,14 +30,14 @@ fun LoginScreen(nav: NavController) {
     var autoLogin by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize().background(Color(0xFFF1F5F7))
     ) {
         val W = maxWidth      // 화면 가로(Dp)
         val H = maxHeight     // 화면 세로(Dp)
 
         // ===== 비율 기반 스케일 =====
-        val screenHPad   = (W * 0.045f).coerceIn(12.dp, 24.dp)     // 좌우 패딩
-        val topVPad      = (H * 0.03f).coerceIn(8.dp, 28.dp)       // 상단 여백
+        val screenHPad   = (W * 0.045f)  // 좌우 패딩
+        val topVPad      = (H * 0.03f)       // 상단 여백
 
         val backSizeSp   = (W.value * 0.065f).sp                   // "<" 크기
         val titleSp      = (W.value * 0.09f).sp                    // "로그인" 타이틀
@@ -52,17 +56,19 @@ fun LoginScreen(nav: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = screenHPad)
-                .padding(top = topVPad),
-            horizontalAlignment = Alignment.Start
         ) {
-            // 🔙 상단 "<" (얇게)
-            TextButton(onClick = { nav.popBackStack() }) {
+            Spacer(Modifier.height(topVPad))
+            Spacer(Modifier.height(topVPad))
+
+            // 🔙 뒤로가기: 텍스트 "<" 한 줄
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "<",
                     fontSize = backSizeSp,
-                    fontWeight = FontWeight.Normal,
-                    color = Color.Black
+                    color = Color.Black,
+                    modifier = Modifier.clickable { nav.popBackStack() }
                 )
             }
 
