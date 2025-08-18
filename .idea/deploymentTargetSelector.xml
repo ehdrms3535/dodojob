@@ -6,6 +6,10 @@
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
       <SelectionState runConfigName="SignUpCompleteScreenPreview">
+      <SelectionState runConfigName="PreviewAnnouncement1">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="iam">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

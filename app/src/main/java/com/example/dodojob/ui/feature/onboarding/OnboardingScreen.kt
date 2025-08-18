@@ -37,7 +37,7 @@ fun OnboardingScreen(nav: NavController) {
                         // 선택값에 따라 다음 화면 라우팅
                         when (selected) {
                             "senior" -> nav.navigate(Route.Login.path)
-                            "boss"   -> nav.navigate(Route.Login.path)     // 임시
+                            "boss"   -> nav.navigate(Route.Announcement.path)     // 임시
                             "center" -> nav.navigate(Route.Login.path)     // 임시
                         }
                     },
