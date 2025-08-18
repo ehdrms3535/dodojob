@@ -7,10 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterStart
@@ -20,15 +17,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.dodojob.navigation.Route
 
 @Composable
-fun HopeWorkFilterScreenStandalone() {
-    // ----- 내부 상태 (나중에 네비/VM으로 대체 가능) -----
+fun HopeWorkFilterScreen(nav: NavController) {
+    // ----- 내부 상태 -----
     var region by remember { mutableStateOf<String?>(null) }
-    var job by remember { mutableStateOf<String?>(null) }
+    var jobSelections by remember { mutableStateOf<Set<String>>(emptySet()) }
     var period by remember { mutableStateOf<String?>(null) }
     var days by remember { mutableStateOf(setOf<String>()) }
     var timeOfDay by remember { mutableStateOf<String?>(null) }
+
+    // 🔁 서브화면에서 돌아온 값 수신 (savedStateHandle)
+    val backStackEntry = nav.currentBackStackEntry
+    val pickedRegionFlow = backStackEntry?.savedStateHandle?.getStateFlow("pickedRegion", "")
+    val pickedJobsFlow   = backStackEntry?.savedStateHandle?.getStateFlow("pickedJobs", emptySet<String>())
+
+    val pickedRegion by pickedRegionFlow?.collectAsState() ?: remember { mutableStateOf("") }
+    val pickedJobs by pickedJobsFlow?.collectAsState() ?: remember { mutableStateOf(emptySet()) }
+
+    // 수신값을 로컬 상태에 반영
+    LaunchedEffect(pickedRegion) {
+        if (pickedRegion.isNotBlank()) region = pickedRegion
+    }
+    LaunchedEffect(pickedJobs) {
+        if (pickedJobs.isNotEmpty()) jobSelections = pickedJobs
+    }
 
     val periodOptions = listOf("1일", "1주일 이하", "1주일~1개월", "6개월~1년", "1년 이상")
     val dayOptions = listOf("평일", "주말", "월", "화", "수", "목", "금", "토", "일")
@@ -36,182 +52,180 @@ fun HopeWorkFilterScreenStandalone() {
 
     val scroll = rememberScrollState()
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
-    ) {
-        val W = maxWidth
-        val H = maxHeight
+    Scaffold(
+        containerColor = Color(0xFFF5F5F5),
+        bottomBar = {
+            val canApply = region != null ||
+                    jobSelections.isNotEmpty() ||
+                    period != null ||
+                    days.isNotEmpty() ||
+                    timeOfDay != null
 
-        // 비율 기반 치수
-        fun clamp(dp: Dp, min: Dp, max: Dp) = dp.coerceIn(min, max)
-        val hPad = clamp(W * 0.045f, 12.dp, 20.dp)
-        val vPad = clamp(H * 0.02f, 8.dp, 20.dp)
-
-        val titleSp = (W.value * 0.09f).sp
-        val titleLH = (W.value * 0.12f).sp
-        val labelSp = (W.value * 0.07f).sp
-        val chipSp = (W.value * 0.055f).sp
-        val btnSp = (W.value * 0.06f).sp
-
-        val blockGap = clamp(H * 0.06f, 16.dp, 36.dp)
-        val rowGap = clamp(H * 0.02f, 10.dp, 20.dp)
-        val chipH = clamp(H * 0.08f, 48.dp, 68.dp)
-        val chipRadius = clamp(W * 0.03f, 8.dp, 12.dp)
-        val fieldH = 57.dp
-        val fieldRadius = 10.dp
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scroll)
-                .padding(horizontal = hPad, vertical = vPad)
-        ) {
-            // 상단 "<" (동작은 추후 연결)
-            Text(
-                "<",
-                fontSize = (W.value * 0.07f).sp,
-                color = Color.Black,
-                modifier = Modifier
-                    .clickable { /* TODO: nav.popBackStack() */ }
-                    .padding(bottom = 16.dp)
-            )
-
-            // 타이틀
-            Text(
-                "나에게 맞게 \n입력해주세요 :)",
-                fontSize = titleSp,
-                lineHeight = titleLH,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.Black
-            )
-
-            Spacer(Modifier.height(blockGap))
-
-            // ───────── 근무할 지역 ─────────
-            SectionLabel("근무할 지역", labelSp)
-            FieldBox(
-                text = region ?: "지역, 동네를 선택해주세요                         >",
-                hintColor = Color(0xFF727272),
-                height = fieldH,
-                radius = fieldRadius,
-                onClick = { /* TODO: 지역 선택 열기 */ }
-            )
-
-            Spacer(Modifier.height(blockGap))
-
-            // ───────── 직종 선택 ─────────
-            SectionLabel("직종 선택", labelSp)
-            FieldBox(
-                text = job ?: "직종을 선택해주세요                                  >",
-                hintColor = Color(0xFF727272),
-                height = fieldH,
-                radius = fieldRadius,
-                onClick = { /* TODO: 직종 선택 열기 */ }
-            )
-
-            Spacer(Modifier.height(blockGap))
-
-            // ───────── 기간 ─────────
-            SectionLabel("얼마나 일하실 건가요?", labelSp)
-            Spacer(Modifier.height(rowGap))
-            TwoColumnChips(
-                options = periodOptions,
-                isSelected = { it == period },
-                onClick = { opt -> period = if (period == opt) null else opt },
-                itemHeight = chipH,
-                radius = chipRadius,
-                textSize = chipSp
-            )
-
-            Spacer(Modifier.height(blockGap))
-
-            // ───────── 요일 ─────────
-            SectionLabel("일할 수 있는 요일을 \n선택해주세요", labelSp)
-            Spacer(Modifier.height(rowGap))
-            TwoColumnChips(
-                options = dayOptions,
-                isSelected = { it in days },
-                onClick = { opt -> days = if (opt in days) days - opt else days + opt },
-                itemHeight = chipH,
-                radius = chipRadius,
-                textSize = chipSp
-            )
-
-            Spacer(Modifier.height(blockGap))
-
-            // ───────── 시간 ─────────
-            SectionLabel("일하실 시간을 선택해주세요", labelSp)
-            Spacer(Modifier.height(rowGap))
-            TwoColumnChips(
-                options = timeOptions,
-                isSelected = { it == timeOfDay },
-                onClick = { opt -> timeOfDay = if (timeOfDay == opt) null else opt },
-                itemHeight = chipH,
-                radius = chipRadius,
-                textSize = chipSp
-            )
-
-            Spacer(Modifier.height(clamp(H * 0.045f, 20.dp, 36.dp)))
-
-            // 하단 버튼 (초기화 / 적용하기)
-            val btnH = clamp(H * 0.07f, 48.dp, 64.dp)
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
                     onClick = {
                         region = null
-                        job = null
+                        jobSelections = emptySet()
                         period = null
                         days = emptySet()
                         timeOfDay = null
+                        // 초깃값으로 savedStateHandle도 정리(선택)
+                        nav.currentBackStackEntry?.savedStateHandle?.apply {
+                            set("pickedRegion", "")
+                            set("pickedJobs", emptySet<String>())
+                        }
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(btnH),
-                    shape = RoundedCornerShape(chipRadius),
+                    modifier = Modifier.weight(1f).height(54.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDADADA))
-                ) {
-                    Text("초기화", fontSize = btnSp, color = Color.Black)
-                }
+                ) { Text("초기화", fontSize = 20.sp, color = Color.Black) }
 
-                Spacer(Modifier.width(clamp(W * 0.05f, 12.dp, 24.dp)))
-
-                val canApply = region != null || job != null || period != null || days.isNotEmpty() || timeOfDay != null
                 Button(
-                    onClick = {
-                        // TODO: 다음 단계로 이동 or 결과 전달
-                        // println("region=$region, job=$job, period=$period, days=$days, time=$timeOfDay")
-                    },
+                    onClick = { /* TODO: 적용 후 이동/저장 */ },
                     enabled = canApply,
-                    modifier = Modifier
-                        .weight(2f)
-                        .height(btnH),
-                    shape = RoundedCornerShape(chipRadius),
+                    modifier = Modifier.weight(2f).height(54.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (canApply) Color(0xFF005FFF) else Color(0xFFBFC6D2),
                         disabledContainerColor = Color(0xFFBFC6D2)
                     )
-                ) {
-                    Text("적용하기", fontSize = btnSp, color = Color.White)
-                }
+                ) { Text("적용하기", fontSize = 20.sp, color = Color.White) }
             }
+        }
+    ) { inner ->
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+        ) {
+            val W = maxWidth
+            val H = maxHeight
 
-            Spacer(Modifier.height(40.dp)) // 맨 아래 여백
+            fun clamp(dp: Dp, min: Dp, max: Dp) = dp.coerceIn(min, max)
+            val hPad = clamp(W * 0.045f, 12.dp, 20.dp)
+            val vPad = clamp(H * 0.02f, 8.dp, 20.dp)
+
+            val titleSp = (W.value * 0.09f).sp
+            val titleLH = (W.value * 0.12f).sp
+            val labelSp = (W.value * 0.07f).sp
+            val chipSp = (W.value * 0.055f).sp
+
+            val blockGap = clamp(H * 0.06f, 16.dp, 36.dp)
+            val rowGap = clamp(H * 0.02f, 10.dp, 20.dp)
+            val chipH = clamp(H * 0.08f, 48.dp, 68.dp)
+            val chipRadius = clamp(W * 0.03f, 8.dp, 12.dp)
+            val fieldH = 57.dp
+            val fieldRadius = 10.dp
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scroll)
+                    .padding(horizontal = hPad, vertical = vPad)
+            ) {
+                Text(
+                    "<",
+                    fontSize = (W.value * 0.07f).sp,
+                    color = Color.Black,
+                    modifier = Modifier
+                        .clickable { nav.popBackStack() }
+                        .padding(bottom = 16.dp)
+                )
+
+                Text(
+                    "나에게 맞게 \n입력해주세요 :)",
+                    fontSize = titleSp,
+                    lineHeight = titleLH,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black
+                )
+
+                Spacer(Modifier.height(blockGap))
+
+                // ───────── 근무할 지역 ─────────
+                SectionLabel("근무할 지역", labelSp)
+                FieldBox(
+                    text = region ?: "지역, 동네를 선택해주세요                         >",
+                    hintColor = if (region == null) Color(0xFF727272) else Color(0xFF111111),
+                    height = fieldH,
+                    radius = fieldRadius,
+                    onClick = { nav.navigate(Route.PreferMap.path) } // ✅ 지역 선택 화면 이동
+                )
+
+                Spacer(Modifier.height(blockGap))
+
+                // ───────── 직종 선택 ─────────
+                SectionLabel("직종 선택", labelSp)
+                val jobSummary = when {
+                    jobSelections.isEmpty() -> "직종을 선택해주세요                                  >"
+                    jobSelections.size <= 2 -> jobSelections.joinToString(" · ")
+                    else -> jobSelections.first() + " 외 ${jobSelections.size - 1}개"
+                }
+                FieldBox(
+                    text = jobSummary,
+                    hintColor = if (jobSelections.isEmpty()) Color(0xFF727272) else Color(0xFF111111),
+                    height = fieldH,
+                    radius = fieldRadius,
+                    onClick = { nav.navigate(Route.Prefer.path) } // ✅ 직종 선택 화면 이동
+                )
+
+                Spacer(Modifier.height(blockGap))
+
+                // ───────── 기간 ─────────
+                SectionLabel("얼마나 일하실 건가요?", labelSp)
+                Spacer(Modifier.height(rowGap))
+                TwoColumnChips(
+                    options = periodOptions,
+                    isSelected = { it == period },
+                    onClick = { opt -> period = if (period == opt) null else opt },
+                    itemHeight = chipH,
+                    radius = chipRadius,
+                    textSize = chipSp
+                )
+
+                Spacer(Modifier.height(blockGap))
+
+                // ───────── 요일 ─────────
+                SectionLabel("일할 수 있는 요일을 \n선택해주세요", labelSp)
+                Spacer(Modifier.height(rowGap))
+                TwoColumnChips(
+                    options = dayOptions,
+                    isSelected = { it in days },
+                    onClick = { opt -> days = if (opt in days) days - opt else days + opt },
+                    itemHeight = chipH,
+                    radius = chipRadius,
+                    textSize = chipSp
+                )
+
+                Spacer(Modifier.height(blockGap))
+
+                // ───────── 시간 ─────────
+                SectionLabel("일하실 시간을 선택해주세요", labelSp)
+                Spacer(Modifier.height(rowGap))
+                TwoColumnChips(
+                    options = listOf("오전", "오후"),
+                    isSelected = { it == timeOfDay },
+                    onClick = { opt -> timeOfDay = if (timeOfDay == opt) null else opt },
+                    itemHeight = chipH,
+                    radius = chipRadius,
+                    textSize = chipSp
+                )
+
+                Spacer(Modifier.height(40.dp))
+            }
         }
     }
 }
 
-@Composable
-private fun SectionLabel(text: String, size: TextUnit) {
-    Text(text,
-        fontSize = size,
-        fontWeight = FontWeight.SemiBold,
-        color = Color.Black,
-        lineHeight = size*1.4f)
+/* ───────── 공통 UI ───────── */
+@Composable private fun SectionLabel(text: String, size: TextUnit) {
+    Text(text, fontSize = size, fontWeight = FontWeight.SemiBold, color = Color.Black, lineHeight = size * 1.4f)
 }
 
 @Composable
@@ -237,7 +251,7 @@ private fun FieldBox(
     }
 }
 
-/** 외부 라이브러리 없이 2열 칩 레이아웃 */
+/** 외부 라이브러리 없이 2열 칩 */
 @Composable
 private fun TwoColumnChips(
     options: List<String>,
@@ -247,14 +261,10 @@ private fun TwoColumnChips(
     radius: Dp,
     textSize: TextUnit
 ) {
-    // options를 2개씩 끊어서 행으로 배치
     val rows = options.chunked(2)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         rows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 row.forEach { opt ->
                     ChipItem(
                         text = opt,
@@ -266,10 +276,7 @@ private fun TwoColumnChips(
                         modifier = Modifier.weight(1f)
                     )
                 }
-                // 홀수개일 때 오른쪽 비워서 정렬 맞춤
-                if (row.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
@@ -299,19 +306,12 @@ private fun ChipItem(
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            fontSize = textSize,
-            fontWeight = FontWeight.Medium,
-            color = if (selected) Color(0xFF005FFF) else Color.Black
-        )
+        Text(text = text, fontSize = textSize, fontWeight = FontWeight.Medium, color = if (selected) Color(0xFF005FFF) else Color.Black)
     }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
-private fun PreviewHopeWorkFilterScreenStandalone() {
-    MaterialTheme {
-        HopeWorkFilterScreenStandalone()
-    }
+private fun PreviewHopeWorkFilterScreen() {
+    MaterialTheme { HopeWorkFilterScreen(rememberNavController()) }
 }
