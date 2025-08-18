@@ -11,7 +11,8 @@ import com.example.dodojob.ui.feature.onboarding.OnboardingScreen
 import com.example.dodojob.ui.feature.prefer.PreferWorkScreen
 import com.example.dodojob.ui.feature.prefer_map.PreferWorkMapScreen
 import com.example.dodojob.ui.feature.verify.VerifyScreen
-
+import com.example.dodojob.ui.feature.announcement.Announcement1Route
+import com.example.dodojob.ui.feature.announcement.Announcement1Route
 @Composable
 fun AppNavGraph(nav: NavHostController) {
     NavHost(navController = nav, startDestination = Route.Onboarding.path) {
@@ -22,5 +23,6 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.Prefer.path)     { PreferWorkScreen(nav) }
         composable(Route.PreferMap.path)  { PreferWorkMapScreen(nav) }
         composable(Route.Experience.path) { ExperienceScreen(nav) }
+        composable(Route.Announcement.path) { Announcement1Route(nav) }
     }
 }
