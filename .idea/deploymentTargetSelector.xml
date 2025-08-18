@@ -5,7 +5,17 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
+      <!-- jinu 쪽 -->
       <SelectionState runConfigName="SignUpCompleteScreenPreview">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <!-- main 쪽 -->
+      <SelectionState runConfigName="PreviewAnnouncement1">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="iam">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
