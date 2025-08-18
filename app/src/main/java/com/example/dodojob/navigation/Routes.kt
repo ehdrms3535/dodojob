@@ -10,4 +10,8 @@ sealed class Route(val path: String) {
     data object Experience : Route("experience")
     data object Hope : Route("hope")
     data object SignUp : Route("signup")
+
+    data object SignUpComplete : Route("signup_complete")
+
+    data object Main : Route("main")
 }
