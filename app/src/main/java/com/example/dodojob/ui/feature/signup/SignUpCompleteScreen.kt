@@ -103,17 +103,3 @@ fun SignUpCompleteScreen(nav: NavController) {
         )
     }
 }
-
-
-@Preview(
-    name = "SignUpComplete – Preview",
-    showBackground = true,
-    widthDp = 360,
-    heightDp = 800
-)
-@Composable
-private fun SignUpCompleteScreenPreview() {
-    // 프리뷰 전용 NavController 생성
-    val nav = androidx.navigation.compose.rememberNavController()
-    SignUpCompleteScreen(nav)
-}
