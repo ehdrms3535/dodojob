@@ -17,4 +17,6 @@ sealed class Route(val path: String) {
     data object SignUpComplete : Route("signup_complete")
 
     data object Main : Route("main")
+
+    data object My : Route("my")
 }
