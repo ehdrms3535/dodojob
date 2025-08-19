@@ -5,7 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dodojob.ui.feature.experience.ExperienceScreen
-import com.example.dodojob.ui.feature.experience.MainScreen
+import com.example.dodojob.ui.feature.main.MainScreen
 import com.example.dodojob.ui.feature.hope.HopeWorkFilterScreen
 import com.example.dodojob.ui.feature.jobtype.JobTypeScreen
 import com.example.dodojob.ui.feature.login.LoginScreen
@@ -17,11 +17,12 @@ import com.example.dodojob.ui.feature.verify.VerifyScreen
 import com.example.dodojob.ui.feature.announcement.Announcement1Route
 import com.example.dodojob.ui.feature.announcement.Announcement1Route
 import com.example.dodojob.ui.feature.experience.ExperienceCompleteScreen
+import com.example.dodojob.ui.feature.main.MainRoute
 import com.example.dodojob.ui.feature.signup.SignUpIdPwScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.JobType.path) {
+    NavHost(navController = nav, startDestination = Route.Main.path) {
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
         composable(Route.Verify.path)     { VerifyScreen(nav) }
@@ -33,7 +34,7 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.Announcement.path) { Announcement1Route(nav) }
         composable(Route.SignUp.path)     { SignUpIdPwScreen(nav) }
         composable(Route.SignUpComplete.path) { SignUpCompleteScreen(nav) }
-        composable(Route.Main.path) { MainScreen(nav) }
+        composable(Route.Main.path) { MainRoute(nav) }
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }
     }
 }
