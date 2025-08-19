@@ -18,6 +18,7 @@ import com.example.dodojob.ui.feature.announcement.Announcement1Route
 import com.example.dodojob.ui.feature.announcement.Announcement1Route
 import com.example.dodojob.ui.feature.experience.ExperienceCompleteScreen
 import com.example.dodojob.ui.feature.main.MainRoute
+import com.example.dodojob.ui.feature.profile.ProfileRoute
 import com.example.dodojob.ui.feature.signup.SignUpIdPwScreen
 
 @Composable
@@ -36,6 +37,7 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.SignUpComplete.path) { SignUpCompleteScreen(nav) }
         composable(Route.Main.path) { MainRoute(nav) }
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }
+        composable(Route.My.path) { ProfileRoute(nav) }
     }
 }
 
