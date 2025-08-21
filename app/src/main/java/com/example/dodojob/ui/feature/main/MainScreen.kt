@@ -317,7 +317,7 @@ private fun ScrollHeaderRow(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.logo), // ← 로고 리소스
+                        painter = painterResource(id = R.drawable.logo1), // ← 로고 리소스
                         contentDescription = "Logo",
                         modifier = Modifier.size(50.dp),
                         colorFilter = ColorFilter.tint(iconTintBlue) // 필요 시 색 적용
