@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.profile
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,18 +9,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.R
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -29,13 +33,11 @@ fun ProfileRoute(nav: NavController) {
         resumeViews = 2,
         recentCount = 3,
         likedCount = 2,
-        myReviewsCount = 1,
         onClickResumeCreate = {},
         onClickResumeManage = {},
-        onClickMyReviews = {},
         onClickBookmarks = {},
         onClickRecent = {},
-        onClickBadges = {},
+        onClickActivityLevel = {},
         onClickEditProfile = {},
         onClickChangePw = {},
         onClickLogout = {},
@@ -59,13 +61,11 @@ fun ProfileScreen(
     resumeViews: Int,
     recentCount: Int,
     likedCount: Int,
-    myReviewsCount: Int,
     onClickResumeCreate: () -> Unit,
     onClickResumeManage: () -> Unit,
-    onClickMyReviews: () -> Unit,
     onClickBookmarks: () -> Unit,
     onClickRecent: () -> Unit,
-    onClickBadges: () -> Unit,
+    onClickActivityLevel: () -> Unit,
     onClickEditProfile: () -> Unit,
     onClickChangePw: () -> Unit,
     onClickLogout: () -> Unit,
@@ -84,53 +84,55 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()) // ✅ 스크롤 적용
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // 상단 로고/메뉴
+            // 상단바: 로고(좌) / 알림(우)
             Row(
-                modifier = Modifier.fillMaxWidth().height(44.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .background(Color.White, RoundedCornerShape(6.dp))
-                        .shadow(1.dp, RoundedCornerShape(6.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("L", color = brandBlue)
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = "앱 로고",
+                    modifier = Modifier.size(24.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { /* 알림센터 이동 등 */ }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = "알림",
+                        tint = Color(0xFF696969)
+                    )
                 }
-                Text("⋯", fontSize = 18.sp)
             }
 
             Spacer(Modifier.height(8.dp))
 
-            // 프로필
+            // 프로필: 증명사진 + 이름
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.senior_id), // ← 증명사진
+                    contentDescription = "프로필 사진",
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFECEEF3)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🙂", fontSize = 20.sp)
-                }
+                        .size(75.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
                 Text(
-                    text = "${name}님",
+                    text = " ${name}님",
                     fontSize = 27.sp,
                     color = Color.Black,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.019).em
                 )
-                Spacer(Modifier.weight(1f))
-                Text("🔔", fontSize = 18.sp, color = Color(0xFF696969))
             }
 
             Spacer(Modifier.height(12.dp))
@@ -154,7 +156,9 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -163,10 +167,10 @@ fun ProfileScreen(
                         checked = notifOn,
                         onCheckedChange = { notifOn = it },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = brandBlue,         // 동그라미
-                            checkedTrackColor = Color(0xFFB2D4FF), // 켜졌을 때 배경 (연파랑)
-                            uncheckedThumbColor = Color.White, // 꺼졌을 때 동그라미
-                            uncheckedTrackColor = Color(0xFFE0E0E0) // 꺼졌을 때 배경
+                            checkedThumbColor = brandBlue,
+                            checkedTrackColor = Color(0xFFB2D4FF),
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = Color(0xFFE0E0E0)
                         )
                     )
                 }
@@ -180,8 +184,7 @@ fun ProfileScreen(
                 items = listOf(
                     RowItem("최근 본 공고", suffix = "${recentCount}건", onClick = onClickRecent),
                     RowItem("좋아한 일자리", suffix = "${likedCount}건", onClick = onClickBookmarks),
-                    RowItem("내가 쓴 일자리 후기", suffix = "${myReviewsCount}건", onClick = onClickMyReviews),
-                    RowItem("활동 뱃지", onClick = onClickBadges)
+                    RowItem("활동 레벨", onClick = onClickActivityLevel)
                 )
             )
 
