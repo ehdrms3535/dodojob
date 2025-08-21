@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -28,6 +27,18 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.dodojob.R
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.ColorFilter
+
 
 /* ===================== 데이터 모델 ===================== */
 
@@ -176,18 +187,19 @@ fun MainScreen(
             }
 
             /* 1) 상단 인사 */
-            item {
-                Text(
-                    text = "오늘도 좋은 하루입니다, ${state.greetingName}님",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.Black,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 4.dp)
-                )
-            }
+                item {
+                    Text(
+                        text = "오늘도 좋은 하루입니다,\n${state.greetingName}님",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black,
+                        lineHeight = 40.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(top = 4.dp)
+                    )
+                }
 
             /* 2) 검색창 (둥근 + 연한테두리 + 그림자) */
             item {
@@ -241,13 +253,7 @@ fun MainScreen(
             if (state.banners.isNotEmpty()) {
                 item {
                     Box(Modifier.padding(horizontal = 16.dp)) {
-                        AutoRotatingAd(
-                            banner = state.banners[bannerIndex],
-                            index = bannerIndex,
-                            total = state.banners.size,
-                            onPrev = { bannerIndex = (bannerIndex - 1 + state.banners.size) % state.banners.size },
-                            onNext = { bannerIndex = (bannerIndex + 1) % state.banners.size }
-                        )
+                        AutoRotatingAd(banners = state.banners)  // ← 리스트 통째로 전달
                     }
                 }
             }
@@ -302,6 +308,7 @@ private fun ScrollHeaderRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // ✅ 로고 버튼
             TextButton(onClick = onLogoClick, contentPadding = PaddingValues(0.dp)) {
                 Box(
                     modifier = Modifier
@@ -309,10 +316,16 @@ private fun ScrollHeaderRow(
                         .background(chipBgColor, shape = RoundedCornerShape(18.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    // TODO: 실제 로고 리소스로 교체
-                    Text("L", fontSize = 16.sp, color = iconTintBlue, fontWeight = FontWeight.Bold)
+                    Image(
+                        painter = painterResource(id = R.drawable.logo1), // ← 로고 리소스
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(50.dp),
+                        colorFilter = ColorFilter.tint(iconTintBlue) // 필요 시 색 적용
+                    )
                 }
             }
+
+            // ✅ 알림 버튼
             IconButton(onClick = onNotifyClick) {
                 Box(
                     modifier = Modifier
@@ -320,13 +333,17 @@ private fun ScrollHeaderRow(
                         .background(chipBgColor, shape = RoundedCornerShape(18.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    // TODO: 실제 벨 리소스로 교체(예: Icon(painterResource(...), tint = iconTintBlue))
-                    Text("🔔", fontSize = 16.sp, color = Color.Unspecified)
+                    Image(
+                        painter = painterResource(id = R.drawable.bell), // ← 알림 리소스
+                        contentDescription = "Notifications",
+                        modifier = Modifier.size(50.dp)
+                    )
                 }
             }
         }
     }
 }
+
 
 /* ---------- 검색창: 둥근 + 연한테두리 + 그림자 + 돋보기 ---------- */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -409,11 +426,11 @@ private fun InterviewCalendarButton(onClick: () -> Unit) {
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.CalendarMonth,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
+                    // 📅 여기! → drawable 리소스 불러오기
+                    Image(
+                        painter = painterResource(id = R.drawable.calender),
+                        contentDescription = "달력",
+                        modifier = Modifier.size(125.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Icon(
@@ -429,27 +446,62 @@ private fun InterviewCalendarButton(onClick: () -> Unit) {
 }
 
 /* ---------- 하단 네비 ---------- */
+private data class NavItem(
+    val key: String,
+    val unselectedRes: Int,
+    val selectedRes: Int? = null // 없으면 틴트 처리
+)
+
 @Composable
-private fun BottomNavBar(current: String, onClick: (String) -> Unit) {
+fun BottomNavBar(current: String, onClick: (String) -> Unit) {
+    val brandBlue = Color(0xFF005FFF)
+
+    val items = listOf(
+        NavItem("home",      R.drawable.unselected_home,      R.drawable.selected_home),
+        NavItem("edu",       R.drawable.unselected_education, null),
+        NavItem("welfare",   R.drawable.unselected_welfare,   null),
+        NavItem("community", R.drawable.unselected_talent,    null),
+        NavItem("my",        R.drawable.unselected_my,        R.drawable.selected_my),
+    )
+
     NavigationBar(containerColor = Color.White) {
-        listOf(
-            "home" to ("🏠" to "홈"),
-            "edu" to ("🎓" to "교육"),
-            "welfare" to ("💝" to "복지"),
-            "community" to ("💬" to "소통"),
-            "my" to ("👤" to "마이"),
-        ).forEach { (key, pair) ->
-            val (emoji, label) = pair
+        items.forEach { item ->
+            val isSelected = item.key == current
+
+            // ✅ 선택 여부에 따라 아이콘 결정
+            val iconRes = if (isSelected && item.selectedRes != null) {
+                item.selectedRes
+            } else {
+                item.unselectedRes
+            }
+
             NavigationBarItem(
-                selected = key == current,
-                onClick = { onClick(key) },
-                // 실제 리소스 아이콘으로 바꿀 땐 painterResource(...) 사용
-                icon = { Text(emoji, fontSize = 18.sp) },
-                label = { Text(label, fontSize = 12.sp) }
+                selected = isSelected,
+                onClick = { onClick(item.key) },
+                icon = {
+                    Image(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = item.key,
+                        modifier = Modifier.size(55.dp),
+                        // selectedRes 없고 선택된 탭만 파란 틴트
+                        colorFilter = if (isSelected && item.selectedRes == null)
+                            ColorFilter.tint(brandBlue)
+                        else null
+                    )
+                },
+                label = null,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor   = Color.Unspecified,
+                    selectedTextColor   = Color.Unspecified,
+                    unselectedIconColor = Color.Unspecified,
+                    unselectedTextColor = Color.Unspecified,
+                    indicatorColor      = Color.Transparent
+                )
             )
         }
     }
 }
+
 
 /* ---------- 공통 UI ---------- */
 @Composable
@@ -566,40 +618,100 @@ private fun JobDetailCard(job: JobDetail, onClick: () -> Unit) {
 }
 
 /* ---------- 광고(자동 회전) ---------- */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AutoRotatingAd(
-    banner: AdBanner,
-    index: Int,
-    total: Int,
-    onPrev: () -> Unit,
-    onNext: () -> Unit
+    banners: List<AdBanner>,
+    autoIntervalMs: Long = 5_000L,
 ) {
+    // 무한 캐러셀 트릭: 아주 큰 페이지 수로 두고 실제 인덱스는 mod 매핑
+    val realCount = banners.size
+    val virtualCount = Int.MAX_VALUE
+    val startPage = remember(realCount) {
+        val mid = virtualCount / 2
+        mid - (mid % realCount)
+    }
+    val pagerState = rememberPagerState(
+        initialPage = startPage,
+        pageCount = { virtualCount }
+    )
+
+    LaunchedEffect(realCount) {
+        if (realCount == 0) return@LaunchedEffect
+        while (isActive) {
+            delay(autoIntervalMs)
+
+            // 사용자가 스와이프 중이면 끝날 때까지 대기
+            while (pagerState.isScrollInProgress) {
+                // 살짝 쉬었다가 다시 체크
+                kotlinx.coroutines.delay(80)
+            }
+
+            // 🔒 남아있을 수 있는 fractional offset 정리(정수 페이지로 스냅)
+            pagerState.scrollToPage(pagerState.currentPage)
+
+            // ➡ 다음 페이지로 완전 이동 (pageOffsetFraction=0f로 확실히 정착)
+            val next = pagerState.currentPage + 1
+            pagerState.animateScrollToPage(next, pageOffsetFraction = 0f)
+        }
+    }
+    // 현재 실제 인덱스
+    val currentReal = (pagerState.currentPage % realCount + realCount) % realCount
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(154.dp),
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = banner.bg),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent) // 각 페이지 배너색을 씀
     ) {
         Box(Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(banner.titleTop, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(banner.titleBottom, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val idx = (page % realCount + realCount) % realCount
+                val banner = banners[idx]
+                Card(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = banner.bg),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                banner.titleTop,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                banner.titleBottom,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
             }
+
+            // ●●● 인디케이터
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                repeat(total) { i ->
-                    val active = i == index
+                repeat(realCount) { i ->
+                    val active = i == currentReal
                     Box(
                         modifier = Modifier
                             .size(if (active) 10.dp else 8.dp)
