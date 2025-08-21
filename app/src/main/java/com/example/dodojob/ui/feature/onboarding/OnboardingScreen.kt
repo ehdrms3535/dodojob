@@ -38,7 +38,6 @@ fun OnboardingScreen(nav: NavController) {
                         when (selected) {
                             "senior" -> nav.navigate(Route.Login.path)
                             "boss"   -> nav.navigate(Route.Announcement.path)     // 임시
-                            "center" -> nav.navigate(Route.Login.path)     // 임시
                         }
                     },
                     enabled = selected != null,
@@ -68,7 +67,7 @@ fun OnboardingScreen(nav: NavController) {
             val subTop = H * 0.02f
             val subSp = (W.value * 0.055f).sp
             val subLH = (W.value * 0.083f).sp
-            val groupTop = H * 0.075f
+            val groupTop = H * 0.1f
             val cardGap = H * 0.015f
             val contentBottomSpacer = H * 0.12f
 
@@ -95,8 +94,6 @@ fun OnboardingScreen(nav: NavController) {
                 OptionCardRatio("🤝", "일하고 싶은 시니어입니다", selected == "senior") { selected = "senior" }
                 Spacer(Modifier.height(cardGap))
                 OptionCardRatio("👔", "사람을 구하는 사장님입니다", selected == "boss") { selected = "boss" }
-                Spacer(Modifier.height(cardGap))
-                OptionCardRatio("🫂", "복지센터 / 기관 담당자", selected == "center") { selected = "center" }
 
                 Spacer(Modifier.height(contentBottomSpacer))
             }
