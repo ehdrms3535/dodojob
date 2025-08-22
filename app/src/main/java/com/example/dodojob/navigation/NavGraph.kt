@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+
+import com.example.dodojob.ui.feature.intro.IntroScreen
 import com.example.dodojob.ui.feature.experience.ExperienceScreen
 import com.example.dodojob.ui.feature.hope.HopeWorkFilterScreen
 import com.example.dodojob.ui.feature.jobtype.JobTypeScreen
@@ -19,12 +21,18 @@ import com.example.dodojob.ui.feature.main.MainRoute
 import com.example.dodojob.ui.feature.profile.ProfileRoute
 import com.example.dodojob.ui.feature.signup.SignUpIdPwScreen
 import com.example.dodojob.ui.feature.applicatioin.ApplicationRoute
+import com.example.dodojob.ui.todo.TodoScreen
+import com.example.dodojob.ui.todo.RealtimeTodoScreen
+import com.example.dodojob.ui.feature.login.PreLoginScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.Main.path) {
+    NavHost(navController = nav, startDestination = Route.Intro.path) {
+        composable(Route.Intro.path) { IntroScreen(nav)}
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
+        composable(Route.PreLogin.path) { PreLoginScreen(nav) }
+
         composable(Route.Verify.path)     { VerifyScreen(nav) }
         composable(Route.JobType.path)    { JobTypeScreen(nav) }
         composable(Route.Prefer.path)     { PreferWorkScreen(nav) }
@@ -38,6 +46,10 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }
         composable(Route.My.path) { ProfileRoute(nav) }
         composable(Route.Application.path) { ApplicationRoute(nav) }
+
+        composable(Route.Todo.path) { TodoScreen(nav) }
+        composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) }
+
     }
 }
 
