@@ -3,8 +3,11 @@ package com.example.dodojob.ui.feature.login
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
@@ -18,40 +21,58 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import com.example.dodojob.navigation.Route
+
+// ▼ 추가: Supabase + 코루틴 + 직렬화 + 쿼리 DSL 임포트
+import com.example.dodojob.data.supabase.LocalSupabase
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.*   // eq, limit 등
+
+@Serializable
+private data class LoginRow(
+    val id: String,
+    val username: String,
+    val password: String? = null,
+    val name: String? = null,
+    val job: String? = null      // ★ 추가
+)
 
 @Composable
 fun LoginScreen(nav: NavController) {
-    var id by remember { mutableStateOf("") }
+    var id by remember { mutableStateOf("") }          // username 입력
     var pw by remember { mutableStateOf("") }
     var autoLogin by remember { mutableStateOf(false) }
+
+    // ▼ 추가: Supabase 클라/코루틴/상태
+    val client = LocalSupabase.current
+    val scope = rememberCoroutineScope()
+    var loading by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize().background(Color(0xFFF1F5F7))
     ) {
-        val W = maxWidth      // 화면 가로(Dp)
-        val H = maxHeight     // 화면 세로(Dp)
+        val W = maxWidth
+        val H = maxHeight
 
-        // ===== 비율 기반 스케일 =====
-        val screenHPad   = (W * 0.045f)  // 좌우 패딩
-        val topVPad      = (H * 0.03f)       // 상단 여백
-
-        val backSizeSp   = (W.value * 0.065f).sp                   // "<" 크기
-        val titleSp      = (W.value * 0.09f).sp                    // "로그인" 타이틀
-        val subtitleSp   = (W.value * 0.065f).sp                   // 서브 타이틀
-        val subtitleLH   = (W.value * 0.095f).sp                   // 서브 타이틀 lineHeight
-
-        val fieldGap     = (H * 0.015f).coerceIn(8.dp, 18.dp)      // 입력칸 간격
-        val sectionGap   = (H * 0.02f).coerceIn(12.dp, 24.dp)      // 섹션 간격
-
-        val circleSize   = (W * 0.065f).coerceIn(20.dp, 28.dp)     // 자동로그인 원 버튼 크기
-        val checkSize    = (circleSize * 0.65f)                    // 내부 체크 크기
-        val loginBtnH    = (H * 0.07f).coerceIn(48.dp, 60.dp)      // 로그인 버튼 높이
-        val signBtnH     = (H * 0.07f).coerceIn(48.dp, 60.dp)      // 회원가입 버튼 높이
-        val betweenBtns  = (H * 0.02f).coerceIn(12.dp, 20.dp)      // 버튼들 사이 간격
+        val screenHPad   = (W * 0.045f)
+        val topVPad      = (H * 0.03f)
+        val backSizeSp   = (W.value * 0.065f).sp
+        val titleSp      = (W.value * 0.09f).sp
+        val subtitleSp   = (W.value * 0.065f).sp
+        val subtitleLH   = (W.value * 0.095f).sp
+        val fieldGap     = (H * 0.015f).coerceIn(8.dp, 18.dp)
+        val sectionGap   = (H * 0.02f).coerceIn(12.dp, 24.dp)
+        val circleSize   = (W * 0.065f).coerceIn(20.dp, 28.dp)
+        val checkSize    = (circleSize * 0.65f)
+        val loginBtnH    = (H * 0.07f).coerceIn(48.dp, 60.dp)
+        val signBtnH     = (H * 0.07f).coerceIn(48.dp, 60.dp)
+        val betweenBtns  = (H * 0.02f).coerceIn(12.dp, 20.dp)
 
         Column(
             modifier = Modifier
@@ -62,7 +83,6 @@ fun LoginScreen(nav: NavController) {
             Spacer(Modifier.height(topVPad))
             Spacer(Modifier.height(topVPad))
 
-            // 🔙 뒤로가기: 텍스트 "<" 한 줄
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "<",
@@ -72,7 +92,6 @@ fun LoginScreen(nav: NavController) {
                 )
             }
 
-            // 제목 (왼쪽 여백 살짝)
             Spacer(Modifier.height((H * 0.005f).coerceAtLeast(2.dp)))
             Text(
                 "로그인",
@@ -83,8 +102,6 @@ fun LoginScreen(nav: NavController) {
             )
 
             Spacer(Modifier.height((H * 0.01f).coerceIn(8.dp, 16.dp)))
-
-            // ✨ 서브타이틀 (왼쪽 여백)
             Text(
                 "당신의 경험이 빛날 곳,\n두두잡에서 만나보세요.",
                 fontSize = subtitleSp,
@@ -96,7 +113,7 @@ fun LoginScreen(nav: NavController) {
 
             Spacer(Modifier.height((H * 0.03f).coerceIn(16.dp, 32.dp)))
 
-            // 🔑 아이디 입력 (밑줄 스타일)
+            // 🔑 아이디(=username)
             UnderlineTextField(
                 value = id,
                 onValueChange = { id = it },
@@ -105,7 +122,7 @@ fun LoginScreen(nav: NavController) {
 
             Spacer(Modifier.height(fieldGap))
 
-            // 🔒 비밀번호 입력 (밑줄 스타일)
+            // 🔒 비밀번호
             UnderlineTextField(
                 value = pw,
                 onValueChange = { pw = it },
@@ -113,7 +130,6 @@ fun LoginScreen(nav: NavController) {
                 isPassword = true
             )
 
-            // ✅ 자동로그인 (배경 회색 원, 테두리 없음, 체크 검은/흰색 선택 가능)
             Spacer(Modifier.height(sectionGap))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(
@@ -139,25 +155,60 @@ fun LoginScreen(nav: NavController) {
                 Text("자동로그인", fontSize = (W.value * 0.045f).sp, color = Color.Black)
             }
 
-            // 🔵 로그인 버튼
             Spacer(Modifier.height(sectionGap))
             Button(
-                onClick = { /* TODO: 로그인 로직 */ },
+                onClick = {
+                    status = null
+                    loading = true
+                    scope.launch {
+                        val q = id.trim()
+                        val json = Json { ignoreUnknownKeys = true }
+
+                        runCatching {
+                            // username 일치하는 1건만 서버에서 조회
+                            val res = client.from("users_tmp").select {
+                                filter { eq("username", q) }
+                                limit(1)
+                            }
+                            val list = json.decodeFromJsonElement(
+                                ListSerializer(LoginRow.serializer()),
+                                Json.parseToJsonElement(res.data)
+                            )
+                            val user = list.firstOrNull() ?: error("존재하지 않는 아이디입니다.")
+                            if (user.password != pw) error("비밀번호가 일치하지 않습니다.")
+                            if (user.job?.trim() != "시니어") error("시니어 전용 탭입니다. (현재: ${user.job ?: "미지정"})")
+                            user
+                        }.onSuccess {
+                            // 성공 → 메인으로 이동
+                            nav.navigate(Route.Main.path) {
+                                popUpTo(Route.Login.path) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }.onFailure {
+                            status = "로그인 실패: ${it.message}"
+                        }
+                        loading = false
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(loginBtnH),
                 shape = RoundedCornerShape((W * 0.08f).coerceIn(16.dp, 28.dp)),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005FFF))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005FFF)),
+                enabled = !loading && id.isNotBlank() && pw.isNotBlank()
             ) {
                 Text(
-                    "로그인",
+                    if (loading) "로그인 중..." else "로그인",
                     fontSize = (W.value * 0.055f).sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
                 )
             }
 
-            // 📌 아이디 찾기 | 비밀번호 찾기
+            // 결과/오류 메시지
+            Spacer(Modifier.height(8.dp))
+            status?.let { Text(it, color = Color.Black) }
+
             Spacer(Modifier.height(betweenBtns))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -173,13 +224,10 @@ fun LoginScreen(nav: NavController) {
                 }
             }
 
-            // ⚪ 회원가입 버튼
             Spacer(Modifier.height(betweenBtns))
             OutlinedButton(
                 onClick = {
-                    nav.navigate(Route.SignUp.path) {
-                        launchSingleTop = true       // 같은 화면 중복 방지 (옵션)
-                    }
+                    nav.navigate(Route.SignUp.path) { launchSingleTop = true }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -201,9 +249,7 @@ fun LoginScreen(nav: NavController) {
     }
 }
 
-/* -------------------------------
-   밑줄만 보이는 입력창 (Material3 TextField)
--------------------------------- */
+/* -------------------------------- */
 @Composable
 private fun UnderlineTextField(
     value: String,
@@ -219,17 +265,15 @@ private fun UnderlineTextField(
         placeholder = { Text(placeholder, color = Color(0xFFA6A6A6)) },
         modifier = modifier.fillMaxWidth(),
         visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-        shape = RoundedCornerShape(0.dp), // 컨테이너 모양은 의미 없음(투명)
+        shape = RoundedCornerShape(0.dp),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
             disabledContainerColor = Color.Transparent,
             errorContainerColor = Color.Transparent,
-
-            focusedIndicatorColor = Color.Black,        // 포커스 밑줄
-            unfocusedIndicatorColor = Color(0xFFA2A2A2),// 기본 밑줄
+            focusedIndicatorColor = Color.Black,
+            unfocusedIndicatorColor = Color(0xFFA2A2A2),
             disabledIndicatorColor = Color(0xFFE0E0E0),
-
             cursorColor = Color.Black,
             focusedTextColor = Color.Black,
             unfocusedTextColor = Color.Black,
