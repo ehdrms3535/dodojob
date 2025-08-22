@@ -19,10 +19,12 @@ import com.example.dodojob.ui.feature.main.MainRoute
 import com.example.dodojob.ui.feature.profile.ProfileRoute
 import com.example.dodojob.ui.feature.signup.SignUpIdPwScreen
 import com.example.dodojob.ui.feature.applicatioin.ApplicationRoute
+import com.example.dodojob.ui.todo.TodoScreen
+import com.example.dodojob.ui.todo.RealtimeTodoScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.Main.path) {
+    NavHost(navController = nav, startDestination = Route.Todo.path) {
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
         composable(Route.Verify.path)     { VerifyScreen(nav) }
@@ -38,6 +40,10 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }
         composable(Route.My.path) { ProfileRoute(nav) }
         composable(Route.Application.path) { ApplicationRoute(nav) }
+
+        composable(Route.Todo.path) { TodoScreen(nav) }
+        composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) }
+
     }
 }
 
