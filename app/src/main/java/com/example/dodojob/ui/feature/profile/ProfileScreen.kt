@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -78,7 +79,7 @@ fun ProfileScreen(
 
     Scaffold(
         containerColor = screenBg,
-        bottomBar = { BottomNavBarProfile(current = "my", onClick = onShortcut) }
+        bottomBar = { BottomNavBar(current = "my", onClick = onShortcut) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -325,22 +326,57 @@ private fun SectionRow(text: String, suffix: String? = null, onClick: () -> Unit
 }
 
 /* 하단 네비 */
+private data class NavItem(
+    val key: String,
+    val unselectedRes: Int,
+    val selectedRes: Int? = null // 없으면 틴트 처리
+)
+
 @Composable
-private fun BottomNavBarProfile(current: String, onClick: (String) -> Unit) {
+fun BottomNavBar(current: String, onClick: (String) -> Unit) {
+    val brandBlue = Color(0xFF005FFF)
+
+    val items = listOf(
+        NavItem("home",      R.drawable.unselected_home,      R.drawable.selected_home),
+        NavItem("edu",       R.drawable.unselected_education, null),
+        NavItem("welfare",   R.drawable.unselected_welfare,   null),
+        NavItem("community", R.drawable.unselected_talent,    null),
+        NavItem("my",        R.drawable.unselected_my,        R.drawable.selected_my),
+    )
+
     NavigationBar(containerColor = Color.White) {
-        listOf(
-            "home" to ("🏠" to "홈"),
-            "edu" to ("📚" to "교육"),
-            "welfare" to ("💰" to "복지"),
-            "community" to ("💬" to "소통"),
-            "my" to ("👤" to "마이")
-        ).forEach { (key, pair) ->
-            val (icon, labelText) = pair
+        items.forEach { item ->
+            val isSelected = item.key == current
+
+            // ✅ 선택 여부에 따라 아이콘 결정
+            val iconRes = if (isSelected && item.selectedRes != null) {
+                item.selectedRes
+            } else {
+                item.unselectedRes
+            }
+
             NavigationBarItem(
-                selected = (key == current),
-                onClick = { onClick(key) },
-                icon = { Text(icon, fontSize = 18.sp) },
-                label = { Text(labelText) }
+                selected = isSelected,
+                onClick = { onClick(item.key) },
+                icon = {
+                    Image(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = item.key,
+                        modifier = Modifier.size(55.dp),
+                        // selectedRes 없고 선택된 탭만 파란 틴트
+                        colorFilter = if (isSelected && item.selectedRes == null)
+                            ColorFilter.tint(brandBlue)
+                        else null
+                    )
+                },
+                label = null,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor   = Color.Unspecified,
+                    selectedTextColor   = Color.Unspecified,
+                    unselectedIconColor = Color.Unspecified,
+                    unselectedTextColor = Color.Unspecified,
+                    indicatorColor      = Color.Transparent
+                )
             )
         }
     }
