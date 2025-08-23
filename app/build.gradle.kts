@@ -103,7 +103,7 @@ dependencies {
 
 }
 
-configurations.configureEach {
+/*configurations.configureEach {
     resolutionStrategy.eachDependency {
         if (requested.group == "org.jetbrains.kotlin" &&
             requested.name.startsWith("kotlin-stdlib")) {
@@ -111,4 +111,4 @@ configurations.configureEach {
             because("Avoid mixed Kotlin stdlib causing compiler ICE")
         }
     }
-}
+}*/
