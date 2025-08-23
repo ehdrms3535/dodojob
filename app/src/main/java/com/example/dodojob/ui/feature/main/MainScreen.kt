@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.example.dodojob.R
@@ -38,6 +37,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Text
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.em
 
 
 /* ===================== 데이터 모델 ===================== */
@@ -64,6 +68,7 @@ data class AdBanner(
     val bg: Color,
     val titleTop: String,
     val titleBottom: String,
+    val imageRes: Int
 )
 
 data class MainUiState(
@@ -85,9 +90,9 @@ object MainFakeRepository {
     )
 
     fun loadBanners(): List<AdBanner> = listOf(
-        AdBanner("b1", Color(0xFFFF8C00), "두 번째 커리어, 이제 시작해볼까요?", "교육 ~ 일자리까지 원스톱 케어"),
-        AdBanner("b2", Color(0xFFFFEA00), "교육 신청 시 사은품 제공", "스마트폰 배우고, 일자리로 연결!"),
-        AdBanner("b3", Color(0xFF505050), "신청만 해도 교육 + 사은품 제공", "병원 안내·행정 보조, 경력 살려 재취업!")
+        AdBanner("b1", Color(0xFFFF8C00), "두 번째 커리어, 이제 시작해볼까요?", "교육 ~ 일자리까지\n원스톱 케어", R.drawable.first_banner),
+        AdBanner("b2", Color(0xFFFFEA00), "교육 신청 시 사은품 제공", "스마트폰 배우고,\n일자리로 연결!",R.drawable.second_banner),
+        AdBanner("b3", Color(0xFF505050), "신청만 해도 교육 + 사은품 제공", "병원 안내·행정 보조,\n경력 살려 재취업!",R.drawable.third_banner)
     )
 
     fun loadTailored(): List<JobDetail> = listOf(
@@ -618,14 +623,37 @@ private fun JobDetailCard(job: JobDetail, onClick: () -> Unit) {
 }
 
 /* ---------- 광고(자동 회전) ---------- */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AutoRotatingAd(
+fun AutoRotatingAd(
     banners: List<AdBanner>,
     autoIntervalMs: Long = 5_000L,
 ) {
-    // 무한 캐러셀 트릭: 아주 큰 페이지 수로 두고 실제 인덱스는 mod 매핑
     val realCount = banners.size
+
+    // 배너가 없으면 플레이스홀더 표시 후 종료
+    if (realCount == 0) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(154.dp),
+            shape = CardDefaults.shape,
+            elevation = CardDefaults.cardElevation(2.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A77FF))
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "광고가 없습니다.",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    letterSpacing = (-0.019).em,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        return
+    }
+
+    // 무한 캐러셀: 매우 큰 가상 페이지 위에서 mod 매핑
     val virtualCount = Int.MAX_VALUE
     val startPage = remember(realCount) {
         val mid = virtualCount / 2
@@ -636,25 +664,23 @@ private fun AutoRotatingAd(
         pageCount = { virtualCount }
     )
 
+    // 자동 슬라이드
     LaunchedEffect(realCount) {
-        if (realCount == 0) return@LaunchedEffect
         while (isActive) {
             delay(autoIntervalMs)
 
-            // 사용자가 스와이프 중이면 끝날 때까지 대기
+            // 스와이프 중이면 대기
             while (pagerState.isScrollInProgress) {
-                // 살짝 쉬었다가 다시 체크
-                kotlinx.coroutines.delay(80)
+                delay(80)
             }
 
-            // 🔒 남아있을 수 있는 fractional offset 정리(정수 페이지로 스냅)
+            // 분수 오프셋 정리 후 다음 페이지로
             pagerState.scrollToPage(pagerState.currentPage)
-
-            // ➡ 다음 페이지로 완전 이동 (pageOffsetFraction=0f로 확실히 정착)
             val next = pagerState.currentPage + 1
             pagerState.animateScrollToPage(next, pageOffsetFraction = 0f)
         }
     }
+
     // 현재 실제 인덱스
     val currentReal = (pagerState.currentPage % realCount + realCount) % realCount
 
@@ -662,9 +688,9 @@ private fun AutoRotatingAd(
         modifier = Modifier
             .fillMaxWidth()
             .height(154.dp),
-        shape = RoundedCornerShape(10.dp),
+        shape = CardDefaults.shape,
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent) // 각 페이지 배너색을 씀
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(Modifier.fillMaxSize()) {
             HorizontalPager(
@@ -673,13 +699,26 @@ private fun AutoRotatingAd(
             ) { page ->
                 val idx = (page % realCount + realCount) % realCount
                 val banner = banners[idx]
+
                 Card(
                     modifier = Modifier.fillMaxSize(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = CardDefaults.shape,
                     colors = CardDefaults.cardColors(containerColor = banner.bg),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
+                        // 오른쪽 이미지
+                        Image(
+                            painter = painterResource(id = banner.imageRes),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 12.dp)
+                                .size(110.dp),            // 필요시 조절 (예: 100~140.dp)
+                            contentScale = ContentScale.Fit
+                        )
+
+                        // 왼쪽 텍스트
                         Column(
                             modifier = Modifier
                                 .align(Alignment.CenterStart)
@@ -692,6 +731,7 @@ private fun AutoRotatingAd(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 banner.titleBottom,
                                 fontSize = 22.sp,
@@ -699,6 +739,8 @@ private fun AutoRotatingAd(
                                 color = Color.White
                             )
                         }
+
+
                     }
                 }
             }
@@ -717,7 +759,7 @@ private fun AutoRotatingAd(
                             .size(if (active) 10.dp else 8.dp)
                             .background(
                                 if (active) Color.White else Color.White.copy(alpha = 0.5f),
-                                RoundedCornerShape(50)
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
                             )
                     )
                 }
