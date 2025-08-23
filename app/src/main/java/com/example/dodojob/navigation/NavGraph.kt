@@ -20,14 +20,15 @@ import com.example.dodojob.ui.feature.experience.ExperienceCompleteScreen
 import com.example.dodojob.ui.feature.main.MainRoute
 import com.example.dodojob.ui.feature.profile.ProfileRoute
 import com.example.dodojob.ui.feature.signup.SignUpIdPwScreen
-import com.example.dodojob.ui.feature.applicatioin.ApplicationRoute
+import com.example.dodojob.ui.feature.application.ApplicationRoute
 import com.example.dodojob.ui.todo.TodoScreen
 import com.example.dodojob.ui.todo.RealtimeTodoScreen
 import com.example.dodojob.ui.feature.login.PreLoginScreen
+import com.example.dodojob.ui.feature.support.SupportRoute
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.Main.path) {
+    NavHost(navController = nav, startDestination = Route.Intro.path) {
         composable(Route.Intro.path) { IntroScreen(nav)}
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
@@ -46,10 +47,12 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }
         composable(Route.My.path) { ProfileRoute(nav) }
         composable(Route.Application.path) { ApplicationRoute(nav) }
+        composable(Route.Support.path) { SupportRoute(nav) }
 
         composable(Route.Todo.path) { TodoScreen(nav) }
         composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) }
 
     }
 }
+
 

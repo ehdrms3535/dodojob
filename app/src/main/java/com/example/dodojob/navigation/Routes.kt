@@ -19,7 +19,7 @@ sealed class Route(val path: String) {
     data object Main : Route("main")
     data object My : Route("my")
     data object Application : Route("application")
-
+    data object Support : Route("support")
     data object Todo : Route("todo")
     data object TodoRealtime : Route("todo_realtime")
 

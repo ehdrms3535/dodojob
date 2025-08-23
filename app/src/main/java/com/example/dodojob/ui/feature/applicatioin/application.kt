@@ -1,4 +1,4 @@
-package com.example.dodojob.ui.feature.applicatioin
+package com.example.dodojob.ui.feature.application
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
