@@ -27,7 +27,7 @@ import com.example.dodojob.ui.feature.login.PreLoginScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.Intro.path) {
+    NavHost(navController = nav, startDestination = Route.Main.path) {
         composable(Route.Intro.path) { IntroScreen(nav)}
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
