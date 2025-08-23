@@ -78,6 +78,7 @@ dependencies {
 
     /* Navigation-Compose: 버전은 그대로 두거나 toml에 alias로 옮겨도 OK */
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.foundation.layout)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
