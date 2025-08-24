@@ -13,6 +13,8 @@ sealed class Route(val path: String) {
     data object Experience : Route("experience")
     data object ExperienceComplete : Route("experience_complete")
     data object Announcement : Route("announcement")
+    data object Announcement4 : Route("announcement4")
+    data object Announcement5 : Route("announcement5")
     data object Hope : Route("hope")
     data object SignUp : Route("signup")
     data object SignUpComplete : Route("signup_complete")
