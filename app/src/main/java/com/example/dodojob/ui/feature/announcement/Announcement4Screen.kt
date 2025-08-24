@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.navigation.Route   // ✅ Route 사용
 
 /* -------- Colors -------- */
 private val Blue = Color(0xFF005FFF)
@@ -39,7 +40,11 @@ private val CardBg = Color.White
 @Composable
 fun Announcement4Route(
     nav: NavController,
-    onSubmit: () -> Unit = {},
+    onSubmit: () -> Unit = {
+        nav.navigate(Route.Announcement5.path) {    // ✅ 다음 단계 → 05로 이동
+            launchSingleTop = true
+        }
+    },
     onBack: () -> Unit = { nav.popBackStack() },
     onEditBasic: () -> Unit = {},
     onEditJob: () -> Unit = {},
@@ -203,36 +208,34 @@ fun Announcement4Screen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(CardBg)
-                    .padding(vertical = 20.dp, horizontal = 16.dp), // 🔹 양옆 패딩 줄임
+                    .padding(vertical = 20.dp, horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // 🔹 이전 버튼: 더 작게 (weight = 0.6f)
                     OutlinedButton(
                         onClick = { onBack() },
                         modifier = Modifier
-                            .weight(0.6f)   // 🔹 상대적으로 더 작음
-                            .height(44.dp), // 🔹 높이도 약간 줄임
+                            .weight(0.6f)
+                            .height(44.dp),
                         shape = RoundedCornerShape(10.dp),
                         border = BorderStroke(1.dp, Blue),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Blue),
-                        contentPadding = PaddingValues(horizontal = 8.dp) // 🔹 패딩 줄임
+                        contentPadding = PaddingValues(horizontal = 8.dp)
                     ) {
                         Text("이전", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     }
 
-                    // 🔹 다음 단계 버튼: 크게 (weight = 1.4f)
                     Button(
-                        onClick = { onSubmit() },
+                        onClick = { onSubmit() },     // ✅ Route 기본값에서 05로 navigate
                         modifier = Modifier
-                            .weight(1.4f)   // 🔹 더 넓음
+                            .weight(1.4f)
                             .height(44.dp),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Blue, contentColor = Color.White),
-                        contentPadding = PaddingValues(horizontal = 12.dp) // 🔹 기본보다 조금 좁힘
+                        contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
                         Text("다음 단계", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
@@ -378,7 +381,6 @@ private fun EditPill(onClick: () -> Unit) {
     }
 }
 
-/** Figma의 "공고등록/최종확인" 박스 스타일 */
 @Composable
 private fun ConfirmItem(
     label: String,
@@ -488,6 +490,7 @@ private fun SecondaryButton(text: String, modifier: Modifier = Modifier, onClick
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Blue)
     ) { Text(text, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
 }
+
 @Composable
 private fun LabelText(text: String) {
     Text(
@@ -501,6 +504,7 @@ private fun LabelText(text: String) {
             .padding(top = 10.dp, bottom = 6.dp)
     )
 }
+
 @Composable
 private fun BottomNavPlaceholder() {
     Box(
@@ -516,7 +520,7 @@ private fun BottomNavPlaceholder() {
 @Composable
 private fun PreviewAnnouncement4() {
     Announcement4Screen(
-        onSubmit = {},
+        onSubmit = {},   // 미리보기에서는 내비 사용 안 함
         onBack = {},
         onEditBasic = {},
         onEditJob = {},
