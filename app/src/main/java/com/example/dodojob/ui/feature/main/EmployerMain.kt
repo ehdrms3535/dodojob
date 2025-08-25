@@ -1,0 +1,547 @@
+package com.example.dodojob.ui.feature.main
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
+import com.example.dodojob.R
+import com.example.dodojob.navigation.Route
+
+
+
+/* ================= Colors ================= */
+private val ScreenBg  = Color(0xFFF1F5F7)
+private val BrandBlue = Color(0xFF005FFF)
+private val TextGray  = Color(0xFF828282)
+private val LineGray  = Color(0xFFDDDDDD)
+private val White     = Color(0xFFFFFFFF)
+
+/* ================= Fake DB ================= */
+object FakeEmployerRepo {
+
+    val employerName = "홍길동"
+    data class DashboardStats(
+        val newApplicantsToday: Int,   // 신규 지원자 수
+        val unreadResumes: Int,        // 미열람 이력서 수
+        val activeNotices: Int         // 진행 중 공고 수
+    )
+    data class Applicant(
+        val name: String,
+        val jobTitle: String,          // 지원 직종 (모두 통일 요청)
+        val experience: String,        // 경력 (tag 대체)
+        val location: String,          // 사는 곳
+        val appliedHoursAgo: Int,      // 몇 시간 전 지원
+        val medalRes: Int              // red_medal / yellow_medal / blue_medal
+    )
+
+    fun getDashboardStats(): DashboardStats =
+        DashboardStats(
+            newApplicantsToday = 7,
+            unreadResumes = 12,
+            activeNotices = 3
+        )
+
+    fun getRecentApplicants(): List<Applicant> {
+        val commonJob = "매장 매니저" // ← 셋 다 동일(자기소개 대체)
+        return listOf(
+            Applicant("홍길동", commonJob, "경력 3년", "서울", 2, R.drawable.blue_medal),
+            Applicant("김철수", commonJob, "경력 1년", "부산", 5, R.drawable.red_medal),
+            Applicant("이영희", commonJob, "신입",     "대구", 9, R.drawable.yellow_medal),
+        )
+    }
+
+
+}
+
+/* ================= Data for UI ================= */
+data class ApplicantUi(
+    val name: String,
+    val jobTitle: String,
+    val experience: String,
+    val location: String,
+    val appliedHoursAgo: Int,
+    val medalRes: Int
+)
+
+/* ================= Route Entry ================= */
+@Composable
+fun EmployerHomeRoute(nav: NavController) {
+    // fakeDB 로드
+    val stats = remember { FakeEmployerRepo.getDashboardStats() }
+    val applicantsUi = remember {
+        FakeEmployerRepo.getRecentApplicants().map {
+            ApplicantUi(
+                name = it.name,
+                jobTitle = it.jobTitle,
+                experience = it.experience,
+                location = it.location,
+                appliedHoursAgo = it.appliedHoursAgo,
+                medalRes = it.medalRes
+            )
+        }
+    }
+
+    Scaffold(
+        containerColor = ScreenBg,
+        bottomBar = {
+            EmployerBottomNavBar(
+                current = "home",
+                onClick = { key ->
+                    when (key) {
+                        "home"      -> nav.safeNavigate(Route.EmployerHome.path)
+                        "notice"    -> nav.safeNavigate(Route.EmployerNotice.path)
+                        "applicant" -> nav.safeNavigate(Route.EmployerApplicant.path)
+                        "my"        -> nav.safeNavigate(Route.EmployerMy.path)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            /* 0) 스크롤되는 헤더 */
+            item {
+                ScrollHeaderRow(
+                    barBgColor   = ScreenBg,
+                    chipBgColor  = ScreenBg,
+                    iconTintBlue = BrandBlue,
+                    onLogoClick  = { nav.safeNavigate(Route.EmployerHome.path) },
+                    onNotifyClick= { /* 알림 라우트 연결 시 교체 */ }
+                )
+            }
+
+            item {
+                val employerName = remember{ FakeEmployerRepo.employerName }
+                Text(
+                    text = "안녕하세요, ${employerName}님",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black,
+                    lineHeight = 40.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 4.dp)
+                )
+            }
+
+            /* 1) 카드 3개 — fakeDB 값으로 치환 */
+            item {
+                StatCard(
+                    leading = { SmallIconBox(iconType = SmallIconType.Plus) },
+                    title = "신규 지원자",
+                    number = stats.newApplicantsToday.toString(),
+                    subtitle = "오늘 ${stats.newApplicantsToday}명이 지원했습니다.",
+                    onClickChevron = {}
+                )
+            }
+            item {
+                StatCard(
+                    leading = { SmallIconBox(iconType = SmallIconType.Ticket) },
+                    title = "미열람 이력서",
+                    number = stats.unreadResumes.toString(),
+                    subtitle = "총 ${stats.unreadResumes}개의 이력서를 확인해보세요",
+                    onClickChevron = {}
+                )
+            }
+            item {
+                StatCard(
+                    leading = { SmallIconBox(iconType = SmallIconType.Grid) },
+                    title = "진행 중인 공고",
+                    number = stats.activeNotices.toString(),
+                    subtitle = "현재 ${stats.activeNotices}개의 공고가 진행 중입니다",
+                    onClickChevron = {}
+                )
+            }
+
+            /* 2) 공고등록 버튼 */
+            item {
+                Box(Modifier.padding(horizontal = 16.dp)) {
+                    PrimaryButton(
+                        text = "공고등록",
+                        height = 43.dp,
+                        onClick = { nav.safeNavigate(Route.EmployerNotice.path) } // 등록 화면 있으면 교체
+                    )
+                }
+            }
+
+            /* 3) 최근 지원자 리스트 카드 */
+            item {
+                Card(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = White),
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "최근 지원자",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.Black,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { nav.safeNavigate(Route.EmployerApplicant.path) }
+                            ) {
+                                Text(
+                                    "전체보기",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = BrandBlue
+                                )
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = null,
+                                    tint = BrandBlue
+                                )
+                            }
+                        }
+
+                        ApplicantList(applicants = applicantsUi)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ================= Bottom Nav ================= */
+data class EmployerNavItem(
+    val key: String,
+    val unselectedRes: Int,
+    val selectedRes: Int? = null, // 없으면 틴트 처리
+    val size: Dp = 55.dp
+)
+
+
+
+@Composable
+fun EmployerBottomNavBar(current: String, onClick: (String) -> Unit) {
+    val items = listOf(
+        // drawable/ 에 아래 리소스 필요:
+        // unselected_home, selected_home, unselected_notice, unselected_applicant, unselected_my, selected_my
+        EmployerNavItem("home",      R.drawable.unselected_home,      R.drawable.selected_home, 55.dp),
+        EmployerNavItem("notice",    R.drawable.unselected_notice,    null,                      75.dp),
+        EmployerNavItem("applicant", R.drawable.unselected_applicant, null,                      75.dp),
+        EmployerNavItem("my",        R.drawable.unselected_my,        R.drawable.selected_my,    55.dp),
+    )
+
+    NavigationBar(containerColor = Color.White) {
+        items.forEach { item ->
+            val isSelected = item.key == current
+            val iconRes = if (isSelected && item.selectedRes != null) item.selectedRes else item.unselectedRes
+
+            NavigationBarItem(
+                selected = isSelected,
+                onClick = { onClick(item.key) },
+                icon = {
+                    Image(
+                        painter = painterResource(id = iconRes!!),
+                        contentDescription = item.key,
+                        modifier = Modifier.size(item.size),
+                        colorFilter = if (isSelected && item.selectedRes == null) ColorFilter.tint(BrandBlue) else null
+                    )
+                },
+                label = null,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor   = Color.Unspecified,
+                    selectedTextColor   = Color.Unspecified,
+                    unselectedIconColor = Color.Unspecified,
+                    unselectedTextColor = Color.Unspecified,
+                    indicatorColor      = Color.Transparent
+                )
+            )
+        }
+    }
+}
+
+/* ================= Cards & List ================= */
+private enum class SmallIconType { Plus, Ticket, Grid }
+
+@Composable
+private fun SmallIconBox(iconType: SmallIconType) {
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(RoundedCornerShape(5.dp))
+            .background(Color(0xFFDEEAFF)),
+        contentAlignment = Alignment.Center
+    ) {
+        when (iconType) {
+            SmallIconType.Plus -> Box(
+                Modifier
+                    .size(16.dp)
+                    .drawBehind {
+                        val s = size
+                        val stroke = 2.dp.toPx()
+                        drawLine(BrandBlue,
+                            Offset(s.width / 2, 0f), androidx.compose.ui.geometry.Offset(s.width / 2, s.height), stroke)
+                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(0f, s.height / 2), androidx.compose.ui.geometry.Offset(s.width, s.height / 2), stroke)
+                    }
+            )
+            SmallIconType.Ticket -> Box(
+                Modifier
+                    .size(16.dp)
+                    .border(2.dp, BrandBlue, RoundedCornerShape(3.dp))
+            )
+            SmallIconType.Grid -> Box(
+                Modifier
+                    .size(16.dp)
+                    .drawBehind {
+                        val stroke = 2.dp.toPx()
+                        val w = size.width
+                        val h = size.height
+                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(w / 2, 0f), androidx.compose.ui.geometry.Offset(w / 2, h), stroke)
+                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(0f, h / 2), androidx.compose.ui.geometry.Offset(w, h / 2), stroke)
+                        drawRect(color = BrandBlue, style = Stroke(width = stroke))
+                    }
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatCard(
+    leading: @Composable () -> Unit,
+    title: String,
+    number: String,
+    subtitle: String,
+    onClickChevron: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .height(120.dp),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 15.dp, bottom = 15.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 15.dp)
+                    .height(27.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                leading()
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = TextGray,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { onClickChevron() }
+                )
+            }
+
+            Text(
+                text = number,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = BrandBlue,
+                modifier = Modifier
+                    .width(288.dp)
+                    .padding(top = 5.dp)
+            )
+            Text(
+                text = subtitle,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextGray,
+                modifier = Modifier
+                    .width(288.dp)
+                    .padding(top = 2.dp)
+            )
+        }
+    }
+}
+
+/** 공용 Primary 버튼 */
+@Composable
+fun PrimaryButton(text: String, height: Dp, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(height),
+        shape = RoundedCornerShape(10.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+    ) {
+        Text(
+            text = text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = White
+        )
+    }
+}
+
+/* ======= Applicants ======= */
+@Composable
+fun ApplicantList(applicants: List<ApplicantUi>) {
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth()
+    ) {
+        applicants.forEachIndexed { idx, ap ->
+            if (idx == 0) HorizontalLine()
+            ApplicantRow(ap)
+            HorizontalLine()
+        }
+    }
+}
+
+@Composable
+private fun ApplicantRow(ap: ApplicantUi) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 아바타(연한 파랑 원) 안에 메달
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFDEEAFF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = ap.medalRes),
+                    contentDescription = "medal",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = Modifier.widthIn(max = 220.dp)
+            ) {
+                // 이름 옆 메달
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        ap.name,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Image(
+                        painter = painterResource(id = ap.medalRes),
+                        contentDescription = "medal_inline",
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+
+                // 지원 직종 (공통)
+                Text(ap.jobTitle, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextGray, maxLines = 1)
+
+                // 경력 · 지역 · n시간 전
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(ap.experience, fontSize = 12.sp, color = BrandBlue)
+                    Spacer(Modifier.width(8.dp))
+                    Text("· ${ap.location}", fontSize = 12.sp, color = TextGray)
+                    Spacer(Modifier.width(8.dp))
+                    Text("· ${ap.appliedHoursAgo}시간 전", fontSize = 12.sp, color = TextGray)
+                }
+            }
+        }
+
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = BrandBlue,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun HorizontalLine() {
+    Spacer(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(0.dp)
+            .border(1.dp, LineGray, RoundedCornerShape(0.dp))
+    )
+}
+
+/* ================= Nav Helper ================= */
+private fun NavController.safeNavigate(
+    route: String,
+    builder: (NavOptionsBuilder.() -> Unit)? = {
+        launchSingleTop = true
+        restoreState = true
+    }
+) {
+    navigate(route) {
+        builder?.invoke(this)
+    }
+}
+
+/* ============ 리소스 체크 ============
+drawable/
+- logo1.png, bell.png
+- red_medal.png, yellow_medal.png, blue_medal.png
+- unselected_home.png, selected_home.png
+- unselected_notice.png, unselected_applicant.png
+- unselected_my.png, selected_my.png
+*/
