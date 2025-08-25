@@ -11,11 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.R // check_17038263.png 넣은 리소스 import
 
@@ -58,7 +56,7 @@ fun ExperienceCompleteScreen(nav: NavController) {
         ) {
             // ✅ 체크 이미지
             Image(
-                painter = painterResource(id = R.drawable.signup_complete_image), // drawable/check_17038263.png 추가
+                painter = painterResource(id = R.drawable.complete_image), // drawable/check_17038263.png 추가
                 contentDescription = "완성 체크",
                 modifier = Modifier.size(96.dp)
             )
