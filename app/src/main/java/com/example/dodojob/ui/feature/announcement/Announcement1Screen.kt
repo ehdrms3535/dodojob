@@ -40,23 +40,43 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.navigation.Route
 import kotlin.math.min
-
 // Size 확장: 짧은 변 길이
 private val androidx.compose.ui.geometry.Size.minSide: Float
     get() = min(width, height)
 
-/** ✅ NavGraph에서 호출하는 엔트리 */
+
+
+// 2) Route에서 nav 전달 + 클릭 핸들러에 navigate 연결
 @Composable
-fun Announcement1Route(nav: NavController /*, 콜백 필요시 추가 */) {
+fun Announcement1Route(
+    nav: NavController,
+    onNext: () -> Unit = {
+        // 하단 "다음단계" → 02로 이동
+        nav.navigate(Route.Announcement2.path) { launchSingleTop = true }
+    },
+    onBack: () -> Unit = { nav.popBackStack() },
+    onTabClick: (Int) -> Unit = { idx ->
+        val target = when (idx) {
+            0 -> Route.Announcement.path
+            1 -> Route.Announcement2.path
+            2 -> Route.Announcement3.path
+            else -> Route.Announcement4.path
+        }
+        val current = nav.currentBackStackEntry?.destination?.route
+        if (current != target) {
+            nav.navigate(target) { launchSingleTop = true }
+        }
+    }
+) {
     Announcement1Screen(
-        onSubmit = { /* TODO */ },
+        onSubmit = onNext,              // 버튼 콜백 연결
         onUploadPhoto = { /* TODO */ },
-        onTabClick = { /* TODO */ }
+        onTabClick = onTabClick
     )
 }
 
-/** 🔒 실제 UI (NavController 의존 X) */
 @Composable
 fun Announcement1Screen(
     onSubmit: () -> Unit,
@@ -66,150 +86,210 @@ fun Announcement1Screen(
     val scroll = rememberScrollState()
 
     var companyName by remember { mutableStateOf("") }
+    var bizNo by remember { mutableStateOf("") }          // 사업자번호
     var contactName by remember { mutableStateOf("") }
     var contactPhone by remember { mutableStateOf("") }
     var contactEmail by remember { mutableStateOf("") }
     var saveContact by remember { mutableStateOf(false) }
-    var placeName by remember { mutableStateOf("") }
-    var placeAddress by remember { mutableStateOf("") }
 
-    // 시스템바 인셋을 정확히 적용
-    Scaffold(
-        contentWindowInsets = WindowInsets.systemBars
-    ) { inner ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF1F5F7))
-                .padding(inner)
-        ) {
-            Column(Modifier.fillMaxSize()) {
+    var placeAddressSearch by remember { mutableStateOf("") }
+    var placeAddressDetail by remember { mutableStateOf("") }
 
-                // Header
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White)
-                        .height(76.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "공고등록",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black,
-                        letterSpacing = (-0.46).sp
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF1F5F7))
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            // Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .height(76.dp)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = "공고등록",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black,
+                    letterSpacing = (-0.46).sp
+                )
+            }
+
+            // Tabs 01~04
+            TabBar(
+                selected = 0,
+                labels = listOf("01", "02", "03", "04"),
+                onClick = onTabClick
+            )
+
+            // Content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(scroll)
+            ) {
+                // 01. 기본정보
+                SectionCard {
+                    TitleRow(text = "01. 기본정보를 입력해주세요!")
+                    Spacer(Modifier.height(6.dp))
+
+                    // 근무회사명 (언더라인 인풋)
+                    LabelText(text = "근무회사명")
+                    UnderlineField(
+                        value = companyName,
+                        onValueChange = { companyName = it },
+                        placeholder = "내용입력"
                     )
                 }
 
-                // Tabs 01~04
-                TabBar(
-                    selected = 0,
-                    labels = listOf("01", "02", "03", "04"),
-                    onClick = onTabClick
-                )
+                // 사업자 등록번호 + 인증하기
+                SectionCard(padding = 20.dp) {
+                    LabelText(text = "사업자 등록번호")
+                    OutlinedInput(
+                        value = bizNo,
+                        onValueChange = { bizNo = it },
+                        placeholder = "000-00-00000"
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    PrimaryButton(
+                        text = "인증하기",
+                        onClick = { /* TODO: 사업자번호 인증 로직 */ }
+                    )
+                }
 
-                // Content
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(scroll)
-                ) {
-                    SectionCard {
-                        TitleRow(text = "공고등록/설명")
-                        Spacer(Modifier.height(4.dp))
-                        LabelText(text = "근무회사명")
-                        UnderlineField(
-                            value = companyName,
-                            onValueChange = { companyName = it },
-                            placeholder = "내용입력"
+                // 담당자 정보
+                SectionCard(padding = 20.dp) {
+                    LabelText(text = "담당자명")
+                    OutlinedInput(
+                        value = contactName,
+                        onValueChange = { contactName = it },
+                        placeholder = "담당자 성함"
+                    )
+                    Spacer(Modifier.height(13.dp))
+
+                    LabelText(text = "담당자 연락처")
+                    OutlinedInput(
+                        value = contactPhone,
+                        onValueChange = { contactPhone = it },
+                        placeholder = "010-0000-0000"
+                    )
+                    Spacer(Modifier.height(13.dp))
+
+                    LabelText(text = "담당자 이메일")
+                    OutlinedInput(
+                        value = contactEmail,
+                        onValueChange = { contactEmail = it },
+                        placeholder = "이메일을 입력해주세요"
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = saveContact, onCheckedChange = { saveContact = it })
+                        Text(
+                            text = "입력한 담당자 정보 저장",
+                            fontSize = 15.sp,
+                            color = Color(0xFF828282),
+                            letterSpacing = (-0.29).sp
                         )
                     }
+                }
 
-                    SectionCard(padding = 20.dp) {
-                        LabelText(text = "담당자명")
-                        OutlinedInput(value = contactName, onValueChange = { contactName = it }, placeholder = "입력")
-                        Spacer(Modifier.height(13.dp))
-
-                        LabelText(text = "담당자 연락처")
-                        OutlinedInput(value = contactPhone, onValueChange = { contactPhone = it }, placeholder = "입력")
-                        Spacer(Modifier.height(13.dp))
-
-                        LabelText(text = "담당자 이메일")
-                        OutlinedInput(value = contactEmail, onValueChange = { contactEmail = it }, placeholder = "입력")
-
-                        Spacer(Modifier.height(10.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
+                // 주소 블록 (요청 레이아웃)
+                SectionCard(padding = 20.dp) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = 328.dp),
+                            horizontalAlignment = Alignment.Start
                         ) {
-                            Checkbox(checked = saveContact, onCheckedChange = { saveContact = it })
-                            Text(
-                                text = "입력한 담당자 정보 저장",
-                                fontSize = 15.sp,
-                                color = Color(0xFF828282),
-                                letterSpacing = (-0.29).sp
+                            LabelText(text = "회사주소")
+                            OutlinedInput(
+                                value = placeAddressSearch,
+                                onValueChange = { placeAddressSearch = it },
+                                placeholder = "주소를 검색해주세요"
+                            )
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = 328.dp)
+                        ) {
+                            PrimaryButton(text = "주소찾기", onClick = { /* TODO */ })
+                        }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = 328.dp)
+                        ) {
+                            LabelText(text = "상세주소")
+                            OutlinedInput(
+                                value = placeAddressDetail,
+                                onValueChange = { placeAddressDetail = it },
+                                placeholder = "상세주소를 입력해주세요"
                             )
                         }
                     }
-
-                    SectionCard {
-                        TitleRow(text = "공고등록")
-                        Spacer(Modifier.height(10.dp))
-
-                        LabelText(text = "사업장명")
-                        OutlinedInput(value = placeName, onValueChange = { placeName = it }, placeholder = "입력")
-                    }
-
-                    SectionCard {
-                        LabelText(text = "사업장 주소")
-                        OutlinedInput(value = placeAddress, onValueChange = { placeAddress = it }, placeholder = "입력")
-                    }
-
-                    SectionCard {
-                        Text(
-                            text = "근무지 사진",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.Black,
-                            letterSpacing = (-0.34).sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                        )
-                        Spacer(Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            repeat(4) {
-                                DashedAddBox(size = 74.5.dp, onClick = onUploadPhoto)
-                            }
-                        }
-                        Spacer(Modifier.height(10.dp))
-                    }
-
-                    SectionCard {
-                        PrimaryButton(text = "공고등록", onClick = onSubmit)
-                    }
-
-                    Spacer(Modifier.height(8.dp))
                 }
 
-                BottomNavPlaceholder()
+                // 근무지 사진 업로드
+                SectionCard {
+                    Text(
+                        text = "근무지 사진",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black,
+                        letterSpacing = (-0.34).sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    )
+                    Spacer(Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(4) {
+                            DashedAddBox(size = 74.5.dp, onClick = onUploadPhoto)
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                // 다음단계 버튼
+                SectionCard {
+                    PrimaryButton(text = "다음단계", onClick = onSubmit)
+                }
+
+                Spacer(Modifier.height(8.dp))
             }
 
-            // ✅ 새 APK 여부(설치 시간) 우상단 오버레이
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-            ) { DebugBuildTag() }
+            BottomNavPlaceholder()
         }
     }
 }
@@ -221,12 +301,11 @@ private fun TabBar(
     onClick: (Int) -> Unit
 ) {
     val density = LocalDensity.current
-    // Compose가 추적하는 상태 리스트(센터 x 좌표 px)
     val centersPx = remember(labels.size) {
         mutableStateListOf<Float>().apply { repeat(labels.size) { add(0f) } }
     }
     val indicatorWidth = 41.dp
-    val rowPaddingStart = 24.dp // Row의 좌측 패딩과 동일해야 함
+    val rowPaddingStart = 24.dp
 
     Box(
         modifier = Modifier
@@ -263,13 +342,9 @@ private fun TabBar(
             }
         }
 
-        // 선택된 탭의 센터가 계산되기 전이면(=0) 인디케이터를 잠시 숨김
         val centerPx = centersPx.getOrNull(selected) ?: 0f
         if (centerPx > 0f) {
-            val startInRow = with(density) {
-                (centerPx - indicatorWidth.toPx() / 2f).toDp()
-            }
-            // Row의 좌측 패딩을 Box 좌표계로 보정
+            val startInRow = with(density) { (centerPx - indicatorWidth.toPx() / 2f).toDp() }
             val targetX = rowPaddingStart + startInRow
             val animatedX by animateDpAsState(targetValue = targetX, label = "tab-indicator")
 

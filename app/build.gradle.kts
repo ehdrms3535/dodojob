@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.parcelize)
 }
 
 android {
@@ -105,6 +106,12 @@ dependencies {
     implementation(libs.ktor.serialization.json)
     implementation(libs.kotlinx.serialization.json)
 
+    implementation(libs.lifecycle.viewmodel.compose)   // ← 필수
+    implementation(libs.lifecycle.runtime.compose)    // (선택) collectAsStateWithLifecycle
+    implementation(libs.lifecycle.viewmodel.ktx)
+    implementation(libs.lifecycle.runtime.ktx)
+
+    implementation(libs.kotlinx.coroutines.android)
 }
 
 /*configurations.configureEach {

@@ -33,7 +33,7 @@ import com.example.dodojob.ui.feature.support.SupportRoute
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.EmployerHome.path) {
+    NavHost(navController = nav, startDestination = Route.Intro.path) {
         composable(Route.Intro.path) { IntroScreen(nav)}
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
