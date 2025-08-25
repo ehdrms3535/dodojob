@@ -297,7 +297,7 @@ fun MainScreen(
 
 /* ---------- 스크롤되는 헤더(로고/알림) ---------- */
 @Composable
-private fun ScrollHeaderRow(
+fun ScrollHeaderRow(
     barBgColor: Color,
     chipBgColor: Color,
     iconTintBlue: Color,
@@ -451,7 +451,7 @@ private fun InterviewCalendarButton(onClick: () -> Unit) {
 }
 
 /* ---------- 하단 네비 ---------- */
-private data class NavItem(
+data class NavItem(
     val key: String,
     val unselectedRes: Int,
     val selectedRes: Int? = null // 없으면 틴트 처리

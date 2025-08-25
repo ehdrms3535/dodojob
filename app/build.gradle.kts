@@ -80,6 +80,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.foundation.layout)
     implementation(libs.foundation)
+    implementation(libs.transportation.consumer)
+    implementation(libs.androidx.ui.text)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
