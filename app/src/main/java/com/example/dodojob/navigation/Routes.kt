@@ -7,12 +7,15 @@ sealed class Route(val path: String) {
     data object PreLogin : Route("prelogin")
 
     data object Verify : Route("verify")
+
     data object JobType : Route("job_type")
     data object Prefer : Route("prefer")
     data object PreferMap : Route("prefer_map")
     data object Experience : Route("experience")
     data object ExperienceComplete : Route("experience_complete")
     data object Announcement : Route("announcement")
+    data object Announcement2 : Route("announcement2")
+    data object Announcement3 : Route("announcement3")
     data object Announcement4 : Route("announcement4")
     data object Announcement5 : Route("announcement5")
     data object Hope : Route("hope")

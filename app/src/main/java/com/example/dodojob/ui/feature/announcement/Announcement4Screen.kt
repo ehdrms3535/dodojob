@@ -51,7 +51,22 @@ fun Announcement4Route(
     onEditWorkCond: () -> Unit = {},
     onEditPayBenefit: () -> Unit = {},
     onEditRequirements: () -> Unit = {},
-    onTabClick: (Int) -> Unit = {}
+    onTabClick: (Int) -> Unit = {idx ->
+        val target = when (idx) {
+            0 -> Route.Announcement.path
+            1 -> Route.Announcement2.path
+            2 -> Route.Announcement3.path
+            else -> Route.Announcement4.path
+        }
+
+        // 같은 화면이면 무시(선택 사항)
+        val current = nav.currentBackStackEntry?.destination?.route
+        if (current != target) {
+            nav.navigate(target) {
+                launchSingleTop = true
+            }
+        }
+    }
 ) {
     Announcement4Screen(
         onSubmit = onSubmit,
