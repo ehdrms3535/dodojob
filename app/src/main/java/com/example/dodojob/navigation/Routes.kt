@@ -1,5 +1,7 @@
 package com.example.dodojob.navigation
 
+
+
 sealed class Route(val path: String) {
     data object Intro : Route("intro")
     data object Onboarding : Route("onboarding")
@@ -27,6 +29,10 @@ sealed class Route(val path: String) {
     data object Support : Route("support")
     data object Todo : Route("todo")
     data object TodoRealtime : Route("todo_realtime")
+    data object EmployerHome : Route("employer_home")
+    data object EmployerNotice : Route("employer_notice")
+    data object EmployerApplicant : Route("employer_applicant")
+    data object EmployerMy : Route("employer_my")
 
 
 }

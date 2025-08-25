@@ -15,13 +15,9 @@ import com.example.dodojob.ui.feature.prefer.PreferWorkScreen
 import com.example.dodojob.ui.feature.prefer.PreferWorkMapScreen
 import com.example.dodojob.ui.feature.signup.SignUpCompleteScreen
 import com.example.dodojob.ui.feature.verify.VerifyScreen
-
 import com.example.dodojob.ui.feature.announcement.Announcement1Route
-import com.example.dodojob.ui.feature.announcement.Announcement2Route
-import com.example.dodojob.ui.feature.announcement.Announcement3Route
 import com.example.dodojob.ui.feature.announcement.Announcement4Route
 import com.example.dodojob.ui.feature.announcement.Announcement5Route
-
 import com.example.dodojob.ui.feature.application.ApplicationRoute
 import com.example.dodojob.ui.feature.experience.ExperienceCompleteScreen
 import com.example.dodojob.ui.feature.main.MainRoute
@@ -31,11 +27,13 @@ import com.example.dodojob.ui.feature.application.ApplyRoute
 import com.example.dodojob.ui.todo.TodoScreen
 import com.example.dodojob.ui.todo.RealtimeTodoScreen
 import com.example.dodojob.ui.feature.login.PreLoginScreen
+import com.example.dodojob.ui.feature.main.EmployerHomeRoute
 import com.example.dodojob.ui.feature.support.SupportRoute
+
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.Intro.path) {
+    NavHost(navController = nav, startDestination = Route.EmployerHome.path) {
         composable(Route.Intro.path) { IntroScreen(nav)}
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
@@ -48,8 +46,6 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.Experience.path) { ExperienceScreen(nav) }
         composable(Route.ExperienceComplete.path) { ExperienceCompleteScreen(nav) }
         composable(Route.Announcement.path) { Announcement1Route(nav) }
-        composable(Route.Announcement2.path) { Announcement2Route(nav) }
-        composable(Route.Announcement3.path) { Announcement3Route(nav) }
         composable(Route.Announcement4.path) { Announcement4Route(nav) }
         composable(Route.Announcement5.path) { Announcement5Route(nav) }
 
@@ -64,6 +60,7 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.Todo.path) { TodoScreen(nav) }
         composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) }
 
+        composable(Route.EmployerHome.path) {EmployerHomeRoute(nav)}
     }
 }
 
