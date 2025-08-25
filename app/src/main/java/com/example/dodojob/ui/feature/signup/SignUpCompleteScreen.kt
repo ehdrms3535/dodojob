@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -58,7 +57,7 @@ fun SignUpCompleteScreen(nav: NavController) {
             verticalArrangement = Arrangement.Top
         ) {
             Image(
-                painter = painterResource(id = R.drawable.signup_complete_image),
+                painter = painterResource(id = R.drawable.complete_image),
                 contentDescription = "가입 완료",
                 modifier = Modifier.size(69.dp)
             )
