@@ -93,7 +93,7 @@ fun SignUpCompleteScreen(nav: NavController) {
                     indication = null, // 물결 효과 제거 (원하면 빼세요)
                     interactionSource = remember { MutableInteractionSource() }
                 ) {
-                    nav.navigate(Route.Login.path)
+                    nav.navigate(Route.JobType.path)
                     // 필요 시, 현재 화면을 백스택에서 제거하고 싶다면:
                     // nav.navigate(Route.Main.path) {
                     //     popUpTo(Route.SignUpComplete.path) { inclusive = true }

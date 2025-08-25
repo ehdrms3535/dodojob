@@ -21,6 +21,8 @@ foundationLayout = "1.9.0"
 foundation = "1.9.0"
 transportationConsumer = "3.2.0"
 uiText = "1.9.0"
+lifecycle = "2.9.0" # ← 사용 중인 버전으로 맞추기
+coroutines = "1.8.1" # ← 위에서 확인한 resolved 버전으로
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -70,9 +72,16 @@ foundation = { group = "androidx.compose.foundation", name = "foundation", versi
 transportation-consumer = { group = "com.google.android.libraries.mapsplatform.transportation", name = "transportation-consumer", version.ref = "transportationConsumer" }
 androidx-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 
+lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+lifecycle-runtime-compose  = { module = "androidx.lifecycle:lifecycle-runtime-compose",  version.ref = "lifecycle" }
+lifecycle-viewmodel-ktx    = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx",    version.ref = "lifecycle" }
+lifecycle-runtime-ktx      = { module = "androidx.lifecycle:lifecycle-runtime-ktx",      version.ref = "lifecycle" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 

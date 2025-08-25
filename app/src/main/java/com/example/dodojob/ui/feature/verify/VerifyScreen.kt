@@ -51,6 +51,20 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.dodojob.navigation.Route
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
+data class SignUpPrefill(
+    val name : String,
+    val gender : String,
+    val rrnFront : String,
+    val rrnBackFirst : String,
+    val region : String,
+    val phone: String,
+    val verifiedAt: Long
+) : Parcelable
+
 
 @Composable
 fun VerifyScreen(
@@ -88,7 +102,7 @@ fun VerifyScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "〈", // "<"로 바꿔도 됨
+                        text = "<", // "<"로 바꿔도 됨
                         fontSize = 28.sp,
                         color = Color.Black,
                         modifier = Modifier.clickable { onBackClick() }
@@ -116,8 +130,30 @@ fun VerifyScreen(
             ) {
                 Button(
                     onClick = {
+                        val ok = name.text.isNotBlank()
+                                && (gender == "남" || gender == "여")
+                                && rrnFront.length == 6
+                                && rrnBackFirst.length == 1
+                                && phone.length in 10..11
+
+                        if (!ok) {
+                            // TODO: 스낵바/토스트로 안내
+                            return@Button
+                        }
+
+                        val prefill = SignUpPrefill(
+                            name = name.text.trim(),
+                            gender = gender,
+                            rrnFront = rrnFront,
+                            rrnBackFirst = rrnBackFirst,
+                            region = region.text.trim(),
+                            phone = phone,
+                            verifiedAt = System.currentTimeMillis()
+                        )
+                        nav.currentBackStackEntry?.savedStateHandle?.set("prefill", prefill)
+
                         nav.navigate(Route.SignUp.path) {
-                            popUpTo(Route.Verify.path) { inclusive = true }
+                            //popUpTo(Route.Verify.path) { inclusive = true }
                             launchSingleTop = true
                         }
                     },
