@@ -227,7 +227,7 @@ fun LoginScreen(nav: NavController) {
             Spacer(Modifier.height(betweenBtns))
             OutlinedButton(
                 onClick = {
-                    nav.navigate(Route.SignUp.path) { launchSingleTop = true }
+                    nav.navigate(Route.Verify.path) { launchSingleTop = true }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
