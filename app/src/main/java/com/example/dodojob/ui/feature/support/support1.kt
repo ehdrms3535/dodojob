@@ -1,6 +1,5 @@
 package com.example.dodojob.ui.feature.support
 
-import android.graphics.Color.BLACK
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,8 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.ui.feature.support.MapCardData
 import java.time.LocalDate
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /* ===================== 색상 ===================== */
@@ -45,28 +46,23 @@ enum class ReadState { Read, Unread }
 enum class ResultState { Pass, Fail }
 
 /* ===================== 데이터 모델 ===================== */
-// 지원완료 탭 (열람유무 포함)
 data class AppliedItem(
     val id: String,
-    val readState: ReadState,  // 열람/미열람
-    val appliedAt: String,     // e.g., 2025.08.25
+    val readState: ReadState,
+    val appliedAt: String,
     val company: String,
     val title: String,
 )
-
-// 면접예정 탭
 data class InterviewItem(
     val id: String,
-    val date: LocalDate,    // 면접 날짜
+    val date: LocalDate,
     val company: String,
     val title: String,
     val address: String
 )
-
-// 합격유무 탭 (지원날짜 포함)
 data class ResultItem(
     val id: String,
-    val appliedAt: String,     // 지원날짜
+    val appliedAt: String,
     val company: String,
     val title: String,
     val result: ResultState
@@ -80,17 +76,15 @@ private object SupportFakeDb {
         AppliedItem("a3", ReadState.Unread, "2025.08.14", "수성구 체육센터", "회원 운동 지도 보조, 센터 관리 가능하신 분 지원 요망"),
         AppliedItem("a4", ReadState.Read,   "2025.08.10", "대구도시철도공사", "지하철 역사 안전 순찰, 이용객 안내, 분실물 관리"),
     )
-
     fun interviews(): List<InterviewItem> {
-        val ws = weekStart(LocalDate.now()) // 이번 주 일요일
+        val ws = weekStart(LocalDate.now())
         return listOf(
-            InterviewItem("i1", ws.plusDays(1), "모던하우스",      "고객관리/매장운영 보조", "대구 수성구 용학로 118 1,2층(두산동) 모던하우스"),
-            InterviewItem("i2", ws.plusDays(3), "수성구 체육센터", "회원운동 지도 보조",     "대구 수성구 체육센터로 12"),
-            InterviewItem("i3", ws.plusDays(3), "대구도시철도공사","역사 안전/안내",         "대구 도시철도 2호선 ○○역"),
-            InterviewItem("i4", ws.plusDays(5), "대구동구 어린이도서관", "독서 프로그램 도우미", "대구 동구 ○○로 123"),
+            InterviewItem("i1", ws.plusDays(1), "모던하우스",           "고객관리/매장운영 보조", "대구 수성구 용학로 118 1,2층(두산동) 모던하우스"),
+            InterviewItem("i2", ws.plusDays(3), "수성구 체육센터",      "회원운동 지도 보조",      "대구 수성구 체육센터로 12"),
+            InterviewItem("i3", ws.plusDays(3), "대구도시철도공사",     "역사 안전/안내",          "대구 도시철도 2호선 ○○역"),
+            InterviewItem("i4", ws.plusDays(5), "대구동구 어린이도서관", "독서 프로그램 도우미",     "대구 동구 ○○로 123"),
         )
     }
-
     fun results(): List<ResultItem> = listOf(
         ResultItem("r1", "2025.08.22", "모던하우스",        "매장운영 및 고객관리", ResultState.Pass),
         ResultItem("r2", "2025.08.18", "수성구 체육센터",  "회원 운동 지도 보조",   ResultState.Fail),
@@ -120,7 +114,7 @@ fun SupportRoute(nav: NavController) {
             onKeywordChange = { keyword = it }
         )
 
-        // 간단 필터
+        // 필터
         val appliedFiltered = remember(keyword, appliedAll) {
             if (keyword.isBlank()) appliedAll
             else appliedAll.filter { it.company.contains(keyword, true) || it.title.contains(keyword, true) }
@@ -134,10 +128,15 @@ fun SupportRoute(nav: NavController) {
             else resultAll.filter { it.company.contains(keyword, true) || it.title.contains(keyword, true) }
         }
 
+        // ★ map으로 보낼 때 MapCardData를 함께 저장
         SupportBodySection(
-            appliedItems = appliedFiltered,
+            appliedItems   = appliedFiltered,
             interviewItems = interviewFiltered,
-            resultItems = resultFiltered
+            resultItems    = resultFiltered,
+            onShowMap      = { card ->
+                nav.currentBackStackEntry?.savedStateHandle?.set("mapCard", card)
+                nav.navigate("map")
+            }
         )
     }
 }
@@ -157,14 +156,12 @@ private fun SupportTopSection(
             .background(Color.White)
             .padding(bottom = 20.dp)
     ) {
-        // 상태바 대체
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(24.dp)
                 .background(Color(0xFFEFEFEF))
         )
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -181,7 +178,6 @@ private fun SupportTopSection(
                     Icon(Icons.Outlined.ArrowBackIosNew, contentDescription = "뒤로", tint = Color.Black)
                 }
             }
-
             Row(
                 modifier = Modifier
                     .height(68.dp)
@@ -242,16 +238,16 @@ private fun SupportTopSection(
 private fun SupportBodySection(
     appliedItems: List<AppliedItem>,
     interviewItems: List<InterviewItem>,
-    resultItems: List<ResultItem>
+    resultItems: List<ResultItem>,
+    onShowMap: (MapCardData) -> Unit // ★ MapCardData를 넘김
 ) {
-    var selectedTab by remember { mutableStateOf(0) } // 0: 지원완료, 1: 면접예정, 2: 합격유무
+    var selectedTab by remember { mutableStateOf(0) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Bg)   // ✅ 세 탭 공통: 회색 배경
+            .background(Bg)
     ) {
-        // 탭바
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -272,9 +268,9 @@ private fun SupportBodySection(
         }
 
         when (selectedTab) {
-            0 -> AppliedTab(appliedItems)
-            1 -> InterviewWeeklyTab(interviewItems) // ✅ 내부는 흰 컨테이너 + 카드, 전체는 회색
-            2 -> ResultTab(resultItems)             // ✅ 카드 UI 적용
+            0 -> AppliedTab(appliedItems, onShowMap)
+            1 -> InterviewWeeklyTab(interviewItems, onShowMap)
+            2 -> ResultTab(resultItems, onShowMap)
         }
     }
 }
@@ -292,53 +288,48 @@ private fun TabLabel(text: String, isSelected: Boolean, onClick: () -> Unit) {
             text = text,
             fontSize = 16.sp,
             lineHeight = 20.sp,
-            letterSpacing = (-0.5).sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = if (isSelected) PrimaryBlue else Color(0xFF000000)
         )
         Spacer(Modifier.height(6.dp))
-        if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .width(60.dp)
-                    .height(4.dp)
-                    .background(PrimaryBlue)
-            )
-        } else {
-            Spacer(Modifier.height(4.dp))
-        }
+        Box(
+            modifier = Modifier
+                .width(60.dp)
+                .height(4.dp)
+                .background(if (isSelected) PrimaryBlue else Color.Transparent)
+        )
     }
 }
 
-/* ===================== 지원완료 탭: 열람유무 표시 ===================== */
+/* ===================== 지원완료 탭 ===================== */
 @Composable
-private fun AppliedTab(items: List<AppliedItem>) {
+private fun AppliedTab(items: List<AppliedItem>, onShowMap: (MapCardData) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(items, key = { it.id }) { item ->
-            AppliedCard(item)
+            AppliedCard(item) { onShowMap(item.toMapCardData()) }
         }
     }
 }
 
 @Composable
-private fun AppliedCard(item: AppliedItem) {
+private fun AppliedCard(item: AppliedItem, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
             .heightIn(min = 120.dp)
-            .padding(horizontal = 16.dp, vertical = 20.dp),
+            .padding(horizontal = 16.dp, vertical = 20.dp)
+            .clickable { onClick() }, // ← 카드 클릭 시 지도 이동
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 열람/미열람
             Text(
                 text = if (item.readState == ReadState.Read) "열람" else "미열람",
                 fontSize = 14.sp,
@@ -354,7 +345,7 @@ private fun AppliedCard(item: AppliedItem) {
             }
         }
 
-        Text(text = item.company, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
+        Text(item.company, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
         Text(
             text = item.title,
             fontSize = 18.sp,
@@ -366,17 +357,20 @@ private fun AppliedCard(item: AppliedItem) {
     }
 }
 
-/* ===================== 면접예정 탭: 주간 달력(선택일만 리스트) ===================== */
-
+/* ===================== 면접예정 탭 ===================== */
 private val CAL_VERTICAL_GAP = 12.dp
 private val CAL_HORIZ_GAP = 16.dp
 private val CAL_SELECTED_SIZE = 40.dp
-@Composable
-private fun InterviewWeeklyTab(items: List<InterviewItem>) {
-    var anchorDate by remember { mutableStateOf(LocalDate.now()) } // 주 기준
-    var selectedDate by remember { mutableStateOf(weekStart(anchorDate).plusDays(1)) } // 기본 월요일 등
 
-    val weekStart = remember(anchorDate) { weekStart(anchorDate) } // 일요일
+@Composable
+private fun InterviewWeeklyTab(
+    items: List<InterviewItem>,
+    onShowMap: (MapCardData) -> Unit
+) {
+    var anchorDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedDate by remember { mutableStateOf(weekStart(anchorDate).plusDays(1)) }
+
+    val weekStart = remember(anchorDate) { weekStart(anchorDate) }
     val weekDates = remember(weekStart) { (0..6).map { weekStart.plusDays(it.toLong()) } }
 
     val itemsForSelectedDay = remember(selectedDate, items) {
@@ -386,15 +380,14 @@ private fun InterviewWeeklyTab(items: List<InterviewItem>) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Bg) // ✅ 전체 회색 (지원완료와 동일)
+            .background(Bg)
     ) {
-        // 상단: 흰색 컨테이너로 헤더+요일줄
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
                 .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(CAL_VERTICAL_GAP)
+            verticalArrangement = Arrangement.spacedBy(CAL_VERTICAL_GAP)
         ) {
             WeeklyHeader(
                 weekStart = weekStart,
@@ -408,7 +401,6 @@ private fun InterviewWeeklyTab(items: List<InterviewItem>) {
                 }
             )
 
-            // 요일/날짜 줄 (선택 날짜는 파란 "정사각형" 라운드 사각형)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -424,7 +416,7 @@ private fun InterviewWeeklyTab(items: List<InterviewItem>) {
                         Spacer(Modifier.height(CAL_VERTICAL_GAP))
                         Box(
                             modifier = Modifier
-                                .size(CAL_SELECTED_SIZE) // ✅ 정사각형
+                                .size(CAL_SELECTED_SIZE)
                                 .background(
                                     if (isSel) PrimaryBlue else Color.Transparent,
                                     shape = RoundedCornerShape(6.dp)
@@ -444,14 +436,13 @@ private fun InterviewWeeklyTab(items: List<InterviewItem>) {
             }
         }
 
-        // 선택된 날짜의 면접만 카드로
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(itemsForSelectedDay, key = { it.id }) { item ->
-                InterviewCard(item)
+                InterviewCard(item) { onShowMap(item.toMapCardData()) }
             }
         }
     }
@@ -464,7 +455,7 @@ private fun WeeklyHeader(
     onNextWeek: () -> Unit
 ) {
     val locale = Locale.KOREAN
-    val monthName = weekStart.month.getDisplayName(TextStyle.FULL, locale) // 예: "9월"
+    val monthName = weekStart.month.getDisplayName(TextStyle.FULL, locale)
     val label = "$monthName"
 
     Row(
@@ -485,24 +476,22 @@ private fun WeeklyHeader(
                 .padding(start = 12.dp)
                 .clickable { onNextWeek() })
     }
-
 }
 
-/* 면접 카드: 면접 날짜 + 주소 + 지도 자리 + 버튼 */
 @Composable
-private fun InterviewCard(item: InterviewItem) {
+private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .padding(horizontal = 16.dp, vertical = 20.dp),
+            .padding(horizontal = 16.dp, vertical = 20.dp)
+            .clickable { onClick() }, // ← 카드 클릭 시 지도 이동
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 면접 날짜
             Text(
                 text = "${item.date}",
                 fontSize = 14.sp,
@@ -515,7 +504,7 @@ private fun InterviewCard(item: InterviewItem) {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.019).em,
-                color = Color(BLACK)
+                color = Color.Black
             )
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { /* TODO */ }, modifier = Modifier.size(28.dp)) {
@@ -523,7 +512,7 @@ private fun InterviewCard(item: InterviewItem) {
             }
         }
 
-        Text(text = item.company, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
+        Text(item.company, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
         Text(
             text = item.title,
             fontSize = 18.sp,
@@ -533,26 +522,16 @@ private fun InterviewCard(item: InterviewItem) {
             overflow = TextOverflow.Ellipsis
         )
 
-        // 주소
-        Text(
-            text = item.address,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF1A1A1A)
-        )
+        Text(item.address, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
 
-        // 지도 API 영역 (플레이스홀더)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(160.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(Color(0xFFEDEFF3))
-        ) {
-            // TODO: 지도 API(WebView/지도 컴포넌트) 삽입 예정
-        }
+        )
 
-        // 버튼 예시
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(7.dp)
@@ -561,40 +540,35 @@ private fun InterviewCard(item: InterviewItem) {
                 modifier = Modifier
                     .weight(1f)
                     .height(44.dp)
-                    .background(Color.White, RoundedCornerShape(10.dp))
-                    .border(1.dp, PrimaryBlue, RoundedCornerShape(10.dp)),
+                    .background(PrimaryBlue, RoundedCornerShape(10.dp))
+                    .border(1.dp, PrimaryBlue, RoundedCornerShape(10.dp))
+                    .clickable { onClick() }, // ← 지도 보기
                 contentAlignment = Alignment.Center
-            ) { Text("지도", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
-
-            Box(
-                modifier = Modifier
-                    .weight(2f)
-                    .height(44.dp)
-                    .background(PrimaryBlue, RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) { Text("면접 준비", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White) }
+            ) {
+                Text("지도 보기", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+            }
         }
     }
 }
 
-/* ===================== 합격유무 탭: 카드 UI + 지원날짜 표기 ===================== */
+/* ===================== 합격유무 탭 ===================== */
 @Composable
-private fun ResultTab(items: List<ResultItem>) {
+private fun ResultTab(items: List<ResultItem>, onShowMap: (MapCardData) -> Unit) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Bg), // ✅ 지원완료와 동일한 회색 배경
+            .background(Bg),
         contentPadding = PaddingValues(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(items, key = { it.id }) { item ->
-            ResultCard(item)
+            ResultCard(item) { onShowMap(item.toMapCardData()) }
         }
     }
 }
 
 @Composable
-private fun ResultCard(item: ResultItem) {
+private fun ResultCard(item: ResultItem, onClick: () -> Unit) {
     val (label, color) = when (item.result) {
         ResultState.Pass -> "합격" to PrimaryBlue
         ResultState.Fail -> "불합격" to DangerRed
@@ -603,9 +577,10 @@ private fun ResultCard(item: ResultItem) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White) // ✅ 흰 카드
+            .background(Color.White)
             .heightIn(min = 120.dp)
-            .padding(horizontal = 16.dp, vertical = 20.dp),
+            .padding(horizontal = 16.dp, vertical = 20.dp)
+            .clickable { onClick() }, // ← 카드 클릭 시 지도 이동
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
@@ -614,7 +589,6 @@ private fun ResultCard(item: ResultItem) {
         ) {
             Text(text = label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = color)
             Spacer(Modifier.width(7.dp))
-            // ✅ 지원날짜 표기
             Text(text = "${item.appliedAt} 지원", fontSize = 13.sp, color = Color(0xFF848484))
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { /* TODO */ }, modifier = Modifier.size(28.dp)) {
@@ -622,7 +596,7 @@ private fun ResultCard(item: ResultItem) {
             }
         }
 
-        Text(text = item.company, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
+        Text(item.company, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
         Text(
             text = item.title,
             fontSize = 20.sp,
@@ -643,9 +617,50 @@ private fun countText(count: Int): AnnotatedString = buildAnnotatedString {
     append(" 지원")
 }
 
-/* 주 시작(일요일) 계산 */
 private fun weekStart(date: LocalDate): LocalDate {
     val dow = date.dayOfWeek
-    val shift = (dow.value % 7) // Mon(1)…Sun(7)-> 0..6로 보정 → 일요일로 이동
+    val shift = (dow.value % 7)
     return date.minusDays(shift.toLong())
+}
+
+/* ===================== ★ MapCardData 매퍼 ===================== */
+
+private fun AppliedItem.toMapCardData(): MapCardData {
+    val badge = "지원" // 배지는 '지원'으로
+    val highlight = if (readState == ReadState.Unread) "미열람" else "열람"
+    return MapCardData(
+        badgeText = badge,
+        company = company,
+        highlight = highlight,
+        title = title,
+        distanceText = "내 위치에서 214m"
+    )
+}
+
+private fun InterviewItem.toMapCardData(): MapCardData {
+    val today = LocalDate.now()
+    val d = ChronoUnit.DAYS.between(today, date).toInt()
+    val badge = if (d >= 0) "D-$d" else "D+${-d}"
+    return MapCardData(
+        badgeText = badge,
+        company = company,
+        highlight = "면접예정",
+        title = title,
+        distanceText = "내 위치에서 214m"
+    )
+}
+
+private fun ResultItem.toMapCardData(): MapCardData {
+    val badge = when (result) {
+        ResultState.Pass -> "합격"
+        ResultState.Fail -> "불합격"
+    }
+    val highlight = "${appliedAt} 지원"
+    return MapCardData(
+        badgeText = badge,
+        company = company,
+        highlight = highlight,
+        title = title,
+        distanceText = "내 위치에서 214m"
+    )
 }
