@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.main
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +30,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
+
 
 
 
@@ -156,7 +158,7 @@ fun EmployerHomeRoute(nav: NavController) {
             /* 1) 카드 3개 — fakeDB 값으로 치환 */
             item {
                 StatCard(
-                    leading = { SmallIconBox(iconType = SmallIconType.Plus) },
+                    leading = { SmallIconBox(resId = R.drawable.new_applicant, contentDescription = "신규 지원자") },
                     title = "신규 지원자",
                     number = stats.newApplicantsToday.toString(),
                     subtitle = "오늘 ${stats.newApplicantsToday}명이 지원했습니다.",
@@ -165,7 +167,7 @@ fun EmployerHomeRoute(nav: NavController) {
             }
             item {
                 StatCard(
-                    leading = { SmallIconBox(iconType = SmallIconType.Ticket) },
+                    leading = { SmallIconBox(resId = R.drawable.unread_resume, contentDescription = "미열람 이력서") },
                     title = "미열람 이력서",
                     number = stats.unreadResumes.toString(),
                     subtitle = "총 ${stats.unreadResumes}개의 이력서를 확인해보세요",
@@ -174,13 +176,14 @@ fun EmployerHomeRoute(nav: NavController) {
             }
             item {
                 StatCard(
-                    leading = { SmallIconBox(iconType = SmallIconType.Grid) },
+                    leading = { SmallIconBox(resId = R.drawable.processing_announ, contentDescription = "진행 중인 공고") },
                     title = "진행 중인 공고",
                     number = stats.activeNotices.toString(),
                     subtitle = "현재 ${stats.activeNotices}개의 공고가 진행 중입니다",
                     onClickChevron = {}
                 )
             }
+
 
             /* 2) 공고등록 버튼 */
             item {
@@ -293,49 +296,32 @@ fun EmployerBottomNavBar(current: String, onClick: (String) -> Unit) {
 }
 
 /* ================= Cards & List ================= */
+// 기존 enum은 유지해도 되지만, 호출부를 resId로 바꿀 거라면 굳이 필요 없습니다.
+// 다른 곳에서 SmallIconType을 더 안쓰면 enum 삭제하셔도 됩니다.
 private enum class SmallIconType { Plus, Ticket, Grid }
 
+// 새 구현: painterResource로 그리는 버전
 @Composable
-private fun SmallIconBox(iconType: SmallIconType) {
+private fun SmallIconBox(
+    @DrawableRes resId: Int,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(24.dp)
             .clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFDEEAFF)),
         contentAlignment = Alignment.Center
     ) {
-        when (iconType) {
-            SmallIconType.Plus -> Box(
-                Modifier
-                    .size(16.dp)
-                    .drawBehind {
-                        val s = size
-                        val stroke = 2.dp.toPx()
-                        drawLine(BrandBlue,
-                            Offset(s.width / 2, 0f), androidx.compose.ui.geometry.Offset(s.width / 2, s.height), stroke)
-                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(0f, s.height / 2), androidx.compose.ui.geometry.Offset(s.width, s.height / 2), stroke)
-                    }
-            )
-            SmallIconType.Ticket -> Box(
-                Modifier
-                    .size(16.dp)
-                    .border(2.dp, BrandBlue, RoundedCornerShape(3.dp))
-            )
-            SmallIconType.Grid -> Box(
-                Modifier
-                    .size(16.dp)
-                    .drawBehind {
-                        val stroke = 2.dp.toPx()
-                        val w = size.width
-                        val h = size.height
-                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(w / 2, 0f), androidx.compose.ui.geometry.Offset(w / 2, h), stroke)
-                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(0f, h / 2), androidx.compose.ui.geometry.Offset(w, h / 2), stroke)
-                        drawRect(color = BrandBlue, style = Stroke(width = stroke))
-                    }
-            )
-        }
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
+
 
 @Composable
 private fun StatCard(
@@ -464,9 +450,9 @@ private fun ApplicantRow(ap: ApplicantUi) {
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(id = ap.medalRes),
-                    contentDescription = "medal",
-                    modifier = Modifier.size(18.dp)
+                    painter = painterResource(id = R.drawable.user_with_circle),
+                    contentDescription = "user",
+                    modifier = Modifier.size(25.dp)
                 )
             }
             Spacer(Modifier.width(10.dp))
@@ -487,7 +473,7 @@ private fun ApplicantRow(ap: ApplicantUi) {
                     Image(
                         painter = painterResource(id = ap.medalRes),
                         contentDescription = "medal_inline",
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
