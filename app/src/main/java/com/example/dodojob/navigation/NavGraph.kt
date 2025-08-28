@@ -31,11 +31,12 @@ import com.example.dodojob.ui.feature.main.EmployerHomeRoute
 import com.example.dodojob.ui.feature.support.SupportRoute
 import com.example.dodojob.ui.feature.profile.ActivityLevelRoute
 import com.example.dodojob.ui.feature.support.MapRoute
+import com.example.dodojob.ui.feature.management.ManagementAnnouncementRoute
 
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.Support.path) {
+    NavHost(navController = nav, startDestination = Route.EmployerNotice.path) {
         composable(Route.Intro.path) { IntroScreen(nav)}
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
@@ -63,6 +64,7 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) }
 
         composable(Route.EmployerHome.path) {EmployerHomeRoute(nav)}
+        composable(Route.EmployerNotice.path) {ManagementAnnouncementRoute(nav)}
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)}
         composable(Route.Map.path) {MapRoute(nav)}
     }
