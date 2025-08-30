@@ -1,23 +1,27 @@
 package com.example.dodojob.ui.feature.profile
 
-import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -36,7 +40,7 @@ private val TextGray  = Color(0xFF828282)
 private val LineGray  = Color(0xFFDDDDDD)
 private val LabelGray = Color(0xFF9C9C9C)
 private val BgGray    = Color(0xFFF1F5F7)
-private val TagGray   = Color(0xFFEFEFEF)
+private val TagGray   = Color(0xFFE0E0E0)
 
 /* ===== 공통 컴포넌트 ===== */
 @Composable
@@ -53,7 +57,7 @@ private fun SectionCard(
     ) { content() }
 }
 
-/* ⬇️ 접기/펼치기 가능한 타이틀 (아이콘 겹치기 포함) */
+/* 접기/펼치기 타이틀 (아이콘 리소스 복구) */
 @Composable
 private fun SectionTitle(
     title: String,
@@ -68,7 +72,6 @@ private fun SectionTitle(
             .clickable { onToggle() },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 기존 회색 네모 + 내부 아이콘
         Box(
             modifier = Modifier
                 .size(28.dp)
@@ -76,13 +79,13 @@ private fun SectionTitle(
                 .background(Color(0xFFDEEAFF)),
             contentAlignment = Alignment.Center
         ) {
-            Image(
+            Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
+                tint = BrandBlue,
                 modifier = Modifier.size(18.dp)
             )
         }
-
         Spacer(Modifier.width(8.dp))
         Text(
             text = title,
@@ -97,7 +100,7 @@ private fun SectionTitle(
             tint = Color(0xFF9C9C9C),
             modifier = Modifier
                 .size(18.dp)
-                .rotate(if (expanded) 0f else -90f) // 접히면 왼쪽 바라보게
+                .rotate(if (expanded) 0f else -90f)
         )
     }
 }
@@ -182,14 +185,15 @@ private fun GrayInputHint(text: String) {
 fun ResumeManageScreen() {
     val scroll = rememberScrollState()
 
-    // ⬇️ 섹션별 접힘 상태
     var personalExpanded by remember { mutableStateOf(true) }
     var careerExpanded by remember { mutableStateOf(true) }
     var licenseExpanded by remember { mutableStateOf(true) }
     var hopeExpanded by remember { mutableStateOf(true) }
 
-    // ⬇️ 희망직무 선택 상태(단일 선택)
     var selectedJob by remember { mutableStateOf("서비스업") }
+
+    // 바텀시트 표시
+    var showSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = BgGray,
@@ -225,13 +229,13 @@ fun ResumeManageScreen() {
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp) // 카드-배경 여백
+                    .padding(horizontal = 14.dp)
             ) {
                 /* ===== 인적사항 ===== */
                 SectionCard {
                     SectionTitle(
                         title = " 인적사항",
-                        iconRes = R.drawable.app_manage_personal,
+                        iconRes = R.drawable.app_manage_personal,  // ✅ 복구
                         expanded = personalExpanded,
                         onToggle = { personalExpanded = !personalExpanded }
                     )
@@ -239,7 +243,7 @@ fun ResumeManageScreen() {
                     if (personalExpanded) {
                         Spacer(Modifier.height(20.dp))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                            Image(
+                            Image(                               // ✅ 복구
                                 painter = painterResource(id = R.drawable.senior_id),
                                 contentDescription = "프로필",
                                 modifier = Modifier
@@ -267,7 +271,7 @@ fun ResumeManageScreen() {
                 SectionCard {
                     SectionTitle(
                         title = " 경력",
-                        iconRes = R.drawable.app_manage_career,
+                        iconRes = R.drawable.app_manage_career,   // ✅ 복구
                         expanded = careerExpanded,
                         onToggle = { careerExpanded = !careerExpanded }
                     )
@@ -302,7 +306,7 @@ fun ResumeManageScreen() {
                 SectionCard {
                     SectionTitle(
                         title = " 자격증",
-                        iconRes = R.drawable.app_manage_certi,
+                        iconRes = R.drawable.app_manage_certi,    // ✅ 복구
                         expanded = licenseExpanded,
                         onToggle = { licenseExpanded = !licenseExpanded }
                     )
@@ -338,7 +342,7 @@ fun ResumeManageScreen() {
                 SectionCard {
                     SectionTitle(
                         title = " 희망직무",
-                        iconRes = R.drawable.app_manage_hope,
+                        iconRes = R.drawable.app_manage_hope,     // ✅ 복구
                         expanded = hopeExpanded,
                         onToggle = { hopeExpanded = !hopeExpanded }
                     )
@@ -390,13 +394,13 @@ fun ResumeManageScreen() {
                         }
 
                         Spacer(Modifier.height(30.dp))
-                        BlueButton("자세히 보기")
+                        BlueButton("자세히 보기") { showSheet = true }
                     }
                 }
 
                 Spacer(Modifier.height(40.dp))
 
-                /* ===== 하단 이력서 저장 버튼 (JobTypeScreen 스타일) ===== */
+                /* ===== 하단 이력서 저장 버튼 ===== */
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -420,9 +424,18 @@ fun ResumeManageScreen() {
             }
         }
     }
+
+    /* ===== PreferWorkScreen 스타일을 그대로 쓴 모달 시트 ===== */
+    if (showSheet) {
+        ExperiencePickerSheet(
+            preselected = emptySet(),
+            onApply = { /* 선택 결과 사용 */ showSheet = false },
+            onDismiss = { showSheet = false }
+        )
+    }
 }
 
-/* ===== 경력 아이템 ===== */
+/* ===== 경력/자격증/동의 ===== */
 @Composable
 private fun CareerItem(title: String, start: String, end: String) {
     Column(Modifier.padding(horizontal = 16.dp)) {
@@ -436,7 +449,6 @@ private fun CareerItem(title: String, start: String, end: String) {
     }
 }
 
-/* ===== 자격증 아이템 ===== */
 @Composable
 private fun LicenseItem(org: String, title: String, code: String) {
     Column(Modifier.padding(horizontal = 16.dp)) {
@@ -448,7 +460,6 @@ private fun LicenseItem(org: String, title: String, code: String) {
     }
 }
 
-/* ===== 동의 문구 공통 Row ===== */
 @Composable
 private fun ConsentRow(fontSize: androidx.compose.ui.unit.TextUnit) {
     Row(
@@ -476,7 +487,7 @@ private fun ConsentRow(fontSize: androidx.compose.ui.unit.TextUnit) {
     }
 }
 
-/* ===== 희망직무 칩 (선택형) ===== */
+/* ===== 희망직무 요약 칩 ===== */
 @Composable
 private fun JobChip(
     title: String,
@@ -506,6 +517,275 @@ private fun JobChip(
     }
 }
 
+/* ===== PreferWorkScreen 스타일 모달 (요청사항 반영) ===== */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExperiencePickerSheet(
+    preselected: Set<String>,
+    onApply: (Set<String>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val Primary = BrandBlue
+    var query by remember { mutableStateOf("") }
+    val selected = remember { mutableStateListOf<String>().apply { addAll(preselected) } }
+    var healthy by remember { mutableStateOf(false) }
+
+    val categories: List<Pair<String, List<String>>> = listOf(
+        "서비스업" to listOf("고객 응대","카운터/계산","상품 진열","청결 관리","안내 데스크","주차 관리"),
+        "교육/강의" to listOf("영어 회화","악기 지도","요리 강사","역사 강의","공예 강의","예술 지도"),
+        "관리/운영" to listOf("환경미화","인력 관리","사서 보조","사무 보조","경비/보안"),
+        "돌봄" to listOf("등하원 도우미","가정 방문","보조 교사")
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 35.dp, topEnd = 35.dp),
+        dragHandle = null // ✅ 위 바 하나만 (커스텀) 쓰기 위해 제거
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(Modifier.height(18.dp))
+            SheetDragHandle() // ✅ 아래꺼 하나만
+            Spacer(Modifier.height(28.dp))
+
+            Text(
+                "경험을 살릴 일을 설정해주세요",
+                fontSize = 26.sp,                 // ✅ 26sp
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
+
+            Spacer(Modifier.height(18.dp))
+
+            // ✅ 배경 #EFEFEF, radius 10, 오른쪽(트레일링) 아이콘, placeholder #959595
+            TextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                placeholder = { Text("직종 키워드", fontSize = 18.sp, color = Color(0xFF959595)) },
+                trailingIcon = {                  // ← 오른쪽 아이콘
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = null,
+                        tint = Color(0xFF959595),
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                shape = RoundedCornerShape(10.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = TagGray,     // #EFEFEF
+                    unfocusedContainerColor = TagGray,
+                    disabledContainerColor = TagGray,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    cursorColor = Color.Black
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(57.dp)
+            )
+
+            Spacer(Modifier.height(20.dp))
+            Divider(color = Color(0xFFCFCFCF))
+            Spacer(Modifier.height(14.dp))
+
+            // 본문 리스트
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                categories.forEach { (title, list) ->
+                    val filtered = if (query.isBlank()) list
+                    else list.filter { it.contains(query.trim(), ignoreCase = true) }
+
+                    item {
+                        Text(
+                            title,
+                            fontSize = 26.sp,                  // ✅ 섹션 타이틀 26sp
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Black,
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
+                        Spacer(Modifier.height(16 .dp))
+                        TwoColumnChipsEqualWidth(
+                            options = filtered,
+                            isSelected = { it in selected },
+                            onToggle = { label ->
+                                if (label in selected) selected.remove(label) else selected.add(label)
+                            }
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
+                }
+            }
+
+            Divider(color = Color(0xFFCFCFCF))
+            Spacer(Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("＊ 필수", color = Color(0xFFF24822), fontSize = 18.sp)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OptionCheckBox(checked = healthy, onCheckedChange = { healthy = it })
+                Spacer(Modifier.width(10.dp))
+                Text("건강해서 일하는 데 지장이 없어요.", fontSize = 22.sp, color = Color.Black)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = { selected.clear(); healthy = false; query = "" },
+                    modifier = Modifier.weight(1f).height(54.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Primary
+                    ),
+                    border = BorderStroke(1.dp, Primary)
+                ) { Text("초기화", color = Color.Black, fontSize = 24.sp) }
+
+                Button(
+                    onClick = { onApply(selected.toSet()) },
+                    enabled = healthy,
+                    modifier = Modifier.weight(2f).height(54.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (healthy) Primary else Color(0xFFBFC6D2),
+                        disabledContainerColor = Color(0xFFBFC6D2)
+                    )
+                ) { Text("적용하기", color = Color.White, fontSize = 24.sp) }
+            }
+
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+/* ----- 칩 2열 레이아웃 (PreferWorkScreen과 동일) ----- */
+@Composable
+private fun TwoColumnChipsEqualWidth(
+    options: List<String>,
+    isSelected: (String) -> Boolean,
+    onToggle: (String) -> Unit,
+    itemHeight: Dp = 56.dp,
+    radius: Dp = 12.dp
+) {
+    val rows = options.chunked(2)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        rows.forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                row.forEach { label ->
+                    val selected = isSelected(label)
+                    SimpleChoiceChip(
+                        text = label,
+                        selected = selected,
+                        onClick = { onToggle(label) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(itemHeight),
+                        radius = radius
+                    )
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/* ----- 칩 스타일 (요청 스펙 반영) ----- */
+@Composable
+private fun SimpleChoiceChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    radius: Dp = 10.dp // 디자인 radius 10
+) {
+    val bg = if (selected) Color(0xFFC1D2ED) else Color(0xFFE0E0E0)
+    val border = if (selected) Color(0xFF005FFF) else Color.Transparent
+    val textColor = if (selected) Color(0xFF005FFF) else Color(0xFF111111) // 미선택 연회색
+
+    Box(
+        modifier = modifier
+            .border(1.dp, border, RoundedCornerShape(radius))
+            .background(bg, RoundedCornerShape(radius))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            fontWeight = FontWeight.Medium,
+            fontSize = 24.sp,          // 요청: 24sp
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+/* ----- 체크박스 (PreferWorkScreen 동일) ----- */
+@Composable
+private fun OptionCheckBox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val badgeSize = 28.dp
+    val iconSize = 18.dp
+
+    Box(
+        modifier = Modifier
+            .size(badgeSize)
+            .clip(CircleShape)
+            .background(if (checked) Color(0xFF2A77FF) else Color(0xFFE6E6E6))
+            .clickable { onCheckedChange(!checked) },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Check,
+            contentDescription = null,
+            tint = if (checked) Color.White else Color(0xFFBDBDBD),
+            modifier = Modifier.size(iconSize)
+        )
+    }
+}
+
+/* ----- 상단 드래그 핸들 (하나만 사용) ----- */
+@Composable
+private fun SheetDragHandle() {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .width(122.89.dp)       // 프레임 값과 비슷하게
+                .height(4.16.dp)
+                .background(Color(0xFFB3B3B3), RoundedCornerShape(10395.dp))
+        )
+    }
+}
+
+/* ----- 미리보기 ----- */
 @Preview(
     device = Devices.PHONE,
     showBackground = true,
