@@ -1,5 +1,7 @@
 package com.example.dodojob.ui.feature.signup
 
+import com.example.dodojob.ui.components.CheckState
+import com.example.dodojob.ui.components.UnderlineFieldRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -34,10 +36,12 @@ import com.example.dodojob.ui.feature.verify.SignUpPrefill
 import com.example.dodojob.data.user.UserDto
 import java.util.UUID
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
 
 @Composable
-fun SignUpIdPwScreen(nav: NavController) {
+fun EmployerSignupScreen(nav: NavController) {
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
 
@@ -46,37 +50,35 @@ fun SignUpIdPwScreen(nav: NavController) {
         nav.previousBackStackEntry?.savedStateHandle?.get<SignUpPrefill>("prefill")
     }
 
-    // 기본 정보 (saveable OK)
-    var name by rememberSaveable { mutableStateOf(prefill?.name.orEmpty()) }
-    var gender by rememberSaveable { mutableStateOf(prefill?.gender.orEmpty()) }
-    var region by rememberSaveable { mutableStateOf(prefill?.region.orEmpty()) }
-    var phone by rememberSaveable { mutableStateOf(prefill?.phone.orEmpty()) }
+    // **** 데이터만 변경: 담당자명/연락처/이메일/사업자번호 ****
+    var managerName by rememberSaveable { mutableStateOf(prefill?.name.orEmpty()) }
+    var contactPhone by rememberSaveable { mutableStateOf(prefill?.phone.orEmpty()) }
     var email by rememberSaveable { mutableStateOf("") }
-    var userId by rememberSaveable { mutableStateOf("") }
+    var bizNo by rememberSaveable { mutableStateOf("") } // 하이픈 없이 10자리
 
-    // 민감정보: 디스크 보존 방지 → remember
+    // 기존 prefill 민감정보는 그대로 유지(사용 안 함)
     var rrnFront by remember { mutableStateOf(prefill?.rrnFront.orEmpty()) }
     var rrnBackFirst by remember { mutableStateOf(prefill?.rrnBackFirst.orEmpty()) }
-    var pw by remember { mutableStateOf("") }
-    var pw2 by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
     var loading by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // 간단 유효성
+    // ===== 유효성 검사 (필드 교체) =====
+    val nameOk = managerName.trim().length >= 2
+    val phoneDigits = contactPhone.filter { it.isDigit() }
+    val phoneOk = phoneDigits.length in 10..11
     val emailOk = email.contains("@") && email.contains(".")
-    val idOk = userId.length >= 3 && userId.any { it.isDigit() } && userId.any { it.isLetter() }
-    val pwOk = pw.length >= 8 && pw.any { it.isDigit() } && pw.any { it.isLetter() }
-    val pw2Ok = pw2.isNotEmpty() && pw2 == pw
+    val bizDigits = bizNo.filter { it.isDigit() }
+    val bizOk = bizDigits.length == 10
 
     val Bg = Color(0xFFF1F5F7)
     val Primary = Color(0xFF005FFF)
 
-    // 제출 가능 조건(버튼 enabled/색상 모두 동일 기준으로)
-    val canSubmit = emailOk && idOk && pwOk && pw2Ok && prefill != null
+    // 제출 가능 조건
+    val canSubmit = nameOk && phoneOk && emailOk && bizOk && prefill != null
 
-    // prefill 없이 접근 시 방어 (원하면 Verify로 돌려보내기)
+    // prefill 없이 접근 시 방어
     LaunchedEffect(prefill) {
         if (prefill == null) nav.popBackStack()
     }
@@ -98,30 +100,31 @@ fun SignUpIdPwScreen(nav: NavController) {
 
                         scope.launch {
                             runCatching {
+                                // NOTE: 레포 스키마가 username/password를 요구해서
+                                // 임시로 bizNo/임시비밀번호를 넣었습니다. 실제 스키마에 맞게 교체하세요.
                                 val user = UserDto(
                                     id = UUID.randomUUID().toString(),
-                                    name = name,
-                                    gender = gender,
-                                    rrnFront = rrnFront,          // repo에서 birthdate로 변환
-                                    rrnBackFirst = rrnBackFirst,  // repo에서 birthdate로 변환
-                                    region = region,
-                                    phone = phone,
+                                    name = managerName,
+                                    gender = prefill?.gender.orEmpty(),
+                                    rrnFront = rrnFront,
+                                    rrnBackFirst = rrnBackFirst,
+                                    region = prefill?.region.orEmpty(),
+                                    phone = phoneDigits,
                                     email = email,
-                                    username = userId,
-                                    password = pw,                // 운영에서는 GoTrue 권장
-                                    job = "시니어"
+                                    username = bizDigits,           // FIXME: 스키마에 맞게 변경
+                                    password = "TempPass#1234",     // FIXME: 운영에서는 미사용/삭제
+                                    job = "시니어",
                                 )
-                                repo.insertUser(user)            // 실제 DB insert
+                                repo.insertUser(user)
                             }.onSuccess {
                                 // 민감정보 즉시 파기
                                 rrnFront = ""; rrnBackFirst = ""
-                                pw = ""; pw2 = ""
 
                                 nav.navigate(Route.SignUpComplete.path) {
                                     launchSingleTop = true
                                 }
                             }.onFailure { e ->
-                                error = e.message ?: "회원가입 실패"
+                                error = e.message ?: "등록 실패"
                             }
                             loading = false
                         }
@@ -151,7 +154,7 @@ fun SignUpIdPwScreen(nav: NavController) {
             val W = maxWidth
             val H = maxHeight
 
-            // 비율 기반 치수
+            // 비율 기반 치수(그대로 유지)
             val hPad = (W * 0.045f)
             val titleTop = (H * 0.03f)
             val titleSp = (W.value * 0.09f).sp
@@ -192,8 +195,38 @@ fun SignUpIdPwScreen(nav: NavController) {
                     fontSize = subSp, color = Color(0xFF636363)
                 )
 
-                // 이메일
+                // ====== 담당자명 ======
                 Spacer(Modifier.height(gapAfterSubtitle))
+                Text("담당자명", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
+                Spacer(Modifier.height(fieldTop))
+                UnderlineFieldRow(
+                    value = managerName,
+                    onValueChange = { managerName = it },
+                    placeholder = "담당자 성함",
+                    placeholderSize = placeSp,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    isPassword = false,
+                    checkState = if (nameOk) CheckState.ValidBlue else CheckState.NeutralGrey
+                )
+                Spacer(Modifier.height(lineGap))
+
+                // ====== 담당자 연락처 ======
+                Spacer(Modifier.height(labelTop))
+                Text("담당자 연락처", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
+                Spacer(Modifier.height(fieldTop))
+                UnderlineFieldRow(
+                    value = contactPhone,
+                    onValueChange = { contactPhone = it },
+                    placeholder = "010-0000-0000",
+                    placeholderSize = placeSp,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    isPassword = false,
+                    checkState = if (phoneOk) CheckState.ValidBlue else CheckState.NeutralGrey
+                )
+                Spacer(Modifier.height(lineGap))
+
+                // ====== 담당자 이메일 ======
+                Spacer(Modifier.height(labelTop))
                 Text("이메일", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(fieldTop))
                 UnderlineFieldRow(
@@ -207,52 +240,24 @@ fun SignUpIdPwScreen(nav: NavController) {
                 )
                 Spacer(Modifier.height(lineGap))
 
-                // 아이디
+                // ====== 사업자 등록번호 ======
                 Spacer(Modifier.height(labelTop))
-                Text("아이디", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
+                Text("사업자 등록번호", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(fieldTop))
                 UnderlineFieldRow(
-                    value = userId,
-                    onValueChange = { userId = it },
-                    placeholder = "숫자,영문 포함 3자리 이상",
+                    value = bizNo,
+                    onValueChange = { input ->
+                        // 하이픈 제거 + 숫자만 허용
+                        bizNo = input.filter { it.isDigit() }.take(10)
+                    },
+                    placeholder = "사업자 등록번호(-제외 입력)",
                     placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isPassword = false,
-                    checkState = if (idOk) CheckState.ValidBlue else CheckState.NeutralGrey
-                )
-                Spacer(Modifier.height(lineGap))
-
-                // 비밀번호
-                Spacer(Modifier.height(labelTop))
-                Text("비밀번호", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
-                    value = pw,
-                    onValueChange = { pw = it },
-                    placeholder = "숫자, 영문 포함 8자리 이상",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    isPassword = true,
-                    checkState = if (pwOk) CheckState.ValidBlue else CheckState.NeutralGrey
-                )
-                Spacer(Modifier.height(lineGap))
-
-                // 비밀번호 재입력
-                Spacer(Modifier.height(labelTop))
-                Text("비밀번호 재입력", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
-                    value = pw2,
-                    onValueChange = { pw2 = it },
-                    placeholder = "",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    isPassword = true,
-                    checkState = null
+                    checkState = if (bizOk) CheckState.ValidBlue else CheckState.NeutralGrey
                 )
 
                 Spacer(Modifier.height(8.dp))
-                // 에러 메시지 노출
                 error?.let { Text(it, color = Color(0xFFD32F2F), fontSize = 14.sp) }
 
                 Spacer(Modifier.height(lineGap))
@@ -261,95 +266,8 @@ fun SignUpIdPwScreen(nav: NavController) {
     }
 }
 
-/* -------------------------------
-   밑줄형 입력 + 오른쪽 체크
--------------------------------- */
+@Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Employer Signup UI")
 @Composable
-private fun UnderlineFieldRow(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    placeholderSize: androidx.compose.ui.unit.TextUnit,
-    keyboardOptions: KeyboardOptions,
-    isPassword: Boolean,
-    checkState: CheckState?
-) {
-    val hint = Color(0xFFA6A6A6)
-
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = TextStyle(fontSize = placeholderSize, color = Color.Black),
-            placeholder = { Text(placeholder, color = hint, fontSize = placeholderSize) },
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 40.dp),
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-            keyboardOptions = keyboardOptions,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                errorContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Black,
-                unfocusedIndicatorColor = Color(0xFFA2A2A2),
-                disabledIndicatorColor = Color(0xFFC0C0C0),
-                cursorColor = Color.Black,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                focusedPlaceholderColor = hint,
-                unfocusedPlaceholderColor = hint
-            )
-        )
-
-        if (checkState != null) {
-            Spacer(Modifier.width(10.dp))
-            CheckDot(state = checkState)
-        }
-    }
-}
-
-/* -------------------------------
-   체크: 회색/파랑
--------------------------------- */
-private enum class CheckState { NeutralGrey, ValidBlue }
-
-@Composable
-private fun CheckDot(state: CheckState) {
-    when (state) {
-        CheckState.NeutralGrey -> {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE6E6E6)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = Color(0xFFBDBDBD),
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-        }
-        CheckState.ValidBlue -> {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF2A77FF)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-        }
-    }
+fun EmployerSignupScreenPreview() {
+    EmployerSignupScreen(nav = rememberNavController())
 }
