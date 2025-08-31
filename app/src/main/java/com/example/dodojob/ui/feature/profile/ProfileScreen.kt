@@ -26,9 +26,14 @@
     import androidx.navigation.NavController
     import com.example.dodojob.R
     import androidx.compose.foundation.clickable
+    import com.example.dodojob.ui.feature.common.LeaveDialog
+    import com.example.dodojob.ui.feature.common.LogoutDialog
 
     @Composable
     fun ProfileRoute(nav: NavController) {
+        var showLogout by remember { mutableStateOf(false) }
+        var showLeave by remember { mutableStateOf(false) }
+
         ProfileScreen(
             name = "홍길동",
             applyCount = 4,
@@ -43,9 +48,9 @@
                 nav.navigate("activity_level")
             },
             onClickEditProfile = {},
-            onClickChangePw = {},
-            onClickLogout = {},
-            onClickLeave = {},
+            onClickChangePw = { nav.navigate("change_password")},
+            onClickLogout = { showLogout = true},
+            onClickLeave = { showLeave = true},
             onShortcut = { key ->
                 when (key) {
                     "home" -> nav.navigate("main") { launchSingleTop = true }
@@ -56,6 +61,30 @@
                 }
             }
         )
+
+        // 🔵 로그아웃 모달
+        if (showLogout) {
+            LogoutDialog(
+                onConfirm = {
+                    showLogout = false
+                    // TODO: 실제 로그아웃 로직
+                    // e.g., auth.signOut(); nav.navigate("login") { popUpTo(0) }
+                },
+                onCancel = { showLogout = false }
+            )
+        }
+
+        // 🔴 회원탈퇴 모달
+        if (showLeave) {
+            LeaveDialog(
+                onConfirm = {
+                    showLeave = false
+                    // TODO: 실제 회원탈퇴 로직
+                    // e.g., repo.deleteAccount(); nav.navigate("intro") { popUpTo(0) }
+                },
+                onCancel = { showLeave = false }
+            )
+        }
     }
 
     @Composable

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.dodojob.ui.feature.account.ChangePasswordScreen
 
 import com.example.dodojob.ui.feature.intro.IntroScreen
 import com.example.dodojob.ui.feature.experience.ExperienceScreen
@@ -36,7 +37,7 @@ import com.example.dodojob.ui.feature.management.ManagementAnnouncementRoute
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.EmployerNotice.path) {
+    NavHost(navController = nav, startDestination = Route.Main.path) {
         composable(Route.Intro.path) { IntroScreen(nav)}
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }
         composable(Route.Login.path)      { LoginScreen(nav) }
@@ -67,6 +68,7 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.EmployerNotice.path) {ManagementAnnouncementRoute(nav)}
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)}
         composable(Route.Map.path) {MapRoute(nav)}
+        composable(Route.ChangePassword.path) { ChangePasswordScreen(nav)}
     }
 }
 
