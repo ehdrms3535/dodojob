@@ -35,5 +35,6 @@ sealed class Route(val path: String) {
     data object EmployerMy : Route("employer_my")
     data object ActivityLevel : Route("activity_level")
     data object Map : Route("map")
+    data object ChangePassword : Route("change_password")
 
 }

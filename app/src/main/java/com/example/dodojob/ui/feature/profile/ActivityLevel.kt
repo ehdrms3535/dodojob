@@ -203,11 +203,8 @@ fun ActivityLevelScreen(
                     Text("나의 활동", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
 
                     ActivityRow("1년 이내 일자리 지원", "${data.applyWithinYear}건", valueColor = brandBlue)
-                    Divider(thickness = 1.dp, color = Color(0xFFF0F0F0))
                     ActivityRow("실제 근무 경험", "${data.realWorkExpCount}건", valueColor = brandBlue)
-                    Divider(thickness = 1.dp, color = Color(0xFFF0F0F0))
                     ActivityRow("교육/강의 콘텐츠", if (data.eduCompleted) "수강 완료" else "수강 중", valueColor = brandBlue)
-                    Divider(thickness = 1.dp, color = Color(0xFFF0F0F0))
                     ActivityRow("회원가입", data.joinedDate, valueColor = brandBlue)
                 }
             }
@@ -242,8 +239,8 @@ private fun ActivityRow(label: String, value: String, valueColor: Color) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, fontSize = 14.sp, color = Color(0xFF7A7A7A)) // 라벨 회색
-        Text(value, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = valueColor) // 값 파란색
+        Text(label, fontSize = 17.sp, color = Color(0xFF7A7A7A)) // 라벨 회색
+        Text(value, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = valueColor) // 값 파란색
     }
 }
 
