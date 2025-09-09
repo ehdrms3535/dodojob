@@ -1,3 +1,4 @@
+// com/example/dodojob/ui/feature/hope/HopeWorkFilterScreen.kt
 package com.example.dodojob.ui.feature.hope
 
 import androidx.compose.foundation.background
@@ -9,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
@@ -20,35 +22,104 @@ import androidx.compose.ui.unit.*
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.util.Bits
+import com.example.dodojob.data.jobtype.JobTypeRow
+import com.example.dodojob.data.jobtype.JobTypeRepository
+import com.example.dodojob.session.CurrentUser
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.data.jobtype.JobTypeRepositorySupabase
+import com.example.dodojob.data.jobtype.JobtypeDto
+import com.example.dodojob.data.user.UserDto
+import kotlinx.coroutines.launch
+import java.util.UUID
 
+/* --- 요일/칩 동기화 유틸 --- */
+
+// "월,화,..." → bit index
+private fun bitOf(opt: String): Int = when (opt) {
+    "월" -> 0; "화" -> 1; "수" -> 2; "목" -> 3; "금" -> 4; "토" -> 5; "일" -> 6
+    else -> -1
+}
+
+// 월~금 일괄 on/off
+private fun setWeekdays(on: Boolean, currentMask: Int): Int {
+    val weekdaysBits = (1 shl 0) or (1 shl 1) or (1 shl 2) or (1 shl 3) or (1 shl 4)
+    return if (on) (currentMask or weekdaysBits) else (currentMask and weekdaysBits.inv())
+}
+
+// 토/일 일괄 on/off
+private fun setWeekend(on: Boolean, currentMask: Int): Int {
+    val weekendBits = (1 shl 5) or (1 shl 6)
+    return if (on) (currentMask or weekendBits) else (currentMask and weekendBits.inv())
+}
+
+// dayMask에서 평일/주말 칩 상태를 재계산
+private fun recomputeChipsFromMask(mask: Int): Pair<Boolean, Boolean> {
+    val weekdaysBits = 0b00011111 // 월~금
+    val weekendBits  = 0b01100000 // 토~일
+    val weekdaysOn = (mask and weekdaysBits) == weekdaysBits
+    val weekendOn  = (mask and weekendBits)  == weekendBits
+    return weekdaysOn to weekendOn
+}
+
+// 저장용 "1110000" 문자열
+private fun maskToString(mask: Int): String =
+    (0..6).joinToString("") { if (((mask shr it) and 1) == 1) "1" else "0" }
+
+
+/* ------------------------ 화면 컴포저블 ------------------------- */
 @Composable
 fun HopeWorkFilterScreen(nav: NavController) {
+
+    val client = LocalSupabase.current
+    val repo: JobTypeRepository = remember(client) { JobTypeRepositorySupabase(client) }
+
+    val scope = rememberCoroutineScope()
+
+    val prev = nav.previousBackStackEntry?.savedStateHandle
+
+    val talentBits  = prev?.get<String>("sheet_talent_bits")  ?: ""
+    val serviceBits = prev?.get<String>("sheet_service_bits") ?: ""
+    val manageBits  = prev?.get<String>("sheet_manage_bits")  ?: ""
+    val careBits    = prev?.get<String>("sheet_care_bits")    ?: ""
+    val healthy     = prev?.get<Boolean>("sheet_healthy") ?: false
     // ----- 내부 상태 -----
-    var region by remember { mutableStateOf<String?>(null) }
-    var jobSelections by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var region by rememberSaveable { mutableStateOf<String?>(null) }
+    var jobSelections by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) } // 별도 설계 전 임시 유지
     var period by remember { mutableStateOf<String?>(null) }
-    var days by remember { mutableStateOf(setOf<String>()) }
-    var timeOfDay by remember { mutableStateOf<String?>(null) }
+
+    var weekdaysChip by remember { mutableStateOf(false) } // 평일 버튼(dyas)
+    var weekendChip  by remember { mutableStateOf(false) } // 주말 버튼(weekend)
+    var dayMask      by remember { mutableStateOf(0) }     // 개별 요일 비트(week)
+    var timeOfDay    by remember { mutableStateOf<String?>(null) }
 
     // 🔁 서브화면에서 돌아온 값 수신 (savedStateHandle)
-    val backStackEntry = nav.currentBackStackEntry
-    val pickedRegionFlow = backStackEntry?.savedStateHandle?.getStateFlow("pickedRegion", "")
-    val pickedJobsFlow   = backStackEntry?.savedStateHandle?.getStateFlow("pickedJobs", emptySet<String>())
 
-    val pickedRegion by pickedRegionFlow?.collectAsState() ?: remember { mutableStateOf("") }
-    val pickedJobs by pickedJobsFlow?.collectAsState() ?: remember { mutableStateOf(emptySet()) }
+    LaunchedEffect(Unit) {
+        val handle = nav.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
 
-    // 수신값을 로컬 상태에 반영
-    LaunchedEffect(pickedRegion) {
-        if (pickedRegion.isNotBlank()) region = pickedRegion
-    }
-    LaunchedEffect(pickedJobs) {
-        if (pickedJobs.isNotEmpty()) jobSelections = pickedJobs
+        // 지역
+        handle.get<String>("pickedRegion")?.let { picked ->
+            region = picked
+            handle.remove<String>("pickedRegion")
+        }
+
+        // 직종 - 어떤 타입으로 들어있든 방어적으로 읽기
+        handle.get<Any>("pickedJobs")?.let { raw ->
+            val pickedList: List<String> = when (raw) {
+                is ArrayList<*> -> raw.filterIsInstance<String>()
+                is List<*>      -> raw.filterIsInstance<String>()
+                is Set<*>       -> raw.filterIsInstance<String>()
+                else            -> emptyList()
+            }
+            jobSelections = pickedList.toSet()
+            // ✅ 읽었으면 타입 혼선 방지를 위해 키를 지워둡니다
+            handle.remove<Any>("pickedJobs")
+        }
     }
 
     val periodOptions = listOf("1일", "1주일 이하", "1주일~1개월", "6개월~1년", "1년 이상")
     val dayOptions = listOf("평일", "주말", "월", "화", "수", "목", "금", "토", "일")
-    val timeOptions = listOf("오전", "오후")
 
     val scroll = rememberScrollState()
 
@@ -58,7 +129,7 @@ fun HopeWorkFilterScreen(nav: NavController) {
             val canApply = region != null ||
                     jobSelections.isNotEmpty() ||
                     period != null ||
-                    days.isNotEmpty() ||
+                    dayMask != 0 || weekdaysChip || weekendChip ||
                     timeOfDay != null
 
             Row(
@@ -73,12 +144,14 @@ fun HopeWorkFilterScreen(nav: NavController) {
                         region = null
                         jobSelections = emptySet()
                         period = null
-                        days = emptySet()
+                        weekdaysChip = false
+                        weekendChip = false
+                        dayMask = 0
                         timeOfDay = null
-                        // 초깃값으로 savedStateHandle도 정리(선택)
+                        // savedStateHandle 초기화(선택)
                         nav.currentBackStackEntry?.savedStateHandle?.apply {
                             set("pickedRegion", "")
-                            set("pickedJobs", emptySet<String>())
+                            set("pickedJobs", arrayListOf<String>())
                         }
                     },
                     modifier = Modifier.weight(1f).height(54.dp),
@@ -88,7 +161,50 @@ fun HopeWorkFilterScreen(nav: NavController) {
 
                 Button(
                     onClick = {
-                        nav.navigate(Route.Experience.path)
+                        if (!canApply) return@Button
+
+                        //val username = try { CurrentUser.requireUsername() } catch (_: IllegalStateException) {
+                        //    // TODO: 사용자 알림(로그인 필요)
+                        //    return@Button
+                        //}
+                        val username = "1234";
+                        val timeFlag = timeOfDay != null
+
+                        // TODO: 직종/기간 비트 문자열 설계 후 교체
+                        val jobTalentBin  = talentBits
+                        val jobManageBin  = manageBits
+                        val jobServiceBin = serviceBits
+                        val jobCareBin    = careBits
+                        val termBin       = true
+
+                        val weekString = maskToString(dayMask)
+
+                        scope.launch {
+                            runCatching {
+                                val toSave = JobtypeDto(
+                                    id      = username,
+                                    jobtype = "0", // job 이동하는거 생성시 수정
+                                    locate        = region, // ← 개별 요일 비트
+                                    job_talent = jobTalentBin,
+                                    job_manage = jobManageBin,
+                                    job_service = jobServiceBin,
+                                    job_care =  jobCareBin,
+                                    term = period,
+                                    days = weekdaysChip,
+                                    weekend    = weekendChip,
+                                    week = weekString, // 요일 비트 변환
+                                    time = timeFlag //
+                                )
+                                repo.insertJobtype(toSave)
+                                toSave
+                            }.onSuccess {
+                                nav.navigate(Route.Experience.path)
+                            }.onFailure {
+                                android.util.Log.e("HopeWorkFilter", "insert failed", it)
+                                // TODO: 에러 UI 처리(it.message)
+                            }
+
+                        }
                     },
                     enabled = canApply,
                     modifier = Modifier.weight(2f).height(54.dp),
@@ -198,8 +314,37 @@ fun HopeWorkFilterScreen(nav: NavController) {
                 Spacer(Modifier.height(rowGap))
                 TwoColumnChips(
                     options = dayOptions,
-                    isSelected = { it in days },
-                    onClick = { opt -> days = if (opt in days) days - opt else days + opt },
+                    isSelected = { opt ->
+                        when (opt) {
+                            "평일" -> weekdaysChip
+                            "주말" -> weekendChip
+                            else   -> {
+                                val bit = bitOf(opt)
+                                bit >= 0 && (dayMask and (1 shl bit)) != 0
+                            }
+                        }
+                    },
+                    onClick = { opt ->
+                        when (opt) {
+                            "평일" -> {
+                                weekdaysChip = !weekdaysChip
+                                dayMask = setWeekdays(weekdaysChip, dayMask)   // 비트 반영
+                            }
+                            "주말" -> {
+                                weekendChip = !weekendChip
+                                dayMask = setWeekend(weekendChip, dayMask)     // 비트 반영
+                            }
+                            else -> {
+                                val bit = bitOf(opt)
+                                if (bit >= 0) {
+                                    dayMask = dayMask xor (1 shl bit)          // 개별 비트 토글
+                                    val (wd, we) = recomputeChipsFromMask(dayMask)
+                                    weekdaysChip = wd
+                                    weekendChip  = we
+                                }
+                            }
+                        }
+                    },
                     itemHeight = chipH,
                     radius = chipRadius,
                     textSize = chipSp

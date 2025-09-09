@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">dodojob</string>
+    <string name="naver_map_client_id">7n12dztchn</string>
+    <string name="ncp_api_key_id">7n12dztchn</string>
+    <string name="ncp_api_key_secret">bCwn6hDJVveZNPiPF7twoVHDsl5cGsDnRHK8QITn</string>
 </resources>
