@@ -1,5 +1,7 @@
 package com.example.dodojob.ui.feature.signup
 
+import com.example.dodojob.ui.components.CheckState
+import com.example.dodojob.ui.components.UnderlineFieldRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -237,6 +239,7 @@ fun SignUpIdPwScreen(nav: NavController) {
     }
 }
 
+<<<<<<< HEAD:app/src/main/java/com/example/dodojob/ui/feature/signup/SignupScreen.kt
 /* 입력 라인 + 체크 아이콘 */
 @Composable
 private fun UnderlineFieldRow(
@@ -304,3 +307,5 @@ private fun CheckDot(state: CheckState) {
         }
     }
 }
+=======
+>>>>>>> 5b5d2e97ec1fafdd8967cf0961e74c7b38f3cce3:app/src/main/java/com/example/dodojob/ui/feature/signup/SeniorSignupScreen.kt

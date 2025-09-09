@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.dodojob.ui.feature.account.ChangePasswordScreen
 
 import com.example.dodojob.ui.feature.intro.IntroScreen
 import com.example.dodojob.ui.feature.experience.ExperienceScreen
@@ -31,10 +32,12 @@ import com.example.dodojob.ui.feature.main.EmployerHomeRoute
 import com.example.dodojob.ui.feature.support.SupportRoute
 import com.example.dodojob.ui.feature.profile.ActivityLevelRoute
 import com.example.dodojob.ui.feature.support.MapRoute
+import com.example.dodojob.ui.feature.management.ManagementAnnouncementRoute
 
 
 @Composable
 fun AppNavGraph(nav: NavHostController) {
+<<<<<<< HEAD
     NavHost(navController = nav, startDestination = Route.JobType.path) {
         composable(Route.Intro.path) { IntroScreen(nav)}              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
@@ -55,6 +58,13 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.ExperienceComplete.path) { ExperienceCompleteScreen(nav) } // 프로필 완성
 
         composable(Route.Main.path) { MainRoute(nav) } // main
+=======
+    NavHost(navController = nav, startDestination = Route.Intro.path) {
+        composable(Route.Intro.path) { IntroScreen(nav)}
+        composable(Route.Onboarding.path) { OnboardingScreen(nav) }
+        composable(Route.Login.path)      { LoginScreen(nav) }
+        composable(Route.PreLogin.path) { PreLoginScreen(nav) }
+>>>>>>> 5b5d2e97ec1fafdd8967cf0961e74c7b38f3cce3
 
         composable(Route.Announcement.path) { Announcement1Route(nav) }
         composable(Route.Announcement4.path) { Announcement4Route(nav) }
@@ -70,8 +80,10 @@ fun AppNavGraph(nav: NavHostController) {
         composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) }
 
         composable(Route.EmployerHome.path) {EmployerHomeRoute(nav)}
+        composable(Route.EmployerNotice.path) {ManagementAnnouncementRoute(nav)}
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)}
         composable(Route.Map.path) {MapRoute(nav)}
+        composable(Route.ChangePassword.path) { ChangePasswordScreen(nav)}
     }
 }
 
