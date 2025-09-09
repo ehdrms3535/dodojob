@@ -146,7 +146,7 @@ fun ApplicationScreen(
                         fontWeight = FontWeight.Medium,
                         letterSpacing = (-0.019).em
                     )
-                }
+                } 
             }
         }
     ) { padding ->

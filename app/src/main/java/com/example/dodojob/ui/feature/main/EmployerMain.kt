@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.main
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,17 +12,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,8 +32,6 @@ import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 
-
-
 /* ================= Colors ================= */
 private val ScreenBg  = Color(0xFFF1F5F7)
 private val BrandBlue = Color(0xFF005FFF)
@@ -39,22 +39,29 @@ private val TextGray  = Color(0xFF828282)
 private val LineGray  = Color(0xFFDDDDDD)
 private val White     = Color(0xFFFFFFFF)
 
+/* ================= Layout Const ================= */
+// StatCard의 number/subtitle을 아이콘 바로 아래에서 시작시키는 고정 패딩
+private val STATCARD_TEXT_START = 20.dp   // 아이콘(24) + 간격(5) + 여유(15) ≈ 44
+
 /* ================= Fake DB ================= */
 object FakeEmployerRepo {
 
     val employerName = "홍길동"
+
     data class DashboardStats(
         val newApplicantsToday: Int,   // 신규 지원자 수
         val unreadResumes: Int,        // 미열람 이력서 수
         val activeNotices: Int         // 진행 중 공고 수
     )
+
     data class Applicant(
         val name: String,
-        val jobTitle: String,          // 지원 직종 (모두 통일 요청)
-        val experience: String,        // 경력 (tag 대체)
+        val jobTitle: String,          // 지원 직종
+        val experience: String,        // 경력
         val location: String,          // 사는 곳
         val appliedHoursAgo: Int,      // 몇 시간 전 지원
-        val medalRes: Int              // red_medal / yellow_medal / blue_medal
+        val medalRes: Int,             // 메달 리소스
+        val age: Int                   // 나이
     )
 
     fun getDashboardStats(): DashboardStats =
@@ -65,15 +72,13 @@ object FakeEmployerRepo {
         )
 
     fun getRecentApplicants(): List<Applicant> {
-        val commonJob = "매장 매니저" // ← 셋 다 동일(자기소개 대체)
+        val commonJob = "매장 매니저"
         return listOf(
-            Applicant("홍길동", commonJob, "경력 3년", "서울", 2, R.drawable.blue_medal),
-            Applicant("김철수", commonJob, "경력 1년", "부산", 5, R.drawable.red_medal),
-            Applicant("이영희", commonJob, "신입",     "대구", 9, R.drawable.yellow_medal),
+            Applicant("홍길동", commonJob, "경력 3년", "서울", 2, R.drawable.blue_medal,   age = 29),
+            Applicant("김철수", commonJob, "경력 1년", "부산", 5, R.drawable.red_medal,    age = 25),
+            Applicant("이영희", commonJob, "신입",     "대구", 9, R.drawable.yellow_medal, age = 23),
         )
     }
-
-
 }
 
 /* ================= Data for UI ================= */
@@ -83,7 +88,8 @@ data class ApplicantUi(
     val experience: String,
     val location: String,
     val appliedHoursAgo: Int,
-    val medalRes: Int
+    val medalRes: Int,
+    val age: Int
 )
 
 /* ================= Route Entry ================= */
@@ -99,7 +105,8 @@ fun EmployerHomeRoute(nav: NavController) {
                 experience = it.experience,
                 location = it.location,
                 appliedHoursAgo = it.appliedHoursAgo,
-                medalRes = it.medalRes
+                medalRes = it.medalRes,
+                age = it.age
             )
         }
     }
@@ -138,10 +145,20 @@ fun EmployerHomeRoute(nav: NavController) {
                 )
             }
 
+            /* 인사말: 이름만 파란색 */
             item {
-                val employerName = remember{ FakeEmployerRepo.employerName }
+                val employerName = remember { FakeEmployerRepo.employerName }
                 Text(
-                    text = "안녕하세요, ${employerName}님",
+                    text = buildAnnotatedString {
+                        append("안녕하세요, ")
+                        withStyle(
+                            style = SpanStyle(
+                                color = BrandBlue,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        ) { append(employerName) }
+                        append("님")
+                    },
                     fontSize = 28.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
@@ -156,7 +173,7 @@ fun EmployerHomeRoute(nav: NavController) {
             /* 1) 카드 3개 — fakeDB 값으로 치환 */
             item {
                 StatCard(
-                    leading = { SmallIconBox(iconType = SmallIconType.Plus) },
+                    leading = { SmallIconBox(resId = R.drawable.new_applicant, contentDescription = "신규 지원자") },
                     title = "신규 지원자",
                     number = stats.newApplicantsToday.toString(),
                     subtitle = "오늘 ${stats.newApplicantsToday}명이 지원했습니다.",
@@ -165,7 +182,7 @@ fun EmployerHomeRoute(nav: NavController) {
             }
             item {
                 StatCard(
-                    leading = { SmallIconBox(iconType = SmallIconType.Ticket) },
+                    leading = { SmallIconBox(resId = R.drawable.unread_resume, contentDescription = "미열람 이력서") },
                     title = "미열람 이력서",
                     number = stats.unreadResumes.toString(),
                     subtitle = "총 ${stats.unreadResumes}개의 이력서를 확인해보세요",
@@ -174,7 +191,7 @@ fun EmployerHomeRoute(nav: NavController) {
             }
             item {
                 StatCard(
-                    leading = { SmallIconBox(iconType = SmallIconType.Grid) },
+                    leading = { SmallIconBox(resId = R.drawable.processing_announ, contentDescription = "진행 중인 공고") },
                     title = "진행 중인 공고",
                     number = stats.activeNotices.toString(),
                     subtitle = "현재 ${stats.activeNotices}개의 공고가 진행 중입니다",
@@ -188,7 +205,7 @@ fun EmployerHomeRoute(nav: NavController) {
                     PrimaryButton(
                         text = "공고등록",
                         height = 43.dp,
-                        onClick = { nav.safeNavigate(Route.EmployerNotice.path) } // 등록 화면 있으면 교체
+                        onClick = { nav.safeNavigate(Route.EmployerNotice.path) }
                     )
                 }
             }
@@ -250,13 +267,9 @@ data class EmployerNavItem(
     val size: Dp = 55.dp
 )
 
-
-
 @Composable
 fun EmployerBottomNavBar(current: String, onClick: (String) -> Unit) {
     val items = listOf(
-        // drawable/ 에 아래 리소스 필요:
-        // unselected_home, selected_home, unselected_notice, unselected_applicant, unselected_my, selected_my
         EmployerNavItem("home",      R.drawable.unselected_home,      R.drawable.selected_home, 55.dp),
         EmployerNavItem("notice",    R.drawable.unselected_notice,    null,                      75.dp),
         EmployerNavItem("applicant", R.drawable.unselected_applicant, null,                      75.dp),
@@ -293,47 +306,24 @@ fun EmployerBottomNavBar(current: String, onClick: (String) -> Unit) {
 }
 
 /* ================= Cards & List ================= */
-private enum class SmallIconType { Plus, Ticket, Grid }
-
 @Composable
-private fun SmallIconBox(iconType: SmallIconType) {
+private fun SmallIconBox(
+    @DrawableRes resId: Int,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(24.dp)
             .clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFDEEAFF)),
         contentAlignment = Alignment.Center
     ) {
-        when (iconType) {
-            SmallIconType.Plus -> Box(
-                Modifier
-                    .size(16.dp)
-                    .drawBehind {
-                        val s = size
-                        val stroke = 2.dp.toPx()
-                        drawLine(BrandBlue,
-                            Offset(s.width / 2, 0f), androidx.compose.ui.geometry.Offset(s.width / 2, s.height), stroke)
-                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(0f, s.height / 2), androidx.compose.ui.geometry.Offset(s.width, s.height / 2), stroke)
-                    }
-            )
-            SmallIconType.Ticket -> Box(
-                Modifier
-                    .size(16.dp)
-                    .border(2.dp, BrandBlue, RoundedCornerShape(3.dp))
-            )
-            SmallIconType.Grid -> Box(
-                Modifier
-                    .size(16.dp)
-                    .drawBehind {
-                        val stroke = 2.dp.toPx()
-                        val w = size.width
-                        val h = size.height
-                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(w / 2, 0f), androidx.compose.ui.geometry.Offset(w / 2, h), stroke)
-                        drawLine(BrandBlue, androidx.compose.ui.geometry.Offset(0f, h / 2), androidx.compose.ui.geometry.Offset(w, h / 2), stroke)
-                        drawRect(color = BrandBlue, style = Stroke(width = stroke))
-                    }
-            )
-        }
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 
@@ -358,7 +348,7 @@ private fun StatCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 15.dp, bottom = 15.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.Start
         ) {
             Row(
                 modifier = Modifier
@@ -391,8 +381,8 @@ private fun StatCard(
                 fontWeight = FontWeight.ExtraBold,
                 color = BrandBlue,
                 modifier = Modifier
-                    .width(288.dp)
-                    .padding(top = 5.dp)
+                    .fillMaxWidth()
+                    .padding(start = STATCARD_TEXT_START, top = 5.dp) // 상수 패딩
             )
             Text(
                 text = subtitle,
@@ -400,8 +390,8 @@ private fun StatCard(
                 fontWeight = FontWeight.SemiBold,
                 color = TextGray,
                 modifier = Modifier
-                    .width(288.dp)
-                    .padding(top = 2.dp)
+                    .fillMaxWidth()
+                    .padding(start = STATCARD_TEXT_START, top = 2.dp) // 상수 패딩
             )
         }
     }
@@ -451,54 +441,80 @@ private fun ApplicantRow(ap: ApplicantUi) {
             .height(100.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier.weight(1f)
         ) {
-            // 아바타(연한 파랑 원) 안에 메달
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFDEEAFF)),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = ap.medalRes),
-                    contentDescription = "medal",
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-                modifier = Modifier.widthIn(max = 220.dp)
-            ) {
-                // 이름 옆 메달
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        ap.name,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black
-                    )
-                    Spacer(Modifier.width(6.dp))
+            // ===== 이름 줄: 사람아이콘 → 이름 → 나이 → 메달 =====
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // 사람 아이콘 (연한 파란 원)
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFDEEAFF)),
+                    contentAlignment = Alignment.Center
+                ) {
                     Image(
-                        painter = painterResource(id = ap.medalRes),
-                        contentDescription = "medal_inline",
-                        modifier = Modifier.size(14.dp)
+                        painter = painterResource(id = R.drawable.user_with_circle),
+                        contentDescription = "user",
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                // 지원 직종 (공통)
-                Text(ap.jobTitle, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextGray, maxLines = 1)
+                Spacer(Modifier.width(6.dp))
 
-                // 경력 · 지역 · n시간 전
+                // 이름
+                Text(
+                    ap.name,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black
+                )
+
+                Spacer(Modifier.width(6.dp))
+
+                // 나이
+                Text("${ap.age}세", fontSize = 13.sp, color = TextGray)
+
+                Spacer(Modifier.width(6.dp))
+
+                // 메달
+                Image(
+                    painter = painterResource(id = ap.medalRes),
+                    contentDescription = "medal_inline",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // ===== 이름 밑에서 시작하는 부분 =====
+            // 이름의 시작 위치만큼 들여쓰기
+            val indent = 24.dp + 6.dp   // 아이콘(24) + 간격(6)
+
+            Column(modifier = Modifier.padding(start = indent)) {
+                // 직무
+                Text(
+                    ap.jobTitle,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextGray,
+                    maxLines = 1
+                )
+
+                // 경력 · 위치 · 시간
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(ap.experience, fontSize = 12.sp, color = BrandBlue)
                     Spacer(Modifier.width(8.dp))
-                    Text("· ${ap.location}", fontSize = 12.sp, color = TextGray)
+                    Text("·", fontSize = 12.sp, color = TextGray)
+                    Spacer(Modifier.width(8.dp))
+                    Image(
+                        painter = painterResource(id = R.drawable.location),
+                        contentDescription = "location",
+                        modifier = Modifier.size(12.dp),
+                        colorFilter = ColorFilter.tint(TextGray)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(ap.location, fontSize = 12.sp, color = TextGray)
                     Spacer(Modifier.width(8.dp))
                     Text("· ${ap.appliedHoursAgo}시간 전", fontSize = 12.sp, color = TextGray)
                 }
@@ -513,6 +529,8 @@ private fun ApplicantRow(ap: ApplicantUi) {
         )
     }
 }
+
+
 
 @Composable
 private fun HorizontalLine() {
@@ -540,8 +558,11 @@ private fun NavController.safeNavigate(
 /* ============ 리소스 체크 ============
 drawable/
 - logo1.png, bell.png
+- user_with_circle.png
 - red_medal.png, yellow_medal.png, blue_medal.png
+- new_applicant.png, unread_resume.png, processing_announ.png
 - unselected_home.png, selected_home.png
 - unselected_notice.png, unselected_applicant.png
 - unselected_my.png, selected_my.png
+- ic_location.png  // ← 위치 아이콘 (이름 확인 후 맞게 변경)
 */
