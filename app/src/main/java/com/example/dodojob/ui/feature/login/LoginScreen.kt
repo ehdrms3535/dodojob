@@ -22,16 +22,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.navigation.Route
-
-// ▼ 추가: Supabase + 코루틴 + 직렬화 + 쿼리 DSL 임포트
 import com.example.dodojob.data.supabase.LocalSupabase
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.*
+import com.example.dodojob.session.CurrentUser
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromJsonElement
-import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.*   // eq, limit 등
 
 @Serializable
 private data class LoginRow(
@@ -39,23 +37,24 @@ private data class LoginRow(
     val username: String,
     val password: String? = null,
     val name: String? = null,
-    val job: String? = null      // ★ 추가
+    val job: String? = null
 )
 
 @Composable
 fun LoginScreen(nav: NavController) {
-    var id by remember { mutableStateOf("") }          // username 입력
+    var id by remember { mutableStateOf("") }          // username
     var pw by remember { mutableStateOf("") }
     var autoLogin by remember { mutableStateOf(false) }
 
-    // ▼ 추가: Supabase 클라/코루틴/상태
     val client = LocalSupabase.current
     val scope = rememberCoroutineScope()
     var loading by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
 
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize().background(Color(0xFFF1F5F7))
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF1F5F7))
     ) {
         val W = maxWidth
         val H = maxHeight
@@ -113,22 +112,9 @@ fun LoginScreen(nav: NavController) {
 
             Spacer(Modifier.height((H * 0.03f).coerceIn(16.dp, 32.dp)))
 
-            // 🔑 아이디(=username)
-            UnderlineTextField(
-                value = id,
-                onValueChange = { id = it },
-                placeholder = "아이디"
-            )
-
+            UnderlineTextField(value = id, onValueChange = { id = it }, placeholder = "아이디")
             Spacer(Modifier.height(fieldGap))
-
-            // 🔒 비밀번호
-            UnderlineTextField(
-                value = pw,
-                onValueChange = { pw = it },
-                placeholder = "비밀번호",
-                isPassword = true
-            )
+            UnderlineTextField(value = pw, onValueChange = { pw = it }, placeholder = "비밀번호", isPassword = true)
 
             Spacer(Modifier.height(sectionGap))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -161,31 +147,31 @@ fun LoginScreen(nav: NavController) {
                     status = null
                     loading = true
                     scope.launch {
-                        val q = id.trim()
-                        val json = Json { ignoreUnknownKeys = true }
-
                         runCatching {
-                            // username 일치하는 1건만 서버에서 조회
                             val res = client.from("users_tmp").select {
-                                filter { eq("username", q) }
+                                filter { eq("username", id.trim()) }
                                 limit(1)
                             }
+                            // 수동 디코딩 (decodeList 미사용)
+                            val json = Json { ignoreUnknownKeys = true }
                             val list = json.decodeFromJsonElement(
                                 ListSerializer(LoginRow.serializer()),
                                 Json.parseToJsonElement(res.data)
                             )
                             val user = list.firstOrNull() ?: error("존재하지 않는 아이디입니다.")
                             if (user.password != pw) error("비밀번호가 일치하지 않습니다.")
-                            if (user.job?.trim() != "시니어") error("시니어 전용 탭입니다. (현재: ${user.job ?: "미지정"})")
+
+                            val currentJob = user.job?.trim().takeUnless { it.isNullOrEmpty() } ?: "미지정"
+                            if (currentJob != "시니어") error("시니어 전용 탭입니다. (현재: $currentJob)")
                             user
-                        }.onSuccess {
-                            // 성공 → 메인으로 이동
+                        }.onSuccess { user ->
+                            CurrentUser.setLogin(user.id, user.username)
                             nav.navigate(Route.Main.path) {
                                 popUpTo(Route.Login.path) { inclusive = true }
                                 launchSingleTop = true
                             }
-                        }.onFailure {
-                            status = "로그인 실패: ${it.message}"
+                        }.onFailure { e ->
+                            status = "로그인 실패: ${e.message}"
                         }
                         loading = false
                     }
@@ -205,7 +191,6 @@ fun LoginScreen(nav: NavController) {
                 )
             }
 
-            // 결과/오류 메시지
             Spacer(Modifier.height(8.dp))
             status?.let { Text(it, color = Color.Black) }
 
@@ -226,9 +211,7 @@ fun LoginScreen(nav: NavController) {
 
             Spacer(Modifier.height(betweenBtns))
             OutlinedButton(
-                onClick = {
-                    nav.navigate(Route.Verify.path) { launchSingleTop = true }
-                },
+                onClick = { nav.navigate(Route.Verify.path) { launchSingleTop = true } },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(signBtnH),
@@ -239,17 +222,12 @@ fun LoginScreen(nav: NavController) {
                     contentColor = Color(0xFF7E7D7D)
                 )
             ) {
-                Text(
-                    "휴대폰 번호로 회원가입",
-                    fontSize = (W.value * 0.055f).sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text("휴대폰 번호로 회원가입", fontSize = (W.value * 0.055f).sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
 
-/* -------------------------------- */
 @Composable
 private fun UnderlineTextField(
     value: String,
