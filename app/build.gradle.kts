@@ -112,6 +112,12 @@ dependencies {
     implementation(libs.lifecycle.runtime.ktx)
 
     implementation(libs.kotlinx.coroutines.android)
+
+    implementation("com.naver.maps:map-sdk:3.22.1") // 최신 버전으로 교체 가능
+    implementation("com.squareup.okhttp3:okhttp:4.12.0") // 네이버 역지오코딩 REST 호출용
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 }
 
 /*configurations.configureEach {
