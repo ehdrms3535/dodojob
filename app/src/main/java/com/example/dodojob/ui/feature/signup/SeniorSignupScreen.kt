@@ -37,18 +37,17 @@ import com.example.dodojob.data.user.UserDto
 import java.util.UUID
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import com.example.dodojob.session.CurrentUser
 
 @Composable
 fun SignUpIdPwScreen(nav: NavController) {
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
 
-    // Verify → SignUp에서 전달된 값
     val prefill = remember {
         nav.previousBackStackEntry?.savedStateHandle?.get<SignUpPrefill>("prefill")
     }
 
-    // 기본 정보 (saveable OK)
     var name by rememberSaveable { mutableStateOf(prefill?.name.orEmpty()) }
     var gender by rememberSaveable { mutableStateOf(prefill?.gender.orEmpty()) }
     var region by rememberSaveable { mutableStateOf(prefill?.region.orEmpty()) }
@@ -56,7 +55,6 @@ fun SignUpIdPwScreen(nav: NavController) {
     var email by rememberSaveable { mutableStateOf("") }
     var userId by rememberSaveable { mutableStateOf("") }
 
-    // 민감정보: 디스크 보존 방지 → remember
     var rrnFront by remember { mutableStateOf(prefill?.rrnFront.orEmpty()) }
     var rrnBackFirst by remember { mutableStateOf(prefill?.rrnBackFirst.orEmpty()) }
     var pw by remember { mutableStateOf("") }
@@ -66,7 +64,6 @@ fun SignUpIdPwScreen(nav: NavController) {
     var loading by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // 간단 유효성
     val emailOk = email.contains("@") && email.contains(".")
     val idOk = userId.length >= 3 && userId.any { it.isDigit() } && userId.any { it.isLetter() }
     val pwOk = pw.length >= 8 && pw.any { it.isDigit() } && pw.any { it.isLetter() }
@@ -75,13 +72,9 @@ fun SignUpIdPwScreen(nav: NavController) {
     val Bg = Color(0xFFF1F5F7)
     val Primary = Color(0xFF005FFF)
 
-    // 제출 가능 조건(버튼 enabled/색상 모두 동일 기준으로)
     val canSubmit = emailOk && idOk && pwOk && pw2Ok && prefill != null
 
-    // prefill 없이 접근 시 방어 (원하면 Verify로 돌려보내기)
-    LaunchedEffect(prefill) {
-        if (prefill == null) nav.popBackStack()
-    }
+    LaunchedEffect(prefill) { if (prefill == null) nav.popBackStack() }
 
     Scaffold(
         containerColor = Bg,
@@ -100,28 +93,29 @@ fun SignUpIdPwScreen(nav: NavController) {
 
                         scope.launch {
                             runCatching {
-                                val user = UserDto(
+                                val toSave = UserDto(
                                     id = UUID.randomUUID().toString(),
                                     name = name,
                                     gender = gender,
-                                    rrnFront = rrnFront,          // repo에서 birthdate로 변환
-                                    rrnBackFirst = rrnBackFirst,  // repo에서 birthdate로 변환
+                                    rrnFront = rrnFront,
+                                    rrnBackFirst = rrnBackFirst,
                                     region = region,
                                     phone = phone,
                                     email = email,
                                     username = userId,
-                                    password = pw,                // 운영에서는 GoTrue 권장
+                                    password = pw,
                                     job = "시니어"
                                 )
-                                repo.insertUser(user)            // 실제 DB insert
-                            }.onSuccess {
-                                // 민감정보 즉시 파기
-                                rrnFront = ""; rrnBackFirst = ""
-                                pw = ""; pw2 = ""
+                                repo.insertUser(toSave)
+                                toSave // onSuccess로 전달
+                            }.onSuccess { created ->
+                                // ✅ 람다 파라미터로 받은 created 사용 (user 참조 에러 해결)
+                                CurrentUser.setLogin(created.id, created.username)
 
-                                nav.navigate(Route.SignUpComplete.path) {
-                                    launchSingleTop = true
-                                }
+                                // 민감정보 파기
+                                rrnFront = ""; rrnBackFirst = ""; pw = ""; pw2 = ""
+
+                                nav.navigate(Route.SignUpComplete.path) { launchSingleTop = true }
                             }.onFailure { e ->
                                 error = e.message ?: "회원가입 실패"
                             }
@@ -153,7 +147,6 @@ fun SignUpIdPwScreen(nav: NavController) {
             val W = maxWidth
             val H = maxHeight
 
-            // 비율 기반 치수
             val hPad = (W * 0.045f)
             val titleTop = (H * 0.03f)
             val titleSp = (W.value * 0.09f).sp
@@ -174,27 +167,14 @@ fun SignUpIdPwScreen(nav: NavController) {
                     .padding(horizontal = hPad)
             ) {
                 Spacer(Modifier.height(titleTop))
-
-                // 뒤로가기
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "<",
-                        fontSize = backSp,
-                        color = Color.Black,
-                        modifier = Modifier.clickable { nav.popBackStack() }
-                    )
+                    Text("<", fontSize = backSp, color = Color.Black, modifier = Modifier.clickable { nav.popBackStack() })
                 }
-
                 Spacer(Modifier.height(8.dp))
                 Text("회원가입", fontSize = titleSp, fontWeight = FontWeight.SemiBold, color = Color.Black)
-
                 Spacer(Modifier.height(subTop))
-                Text(
-                    "회원가입에 필요한 정보를 정확히\n입력해 주세요",
-                    fontSize = subSp, color = Color(0xFF636363)
-                )
+                Text("회원가입에 필요한 정보를 정확히\n입력해 주세요", fontSize = subSp, color = Color(0xFF636363))
 
-                // 이메일
                 Spacer(Modifier.height(gapAfterSubtitle))
                 Text("이메일", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(fieldTop))
@@ -209,7 +189,6 @@ fun SignUpIdPwScreen(nav: NavController) {
                 )
                 Spacer(Modifier.height(lineGap))
 
-                // 아이디
                 Spacer(Modifier.height(labelTop))
                 Text("아이디", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(fieldTop))
@@ -224,7 +203,6 @@ fun SignUpIdPwScreen(nav: NavController) {
                 )
                 Spacer(Modifier.height(lineGap))
 
-                // 비밀번호
                 Spacer(Modifier.height(labelTop))
                 Text("비밀번호", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(fieldTop))
@@ -239,7 +217,6 @@ fun SignUpIdPwScreen(nav: NavController) {
                 )
                 Spacer(Modifier.height(lineGap))
 
-                // 비밀번호 재입력
                 Spacer(Modifier.height(labelTop))
                 Text("비밀번호 재입력", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(fieldTop))
@@ -254,7 +231,6 @@ fun SignUpIdPwScreen(nav: NavController) {
                 )
 
                 Spacer(Modifier.height(8.dp))
-                // 에러 메시지 노출
                 error?.let { Text(it, color = Color(0xFFD32F2F), fontSize = 14.sp) }
 
                 Spacer(Modifier.height(lineGap))
@@ -263,3 +239,73 @@ fun SignUpIdPwScreen(nav: NavController) {
     }
 }
 
+<<<<<<< HEAD:app/src/main/java/com/example/dodojob/ui/feature/signup/SignupScreen.kt
+/* 입력 라인 + 체크 아이콘 */
+@Composable
+private fun UnderlineFieldRow(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    placeholderSize: androidx.compose.ui.unit.TextUnit,
+    keyboardOptions: KeyboardOptions,
+    isPassword: Boolean,
+    checkState: CheckState?
+) {
+    val hint = Color(0xFFA6A6A6)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = TextStyle(fontSize = placeholderSize, color = Color.Black),
+            placeholder = { Text(placeholder, color = hint, fontSize = placeholderSize) },
+            modifier = Modifier.weight(1f).heightIn(min = 40.dp),
+            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+            keyboardOptions = keyboardOptions,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                errorContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Black,
+                unfocusedIndicatorColor = Color(0xFFA2A2A2),
+                disabledIndicatorColor = Color(0xFFC0C0C0),
+                cursorColor = Color.Black,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedPlaceholderColor = hint,
+                unfocusedPlaceholderColor = hint
+            )
+        )
+        if (checkState != null) {
+            Spacer(Modifier.width(10.dp))
+            CheckDot(state = checkState)
+        }
+    }
+}
+
+private enum class CheckState { NeutralGrey, ValidBlue }
+
+@Composable
+private fun CheckDot(state: CheckState) {
+    when (state) {
+        CheckState.NeutralGrey -> {
+            Box(
+                modifier = Modifier.size(22.dp).clip(CircleShape).background(Color(0xFFE6E6E6)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = Icons.Filled.Check, contentDescription = null, tint = Color(0xFFBDBDBD), modifier = Modifier.size(14.dp))
+            }
+        }
+        CheckState.ValidBlue -> {
+            Box(
+                modifier = Modifier.size(22.dp).clip(CircleShape).background(Color(0xFF2A77FF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            }
+        }
+    }
+}
+=======
+>>>>>>> 5b5d2e97ec1fafdd8967cf0961e74c7b38f3cce3:app/src/main/java/com/example/dodojob/ui/feature/signup/SeniorSignupScreen.kt
