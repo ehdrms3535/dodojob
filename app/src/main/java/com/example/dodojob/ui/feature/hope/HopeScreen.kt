@@ -84,7 +84,7 @@ fun HopeWorkFilterScreen(nav: NavController) {
     val careBits    = prev?.get<String>("sheet_care_bits")    ?: ""
     val healthy     = prev?.get<Boolean>("sheet_healthy") ?: false
     // ----- 내부 상태 -----
-    var region by rememberSaveable { mutableStateOf<String?>(null) }
+    var region by rememberSaveable { mutableStateOf(CurrentUser.locate) }
     var jobSelections by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) } // 별도 설계 전 임시 유지
     var period by remember { mutableStateOf<String?>(null) }
 
@@ -163,11 +163,7 @@ fun HopeWorkFilterScreen(nav: NavController) {
                     onClick = {
                         if (!canApply) return@Button
 
-                        //val username = try { CurrentUser.requireUsername() } catch (_: IllegalStateException) {
-                        //    // TODO: 사용자 알림(로그인 필요)
-                        //    return@Button
-                        //}
-                        val username = "1234";
+                        val username = CurrentUser.username
                         val timeFlag = timeOfDay != null
 
                         // TODO: 직종/기간 비트 문자열 설계 후 교체

@@ -37,7 +37,7 @@ class UserRepositorySupabase(
 
     override suspend fun insertUser(user: UserDto) {
         val birth = rrnToBirthDate(user.rrnFront, user.rrnBackFirst).toString() // "YYYY-MM-DD"
-        client.from("users_tmp").insert(
+        client.from("users_tmp").upsert(
             UserRow(
                 id = user.id,
                 name = user.name,
@@ -50,6 +50,23 @@ class UserRepositorySupabase(
                 password = user.password, // 실제로는 해시 or GoTrue 사용
                 job = user.job
             )
-        )
+        ){
+            onConflict = "id"   // ⚡ PK/Unique 컬럼 지정
+        }
+    }
+
+    override suspend fun upsertIdPwByPhone(
+        username: String,
+        rawPassword: String
+    ) {
+        // ✅ phone UNIQUE 기준으로 충돌 시 username/password만 갱신
+        client.from("users_tmp").upsert(
+            mapOf(
+                "username" to username,
+                "password" to rawPassword,
+            )
+        ) {
+            ignoreDuplicates = false   // 충돌 시 UPDATE(merge)
+        }
     }
 }
