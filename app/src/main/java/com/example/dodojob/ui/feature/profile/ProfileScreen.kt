@@ -42,8 +42,12 @@
             likedCount = 2,
             onClickResumeCreate = {},
             onClickResumeManage = {},
-            onClickBookmarks = {},
-            onClickRecent = {},
+            onClickBookmarks = {
+                nav.navigate("liked_job")
+            },
+            onClickRecent = {
+                nav.navigate("recently_viewed")
+            },
             onClickActivityLevel = {
                 nav.navigate("activity_level")
             },
