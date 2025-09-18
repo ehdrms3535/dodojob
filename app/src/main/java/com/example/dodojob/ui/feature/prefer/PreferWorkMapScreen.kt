@@ -47,6 +47,7 @@ import org.json.JSONObject
 import kotlin.math.*
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
+import com.example.dodojob.session.CurrentUser
 
 private const val LOCATION_PERMISSION_REQUEST_CODE = 1000
 
@@ -326,6 +327,8 @@ fun PreferWorkMapScreen(nav: NavController) {
             Button(
                 onClick = {
                     // 반경/모드와 함께 전달하고 싶으면 savedStateHandle에 같이 저장
+                    CurrentUser.setlocate(locate = picked, radium = searchRadiusM)
+
                     nav.previousBackStackEntry?.savedStateHandle?.apply {
                         set("pickedRegion", picked)
                         set("searchRadiusM", searchRadiusM)

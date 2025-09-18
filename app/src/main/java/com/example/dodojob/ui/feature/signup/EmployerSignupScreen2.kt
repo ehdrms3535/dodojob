@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
 import com.example.dodojob.session.CurrentUser
 
 @Composable
-fun SignUpIdPwScreen(nav: NavController) {
+fun EmploySignUpIdPwScreen(nav: NavController) {
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
 
@@ -48,11 +48,6 @@ fun SignUpIdPwScreen(nav: NavController) {
         nav.previousBackStackEntry?.savedStateHandle?.get<SignUpPrefill>("prefill")
     }
 
-    var name by rememberSaveable { mutableStateOf(prefill?.name.orEmpty()) }
-    var gender by rememberSaveable { mutableStateOf(prefill?.gender.orEmpty()) }
-    var region by rememberSaveable { mutableStateOf(prefill?.region.orEmpty()) }
-    var phone by rememberSaveable { mutableStateOf(prefill?.phone.orEmpty()) }
-    var email by rememberSaveable { mutableStateOf("") }
     var userId by rememberSaveable { mutableStateOf("") }
 
     var rrnFront by remember { mutableStateOf(prefill?.rrnFront.orEmpty()) }
@@ -64,7 +59,6 @@ fun SignUpIdPwScreen(nav: NavController) {
     var loading by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val emailOk = email.contains("@") && email.contains(".")
     val idOk = userId.length >= 3 && userId.any { it.isDigit() } && userId.any { it.isLetter() }
     val pwOk = pw.length >= 8 && pw.any { it.isDigit() } && pw.any { it.isLetter() }
     val pw2Ok = pw2.isNotEmpty() && pw2 == pw
@@ -72,7 +66,7 @@ fun SignUpIdPwScreen(nav: NavController) {
     val Bg = Color(0xFFF1F5F7)
     val Primary = Color(0xFF005FFF)
 
-    val canSubmit = emailOk && idOk && pwOk && pw2Ok && prefill != null
+    val canSubmit = idOk && pwOk && pw2Ok && prefill != null
 
     LaunchedEffect(prefill) { if (prefill == null) nav.popBackStack() }
 
@@ -93,24 +87,10 @@ fun SignUpIdPwScreen(nav: NavController) {
 
                         scope.launch {
                             runCatching {
-                                val toSave = UserDto(
-                                    id = UUID.randomUUID().toString(),
-                                    name = name,
-                                    gender = gender,
-                                    rrnFront = rrnFront,
-                                    rrnBackFirst = rrnBackFirst,
-                                    region = region,
-                                    phone = phone,
-                                    email = email,
-                                    username = userId,
-                                    password = pw,
-                                    job = "고용주"
-                                )
-                                repo.insertUser(toSave)
-                                toSave // onSuccess로 전달
+                                repo.upsertIdPwByPhone(username = userId,rawPassword = pw)
                             }.onSuccess { created ->
                                 // ✅ 람다 파라미터로 받은 created 사용 (user 참조 에러 해결)
-                                CurrentUser.setLogin(created.id, created.username)
+                                CurrentUser.setLogin(username = userId, password = pw)
 
                                 // 민감정보 파기
                                 rrnFront = ""; rrnBackFirst = ""; pw = ""; pw2 = ""
@@ -174,20 +154,6 @@ fun SignUpIdPwScreen(nav: NavController) {
                 Text("회원가입", fontSize = titleSp, fontWeight = FontWeight.SemiBold, color = Color.Black)
                 Spacer(Modifier.height(subTop))
                 Text("회원가입에 필요한 정보를 정확히\n입력해 주세요", fontSize = subSp, color = Color(0xFF636363))
-
-                Spacer(Modifier.height(gapAfterSubtitle))
-                Text("이메일", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
-                    value = email,
-                    onValueChange = { email = it },
-                    placeholder = "수신 가능한 본인 이메일을 입력해주세요",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    isPassword = false,
-                    checkState = if (emailOk) CheckState.ValidBlue else CheckState.NeutralGrey
-                )
-                Spacer(Modifier.height(lineGap))
 
                 Spacer(Modifier.height(labelTop))
                 Text("아이디", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)

@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dodojob.ui.feature.account.ChangePasswordScreen
+import com.example.dodojob.session.SessionViewModel
 
 import com.example.dodojob.ui.feature.intro.IntroScreen
 import com.example.dodojob.ui.feature.experience.ExperienceScreen
@@ -34,21 +35,24 @@ import com.example.dodojob.ui.feature.support.SupportRoute
 import com.example.dodojob.ui.feature.profile.ActivityLevelRoute
 import com.example.dodojob.ui.feature.support.MapRoute
 import com.example.dodojob.ui.feature.management.ManagementAnnouncementRoute
+import com.example.dodojob.ui.feature.signup.EmployerSignupScreen
+import com.example.dodojob.ui.feature.signup.EmploySignUpIdPwScreen
 import com.example.dodojob.ui.feature.profile.RecentViewedRoute
 
-
 @Composable
-fun AppNavGraph(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Route.My.path) {
+fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
+    NavHost(navController = nav,startDestination = Route.Intro.path) {
+
         composable(Route.Intro.path) { IntroScreen(nav)}              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
-        composable(Route.Login.path)      { LoginScreen(nav) }        // 3. 시니어 로그인
-        composable(Route.PreLogin.path) { PreLoginScreen(nav) }       // 3-1. 고용주 로그인
+        composable(Route.Login.path)      { LoginScreen(nav,sessionVm) }        // 3. 시니어 로그인
+        composable(Route.PreLogin.path) { PreLoginScreen(nav,sessionVm) }       // 3-1. 고용주 로그인
 
-        composable(Route.Verify.path)     { VerifyScreen(nav) }       // 4. 인증(회원가입)
+        composable(Route.Verify.path)     { VerifyScreen(nav,sessionVm) }       // 4. 인증(회원가입)
         composable(Route.SignUp.path)     { SignUpIdPwScreen(nav) }   // 4-1. 회원가입
         composable(Route.SignUpComplete.path) { SignUpCompleteScreen(nav) } // 4-2. 회원가입 성공
-
+        composable(Route.EmploySignupsec.path) { EmploySignUpIdPwScreen(nav) }
+        composable(Route.EmploySignup.path) { EmployerSignupScreen(nav)}
 
         composable(Route.JobType.path)    { JobTypeScreen(nav) }      // 5. 회원가입 이후
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }    //
