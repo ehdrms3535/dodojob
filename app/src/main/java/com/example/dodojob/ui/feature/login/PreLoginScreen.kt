@@ -4,6 +4,8 @@ package com.example.dodojob.ui.feature.login
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,8 +30,12 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dodojob.session.SessionViewModel
+
 @Serializable
 private data class PreLoginRow(
     val id: String,
@@ -40,65 +46,107 @@ private data class PreLoginRow(
 )
 
 @Composable
-fun PreLoginScreen(nav: NavController) {
-    var id by remember { mutableStateOf("") }
+fun PreLoginScreen(nav: NavController,sessionvm:SessionViewModel) {
+    var id by remember { mutableStateOf("") }          // username
     var pw by remember { mutableStateOf("") }
     var autoLogin by remember { mutableStateOf(false) }
-    var pwVisible by remember { mutableStateOf(false) }
 
     val client = LocalSupabase.current
     val scope = rememberCoroutineScope()
     var loading by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF1F5F7))
     ) {
+        val W = maxWidth
+        val H = maxHeight
+
+        val screenHPad   = (W * 0.045f)
+        val topVPad      = (H * 0.03f)
+        val backSizeSp   = (W.value * 0.065f).sp
+        val titleSp      = (W.value * 0.09f).sp
+        val subtitleSp   = (W.value * 0.065f).sp
+        val subtitleLH   = (W.value * 0.095f).sp
+        val fieldGap     = (H * 0.015f).coerceIn(8.dp, 18.dp)
+        val sectionGap   = (H * 0.02f).coerceIn(12.dp, 24.dp)
+        val circleSize   = (W * 0.065f).coerceIn(20.dp, 28.dp)
+        val checkSize    = (circleSize * 0.65f)
+        val loginBtnH    = (H * 0.07f).coerceIn(48.dp, 60.dp)
+        val signBtnH     = (H * 0.07f).coerceIn(48.dp, 60.dp)
+        val betweenBtns  = (H * 0.02f).coerceIn(12.dp, 20.dp)
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = screenHPad)
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { nav.popBackStack() }) {
-                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
-                }
-                Text(text = "로그인", fontSize = 24.sp)
-            }
+            Spacer(Modifier.height(topVPad))
+            Spacer(Modifier.height(topVPad))
 
-            Spacer(Modifier.height(24.dp))
-            Text(
-                text = "당신의 경험이 빛날 곳,\n두두잡에서 만나보세요.",
-                fontSize = 20.sp,
-                lineHeight = 30.sp,
-                color = Color.Black
-            )
-
-            Spacer(Modifier.height(32.dp))
-            OutlinedTextField(value = id, onValueChange = { id = it }, label = { Text("아이디", color = Color.Gray) }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
-                value = pw,
-                onValueChange = { pw = it },
-                label = { Text("비밀번호", color = Color.Gray) },
-                modifier = Modifier.fillMaxWidth(),
-                visualTransformation = if (pwVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    val icon = if (pwVisible) Icons.Filled.Check else Icons.Filled.Close
-                    IconButton(onClick = { pwVisible = !pwVisible }) { Icon(icon, contentDescription = null) }
-                }
-            )
-
-            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = autoLogin, onCheckedChange = { autoLogin = it })
-                Text("자동로그인", fontSize = 15.sp)
+                Text(
+                    "<",
+                    fontSize = backSizeSp,
+                    color = Color.Black,
+                    modifier = Modifier.clickable { nav.popBackStack() }
+                )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height((H * 0.005f).coerceAtLeast(2.dp)))
+            Text(
+                "로그인",
+                fontSize = titleSp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black,
+                modifier = Modifier.padding(start = (W * 0.02f).coerceIn(6.dp, 14.dp))
+            )
+
+            Spacer(Modifier.height((H * 0.01f).coerceIn(8.dp, 16.dp)))
+            Text(
+                "당신의 경험이 빛날 곳,\n두두잡에서 만나보세요.",
+                fontSize = subtitleSp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black,
+                lineHeight = subtitleLH,
+                modifier = Modifier.padding(start = (W * 0.02f).coerceIn(6.dp, 14.dp))
+            )
+
+            Spacer(Modifier.height((H * 0.03f).coerceIn(16.dp, 32.dp)))
+
+            UnderlineTextField(value = id, onValueChange = { id = it }, placeholder = "아이디")
+            Spacer(Modifier.height(fieldGap))
+            UnderlineTextField(value = pw, onValueChange = { pw = it }, placeholder = "비밀번호", isPassword = true)
+
+            Spacer(Modifier.height(sectionGap))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = { autoLogin = !autoLogin },
+                    modifier = Modifier.size(circleSize),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (autoLogin) Color(0xFF555555) else Color(0xFFDDDDDD),
+                        contentColor = Color.White
+                    )
+                ) {
+                    if (autoLogin) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "자동 로그인 체크됨",
+                            tint = Color.White,
+                            modifier = Modifier.size(checkSize)
+                        )
+                    }
+                }
+                Spacer(Modifier.width((W * 0.02f).coerceIn(6.dp, 14.dp)))
+                Text("자동로그인", fontSize = (W.value * 0.045f).sp, color = Color.Black)
+            }
+
+            Spacer(Modifier.height(sectionGap))
             Button(
                 onClick = {
                     status = null
@@ -109,6 +157,7 @@ fun PreLoginScreen(nav: NavController) {
                                 filter { eq("username", id.trim()) }
                                 limit(1)
                             }
+                            // 수동 디코딩 (decodeList 미사용)
                             val json = Json { ignoreUnknownKeys = true }
                             val list = json.decodeFromJsonElement(
                                 ListSerializer(PreLoginRow.serializer()),
@@ -118,13 +167,15 @@ fun PreLoginScreen(nav: NavController) {
                             if (user.password != pw) error("비밀번호가 일치하지 않습니다.")
 
                             val currentJob = user.job?.trim().takeUnless { it.isNullOrEmpty() } ?: "미지정"
-                            if (currentJob != "시니어") error("시니어 전용 탭입니다. (현재: $currentJob)")
+                            if (currentJob != "고용주") error("고용주 전용 탭입니다. (현재: $currentJob)")
                             user
                         }.onSuccess { user ->
-                            // set 또는 setLogin 사용 가능
                             CurrentUser.setLogin(user.id, user.username)
-                            // CurrentUser.set(user.id)
-
+                            sessionvm.setLogin(
+                                id = user.id,
+                                name = user.username,
+                                role = "고용주" // 혹은 "고용주"
+                            )
                             nav.navigate(Route.Main.path) {
                                 popUpTo(Route.Login.path) { inclusive = true }
                                 launchSingleTop = true
@@ -135,39 +186,92 @@ fun PreLoginScreen(nav: NavController) {
                         loading = false
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(57.dp),
-                enabled = !loading && id.isNotBlank() && pw.isNotBlank(),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005FFF))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(loginBtnH),
+                shape = RoundedCornerShape((W * 0.08f).coerceIn(16.dp, 28.dp)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005FFF)),
+                enabled = !loading && id.isNotBlank() && pw.isNotBlank()
             ) {
-                Text(if (loading) "로그인 중..." else "로그인", fontSize = 18.sp, color = Color.White)
+                Text(
+                    if (loading) "로그인 중..." else "로그인",
+                    fontSize = (W.value * 0.055f).sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             status?.let { Text(it, color = Color.Black) }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(betweenBtns))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "아이디 찾기", modifier = Modifier.clickable { })
-                Spacer(Modifier.width(16.dp))
-                Box(modifier = Modifier.size(width = 1.dp, height = 16.dp).background(Color.Black))
-                Spacer(Modifier.width(16.dp))
-                Text(text = "비밀번호 찾기", modifier = Modifier.clickable { })
+                TextButton(onClick = { /* TODO */ }) {
+                    Text("아이디 찾기", fontSize = (W.value * 0.043f).sp, color = Color.Black)
+                }
+                Text(" | ", fontSize = (W.value * 0.043f).sp, color = Color.Black)
+                TextButton(onClick = { /* TODO */ }) {
+                    Text("비밀번호 찾기", fontSize = (W.value * 0.043f).sp, color = Color.Black)
+                }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(betweenBtns))
             OutlinedButton(
-                onClick = { nav.navigate(Route.SignUp.path) { launchSingleTop = true } },
-                modifier = Modifier.fillMaxWidth().height(57.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF7E7D7D))
+                onClick = {
+                    sessionvm.setrole(
+                        role = "고용주" // 혹은 "고용주"
+                    )
+                    nav.navigate(Route.Verify.path) { launchSingleTop = true } },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(signBtnH),
+                shape = RoundedCornerShape((W * 0.08f).coerceIn(16.dp, 28.dp)),
+                border = ButtonDefaults.outlinedButtonBorder,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF7E7D7D)
+                )
             ) {
-                Text("휴대폰 번호로 회원가입", fontSize = 18.sp)
+                Text("휴대폰 번호로 회원가입", fontSize = (W.value * 0.055f).sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
+}
+
+@Composable
+private fun UnderlineTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    isPassword: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        placeholder = { Text(placeholder, color = Color(0xFFA6A6A6)) },
+        modifier = modifier.fillMaxWidth(),
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        shape = RoundedCornerShape(0.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent,
+            errorContainerColor = Color.Transparent,
+            focusedIndicatorColor = Color.Black,
+            unfocusedIndicatorColor = Color(0xFFA2A2A2),
+            disabledIndicatorColor = Color(0xFFE0E0E0),
+            cursorColor = Color.Black,
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black,
+            errorTextColor = Color.Black,
+            focusedPlaceholderColor = Color(0xFFA6A6A6),
+            unfocusedPlaceholderColor = Color(0xFFA6A6A6)
+        )
+    )
 }

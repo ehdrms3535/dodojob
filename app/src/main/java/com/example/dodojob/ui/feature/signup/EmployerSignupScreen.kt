@@ -38,12 +38,15 @@ import java.util.UUID
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
+import com.example.dodojob.data.employ.EmployDto
 import kotlinx.coroutines.launch
-
+import com.example.dodojob.data.employ.EmployRepository
+import com.example.dodojob.data.employ.EmployRepositorySupabase
 @Composable
 fun EmployerSignupScreen(nav: NavController) {
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
+    val repo1: EmployRepository = remember(client) { EmployRepositorySupabase(client)}
 
     // Verify → SignUp에서 전달된 값
     val prefill = remember {
@@ -51,8 +54,12 @@ fun EmployerSignupScreen(nav: NavController) {
     }
 
     // **** 데이터만 변경: 담당자명/연락처/이메일/사업자번호 ****
-    var managerName by rememberSaveable { mutableStateOf(prefill?.name.orEmpty()) }
-    var contactPhone by rememberSaveable { mutableStateOf(prefill?.phone.orEmpty()) }
+    var name by rememberSaveable { mutableStateOf(prefill?.name.orEmpty()) }
+    var gender by rememberSaveable { mutableStateOf(prefill?.gender.orEmpty()) }
+    var region by rememberSaveable { mutableStateOf(prefill?.region.orEmpty()) }
+    var phone by rememberSaveable { mutableStateOf(prefill?.phone.orEmpty()) }
+    var userId by rememberSaveable { mutableStateOf("") }
+
     var email by rememberSaveable { mutableStateOf("") }
     var bizNo by rememberSaveable { mutableStateOf("") } // 하이픈 없이 10자리
 
@@ -65,8 +72,8 @@ fun EmployerSignupScreen(nav: NavController) {
     var error by rememberSaveable { mutableStateOf<String?>(null) }
 
     // ===== 유효성 검사 (필드 교체) =====
-    val nameOk = managerName.trim().length >= 2
-    val phoneDigits = contactPhone.filter { it.isDigit() }
+    val nameOk = name.trim().length >= 2
+    val phoneDigits = phone.filter { it.isDigit() }
     val phoneOk = phoneDigits.length in 10..11
     val emailOk = email.contains("@") && email.contains(".")
     val bizDigits = bizNo.filter { it.isDigit() }
@@ -104,24 +111,31 @@ fun EmployerSignupScreen(nav: NavController) {
                                 // 임시로 bizNo/임시비밀번호를 넣었습니다. 실제 스키마에 맞게 교체하세요.
                                 val user = UserDto(
                                     id = UUID.randomUUID().toString(),
-                                    name = managerName,
+                                    name = name,
                                     gender = prefill?.gender.orEmpty(),
                                     rrnFront = rrnFront,
                                     rrnBackFirst = rrnBackFirst,
                                     region = prefill?.region.orEmpty(),
-                                    phone = phoneDigits,
+                                    phone = phone,
                                     email = email,
-                                    username = bizDigits,           // FIXME: 스키마에 맞게 변경
+                                    username = "TempPass#1234",           // FIXME: 스키마에 맞게 변경
                                     password = "TempPass#1234",     // FIXME: 운영에서는 미사용/삭제
-                                    job = "시니어",
+                                    job = "고용주",
                                 )
                                 repo.insertUser(user)
+
+                                val employ = EmployDto(
+                                    id = email,
+                                    companyid = bizNo
+                                )
+                                repo1.insertEmploy(employ)
+
                             }.onSuccess {
                                 // 민감정보 즉시 파기
                                 rrnFront = ""; rrnBackFirst = ""
-
-                                nav.navigate(Route.SignUpComplete.path) {
-                                    launchSingleTop = true
+                                nav.currentBackStackEntry?.savedStateHandle?.set("prefill", prefill)
+                                nav.navigate(Route.EmploySignupsec.path) {
+                                   // launchSingleTop = true
                                 }
                             }.onFailure { e ->
                                 error = e.message ?: "등록 실패"
@@ -200,8 +214,8 @@ fun EmployerSignupScreen(nav: NavController) {
                 Text("담당자명", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(fieldTop))
                 UnderlineFieldRow(
-                    value = managerName,
-                    onValueChange = { managerName = it },
+                    value = name,
+                    onValueChange = { name = it },
                     placeholder = "담당자 성함",
                     placeholderSize = placeSp,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
@@ -215,8 +229,8 @@ fun EmployerSignupScreen(nav: NavController) {
                 Text("담당자 연락처", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
                 Spacer(Modifier.height(fieldTop))
                 UnderlineFieldRow(
-                    value = contactPhone,
-                    onValueChange = { contactPhone = it },
+                    value = phone,
+                    onValueChange = { phone = it },
                     placeholder = "010-0000-0000",
                     placeholderSize = placeSp,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
