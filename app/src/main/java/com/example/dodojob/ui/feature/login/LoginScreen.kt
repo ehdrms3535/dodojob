@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-
+import com.example.dodojob.session.SessionViewModel
 @Serializable
 private data class LoginRow(
     val id: String,
@@ -41,7 +41,7 @@ private data class LoginRow(
 )
 
 @Composable
-fun LoginScreen(nav: NavController) {
+fun LoginScreen(nav: NavController,sessionVm: SessionViewModel) {
     var id by remember { mutableStateOf("") }          // username
     var pw by remember { mutableStateOf("") }
     var autoLogin by remember { mutableStateOf(false) }
@@ -166,6 +166,11 @@ fun LoginScreen(nav: NavController) {
                             user
                         }.onSuccess { user ->
                             CurrentUser.setLogin(user.id, user.username)
+                            sessionVm.setLogin(
+                                id = user.id,
+                                name = user.username,
+                                role = "시니어" // 혹은 "고용주"
+                            )
                             nav.navigate(Route.Main.path) {
                                 popUpTo(Route.Login.path) { inclusive = true }
                                 launchSingleTop = true
@@ -211,7 +216,11 @@ fun LoginScreen(nav: NavController) {
 
             Spacer(Modifier.height(betweenBtns))
             OutlinedButton(
-                onClick = { nav.navigate(Route.Verify.path) { launchSingleTop = true } },
+                onClick = {
+                    sessionVm.setrole(
+                        role = "시니어" // 혹은 "고용주"
+                    )
+                    nav.navigate(Route.Verify.path) { launchSingleTop = true } },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(signBtnH),

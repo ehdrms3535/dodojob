@@ -53,6 +53,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.dodojob.navigation.Route
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import com.example.dodojob.session.SessionViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 @Parcelize
 data class SignUpPrefill(
@@ -69,7 +72,7 @@ data class SignUpPrefill(
 @Composable
 fun VerifyScreen(
     nav: NavController,
-    onBackClick: () -> Unit = { nav.popBackStack() }
+    sessionVm: SessionViewModel
 ) {
     val scroll = rememberScrollState()
 
@@ -80,7 +83,7 @@ fun VerifyScreen(
     var rrnBackFirst by remember { mutableStateOf("") }          // 주민번호 뒷 첫 자리 (숫자 1)
     var region by remember { mutableStateOf(TextFieldValue("")) } // 거주지역
     var phone by remember { mutableStateOf("") }                  // 휴대전화 (숫자)
-
+    val role = sessionVm.role.collectAsState().value
     Scaffold(
         containerColor = Color(0xFFF1F5F7),
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -105,7 +108,7 @@ fun VerifyScreen(
                         text = "<", // "<"로 바꿔도 됨
                         fontSize = 28.sp,
                         color = Color.Black,
-                        modifier = Modifier.clickable { onBackClick() }
+                        modifier = Modifier.clickable { nav.navigate(Route.Onboarding.path) }
                     )
                 }
                 // 큰 제목
@@ -152,9 +155,17 @@ fun VerifyScreen(
                         )
                         nav.currentBackStackEntry?.savedStateHandle?.set("prefill", prefill)
 
-                        nav.navigate(Route.SignUp.path) {
-                            //popUpTo(Route.Verify.path) { inclusive = true }
-                            launchSingleTop = true
+                        if (role == "시니어") {
+                            nav.navigate(Route.SignUp.path) {
+                                //popUpTo(Route.Verify.path) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                        else{
+                            nav.navigate(Route.EmploySignup.path) {
+                                //popUpTo(Route.Verify.path) { inclusive = true }
+                                launchSingleTop = true
+                            }
                         }
                     },
                     modifier = Modifier
@@ -473,9 +484,9 @@ private fun GenderBullet(
     }
 }
 /* ---------- Preview ---------- */
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true, device = "id:pixel_7", locale = "ko")
-@Composable
-private fun VerifyScreenPreview() {
-    val nav = rememberNavController()
-    VerifyScreen(nav = nav)
-}
+//@androidx.compose.ui.tooling.preview.Preview(showBackground = true, device = "id:pixel_7", locale = "ko")
+//@Composable
+//private fun VerifyScreenPreview() {
+//    val nav = rememberNavController()
+//    VerifyScreen(nav = nav, sessionVm = sessionVm)
+//}
