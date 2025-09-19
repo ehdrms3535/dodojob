@@ -272,7 +272,7 @@ fun EmployerBottomNavBar(current: String, onClick: (String) -> Unit) {
     val items = listOf(
         EmployerNavItem("home",      R.drawable.unselected_home,      R.drawable.selected_home, 55.dp),
         EmployerNavItem("notice",    R.drawable.unselected_notice,    null,                      75.dp),
-        EmployerNavItem("applicant", R.drawable.unselected_applicant, null,                      75.dp),
+        EmployerNavItem("applicant", R.drawable.unselected_applicant, R.drawable.selected_applicant, 75.dp),
         EmployerNavItem("my",        R.drawable.unselected_my,        R.drawable.selected_my,    55.dp),
     )
 
