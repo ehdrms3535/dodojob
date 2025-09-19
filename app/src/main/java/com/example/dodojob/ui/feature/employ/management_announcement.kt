@@ -1,4 +1,4 @@
-package com.example.dodojob.ui.feature.management
+package com.example.dodojob.ui.feature.employ
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -53,7 +53,7 @@ private data class AnnouncementUi(
 )
 
 /* ===== 상단 통계 카드용 ===== */
-private data class StatItem(
+data class StatItem(
     val label: String,
     val number: Int,
     val iconRes: Int
