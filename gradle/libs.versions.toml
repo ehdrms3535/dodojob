@@ -26,6 +26,7 @@ coroutines = "1.8.1"
 foundationVersion = "1.9.1"
 uiTextVersion = "1.9.1" # ← 위에서 확인한 resolved 버전으로
 
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
