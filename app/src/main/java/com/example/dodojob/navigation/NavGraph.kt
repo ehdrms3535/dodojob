@@ -26,6 +26,7 @@ import com.example.dodojob.ui.feature.main.MainRoute
 import com.example.dodojob.ui.feature.profile.ProfileRoute
 import com.example.dodojob.ui.feature.signup.SignUpIdPwScreen
 import com.example.dodojob.ui.feature.application.ApplyRoute
+import com.example.dodojob.ui.feature.employ.ApplicantManagementRoute
 import com.example.dodojob.ui.feature.profile.LikedJobsRoute
 import com.example.dodojob.ui.todo.TodoScreen
 import com.example.dodojob.ui.todo.RealtimeTodoScreen
@@ -34,14 +35,14 @@ import com.example.dodojob.ui.feature.main.EmployerHomeRoute
 import com.example.dodojob.ui.feature.support.SupportRoute
 import com.example.dodojob.ui.feature.profile.ActivityLevelRoute
 import com.example.dodojob.ui.feature.support.MapRoute
-import com.example.dodojob.ui.feature.management.ManagementAnnouncementRoute
+import com.example.dodojob.ui.feature.employ.ManagementAnnouncementRoute
 import com.example.dodojob.ui.feature.signup.EmployerSignupScreen
 import com.example.dodojob.ui.feature.signup.EmploySignUpIdPwScreen
 import com.example.dodojob.ui.feature.profile.RecentViewedRoute
-
+import com.example.dodojob.ui.feature.employ.SuggestInterviewScreen
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
+    NavHost(navController = nav,startDestination = Route.EmployerApplicant.path) {
 
         composable(Route.Intro.path) { IntroScreen(nav)}              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
@@ -81,10 +82,12 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
 
         composable(Route.EmployerHome.path) {EmployerHomeRoute(nav)} // 고용주 메인
         composable(Route.EmployerNotice.path) {ManagementAnnouncementRoute(nav)} // 공고관리
+        composable(Route.EmployerApplicant.path) {ApplicantManagementRoute(nav)} // 지원자관리
+        composable(Route.SuggestInterview.path) {SuggestInterviewScreen(nav)} // 면접지원}
+
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)} // 활동 레벨
         composable(Route.Map.path) {MapRoute(nav)} // 지도
         composable(Route.ChangePassword.path) { ChangePasswordScreen(nav)} // 비밀번호 변경
     }
 }
-
 
