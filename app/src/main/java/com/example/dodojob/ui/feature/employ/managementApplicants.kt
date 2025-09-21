@@ -38,6 +38,7 @@ import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
 
+
 /* =========================
  *  Fonts
  * ========================= */
@@ -56,33 +57,6 @@ private val SoftGray   = Color(0xFFF5F6F7)
 private val LineGray   = Color(0xFFBDBDBD)
 private val TileBlueBg = Color(0xFFF5F9FF)
 private val IconBoxBg  = Color(0xFFDEEAFF)
-
-/* =========================
- *  모델
- * ========================= */
-private data class ApplicantUi(
-    val id: Long,
-    val name: String,
-    val gender: String,
-    val age: Int,
-    val headline: String,      // 한 줄 자기소개
-    val address: String,
-    val careerYears: Int,
-    val method: String,
-    val postingTitle: String,  // 지원 공고 제목
-    val status: ApplicantStatus,
-    val activityLevel: Int,    // 1:red, 2:yellow, 3:blue
-    val profileRes: Int = R.drawable.basic_profile
-)
-
-private enum class ApplicantStatus { UNREAD, READ, SUGGESTING }
-
-private fun medalRes(level: Int): Int = when (level) {
-    1 -> R.drawable.red_medal
-    2 -> R.drawable.yellow_medal
-    3 -> R.drawable.blue_medal
-    else -> R.drawable.blue_medal
-}
 
 
 
@@ -209,7 +183,7 @@ fun ApplicantManagementRoute(nav: NavController) {
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     onMenuClick = { /* TODO */ },
-                    onViewPostingClick = { /* TODO: 공고 상세 이동 */ },
+                    onViewPostingClick = { nav.navigate(Route.SuggestInterview.path) },
                     onAction = { /* TODO */ }
                 )
             }
