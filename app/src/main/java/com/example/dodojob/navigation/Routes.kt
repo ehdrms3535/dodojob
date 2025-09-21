@@ -41,5 +41,5 @@ sealed class Route(val path: String) {
     data object RecentlyViewed : Route("recently_viewed")
     data object LikedJob : Route("liked_job")
     data object ManagementApplicants : Route("management_applicants")
-
+    data object SuggestInterview : Route("suggest_interview")
 }

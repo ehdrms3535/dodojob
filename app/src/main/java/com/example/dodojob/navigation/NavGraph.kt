@@ -39,7 +39,7 @@ import com.example.dodojob.ui.feature.employ.ManagementAnnouncementRoute
 import com.example.dodojob.ui.feature.signup.EmployerSignupScreen
 import com.example.dodojob.ui.feature.signup.EmploySignUpIdPwScreen
 import com.example.dodojob.ui.feature.profile.RecentViewedRoute
-
+import com.example.dodojob.ui.feature.employ.SuggestInterviewScreen
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
     NavHost(navController = nav,startDestination = Route.EmployerApplicant.path) {
@@ -83,11 +83,11 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.EmployerHome.path) {EmployerHomeRoute(nav)} // 고용주 메인
         composable(Route.EmployerNotice.path) {ManagementAnnouncementRoute(nav)} // 공고관리
         composable(Route.EmployerApplicant.path) {ApplicantManagementRoute(nav)} // 지원자관리
+        composable(Route.SuggestInterview.path) {SuggestInterviewScreen(nav)} // 면접지원}
 
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)} // 활동 레벨
         composable(Route.Map.path) {MapRoute(nav)} // 지도
         composable(Route.ChangePassword.path) { ChangePasswordScreen(nav)} // 비밀번호 변경
     }
 }
-
 
