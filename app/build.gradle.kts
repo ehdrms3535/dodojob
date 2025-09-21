@@ -84,6 +84,8 @@ dependencies {
     implementation(libs.transportation.consumer)
     implementation(libs.androidx.ui.text)
     implementation(libs.androidx.compose.foundation.foundation)
+    implementation(libs.ui.text)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
