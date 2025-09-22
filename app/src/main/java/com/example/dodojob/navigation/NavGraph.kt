@@ -40,9 +40,10 @@ import com.example.dodojob.ui.feature.signup.EmployerSignupScreen
 import com.example.dodojob.ui.feature.signup.EmploySignUpIdPwScreen
 import com.example.dodojob.ui.feature.profile.RecentViewedRoute
 import com.example.dodojob.ui.feature.employ.SuggestInterviewScreen
+import com.example.dodojob.ui.feature.employ.ApplicantInformationScreen
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-    NavHost(navController = nav,startDestination = Route.EmployerApplicant.path) {
+    NavHost(navController = nav,startDestination = Route.Intro.path) {
 
         composable(Route.Intro.path) { IntroScreen(nav)}              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
@@ -84,6 +85,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.EmployerNotice.path) {ManagementAnnouncementRoute(nav)} // 공고관리
         composable(Route.EmployerApplicant.path) {ApplicantManagementRoute(nav)} // 지원자관리
         composable(Route.SuggestInterview.path) {SuggestInterviewScreen(nav)} // 면접지원}
+        composable(Route.InformationOfApplicants.path) {ApplicantInformationScreen(nav)} // 지원자정보)
 
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)} // 활동 레벨
         composable(Route.Map.path) {MapRoute(nav)} // 지도

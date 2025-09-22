@@ -125,18 +125,26 @@ fun SuggestInterviewScreen(navController: NavController) {
         )
 
         // 앱바
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(72.dp)
                 .background(White)
-                .padding(horizontal = SIDE),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = SIDE)
         ) {
-            IconButton(onClick = { navController.popBackStack() }) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "뒤로가기", tint = Color.Black)
+            // 왼쪽: 뒤로가기 버튼
+            IconButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    contentDescription = "뒤로가기",
+                    tint = Color.Black
+                )
             }
-            Spacer(Modifier.width(10.dp))
+
+            // 가운데: 제목
             Text(
                 text = "면접 제안",
                 fontFamily = PretendardSemiBold,
@@ -144,9 +152,11 @@ fun SuggestInterviewScreen(navController: NavController) {
                 fontSize = 24.sp,
                 lineHeight = 36.sp,
                 letterSpacing = (-0.019).em,
-                color = Color.Black
+                color = Color.Black,
+                modifier = Modifier.align(Alignment.Center)
             )
         }
+
 
         // 본문
         Column(
