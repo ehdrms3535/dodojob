@@ -6,7 +6,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dodojob.ui.feature.account.ChangePasswordScreen
 import com.example.dodojob.session.SessionViewModel
-
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.dodojob.ui.feature.intro.IntroScreen
 import com.example.dodojob.ui.feature.experience.ExperienceScreen
 import com.example.dodojob.ui.feature.hope.HopeWorkFilterScreen
@@ -90,6 +91,24 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)} // 활동 레벨
         composable(Route.Map.path) {MapRoute(nav)} // 지도
         composable(Route.ChangePassword.path) { ChangePasswordScreen(nav)} // 비밀번호 변경
+
+        // ✅ 복지 메인
+        composable("welfare/home") {
+            com.example.dodojob.ui.feature.welfare.WelfareHomeRoute(nav)
+        }
+
+        // ✅ 복지 카테고리 (탭 파라미터)
+        composable(
+            route = "welfare/category/{tab}",
+            arguments = listOf(navArgument("tab") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val tabArg = backStackEntry.arguments?.getString("tab")
+            com.example.dodojob.ui.feature.welfare.HealthLeisureRoute(
+                nav = nav,
+                startTabArg = tabArg   // "health" 또는 "leisure"
+            )
+        }
+
     }
 }
 
