@@ -183,8 +183,12 @@ fun ApplicantManagementRoute(nav: NavController) {
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     onMenuClick = { /* TODO */ },
-                    onViewPostingClick = { nav.navigate(Route.SuggestInterview.path) },
-                    onAction = { /* TODO */ }
+                    onViewPostingClick = {  },
+                    onAction = { key ->
+                        when (key){
+                            "suggest_interview" -> nav.navigate(Route.SuggestInterview.path)
+                        }
+                    }
                 )
             }
 
@@ -607,7 +611,7 @@ private fun ApplicantCard(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ActionCell(text = "면접제안") {}
+                    ActionCell(text = "면접제안") { onAction("suggest_interview") }
                     VerticalDivider()
                     ActionCell(text = "문자") {}
                     VerticalDivider()

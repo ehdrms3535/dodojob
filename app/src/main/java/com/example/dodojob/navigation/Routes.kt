@@ -42,4 +42,5 @@ sealed class Route(val path: String) {
     data object LikedJob : Route("liked_job")
     data object ManagementApplicants : Route("management_applicants")
     data object SuggestInterview : Route("suggest_interview")
+    data object InformationOfApplicants : Route("information_of_applicants")
 }
