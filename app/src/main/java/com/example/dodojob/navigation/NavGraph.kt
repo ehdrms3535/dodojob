@@ -6,7 +6,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dodojob.ui.feature.account.ChangePasswordScreen
 import com.example.dodojob.session.SessionViewModel
-
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.dodojob.ui.feature.intro.IntroScreen
 import com.example.dodojob.ui.feature.experience.ExperienceScreen
 import com.example.dodojob.ui.feature.hope.HopeWorkFilterScreen
@@ -26,6 +27,8 @@ import com.example.dodojob.ui.feature.main.MainRoute
 import com.example.dodojob.ui.feature.profile.ProfileRoute
 import com.example.dodojob.ui.feature.signup.SignUpIdPwScreen
 import com.example.dodojob.ui.feature.application.ApplyRoute
+import com.example.dodojob.ui.feature.employ.ApplicantManagementRoute
+import com.example.dodojob.ui.feature.profile.LikedJobsRoute
 import com.example.dodojob.ui.todo.TodoScreen
 import com.example.dodojob.ui.todo.RealtimeTodoScreen
 import com.example.dodojob.ui.feature.login.PreLoginScreen
@@ -33,14 +36,17 @@ import com.example.dodojob.ui.feature.main.EmployerHomeRoute
 import com.example.dodojob.ui.feature.support.SupportRoute
 import com.example.dodojob.ui.feature.profile.ActivityLevelRoute
 import com.example.dodojob.ui.feature.support.MapRoute
-import com.example.dodojob.ui.feature.management.ManagementAnnouncementRoute
+import com.example.dodojob.ui.feature.employ.ManagementAnnouncementRoute
 import com.example.dodojob.ui.feature.signup.EmployerSignupScreen
 import com.example.dodojob.ui.feature.signup.EmploySignUpIdPwScreen
-
+import com.example.dodojob.ui.feature.profile.RecentViewedRoute
+import com.example.dodojob.ui.feature.employ.SuggestInterviewScreen
+import com.example.dodojob.ui.feature.employ.ApplicantInformationScreen
+import com.example.dodojob.ui.feature.employ.EmployerHumanResourceScreen
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
+    NavHost(navController = nav,startDestination = Route.EmployerHumanResource.path) {
 
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
         composable(Route.Intro.path) { IntroScreen(nav)}              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path)      { LoginScreen(nav,sessionVm) }        // 3. 시니어 로그인
@@ -62,26 +68,49 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
 
         composable(Route.Main.path) { MainRoute(nav) } // main
 
-
-        composable(Route.Announcement.path) { Announcement1Route(nav) }
-        composable(Route.Announcement4.path) { Announcement4Route(nav) }
-        composable(Route.Announcement5.path) { Announcement5Route(nav) }
-
+        composable(Route.Announcement.path) { Announcement1Route(nav) } // 공고등록1
+        composable(Route.Announcement4.path) { Announcement4Route(nav) } // 공고등록 4
+        composable(Route.Announcement5.path) { Announcement5Route(nav) } // 공고등록 5
 
 
-        composable(Route.My.path) { ProfileRoute(nav) }
-        composable(ApplyRoute.path) { ApplicationRoute(nav) }
-        composable(Route.Support.path) { SupportRoute(nav) }
 
-        composable(Route.Todo.path) { TodoScreen(nav) }
-        composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) }
+        composable(Route.My.path) { ProfileRoute(nav) } // 시니어 프로필
+        composable(ApplyRoute.path) { ApplicationRoute(nav) } // 지원서 작성
+        composable(Route.Support.path) { SupportRoute(nav) } // 지원 내역
+        composable(Route.RecentlyViewed.path) { RecentViewedRoute(nav) } // 최근 본 공고
+        composable(Route.LikedJob.path) { LikedJobsRoute(nav) } // 좋아요한 공고
 
-        composable(Route.EmployerHome.path) {EmployerHomeRoute(nav)}
-        composable(Route.EmployerNotice.path) {ManagementAnnouncementRoute(nav)}
-        composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)}
-        composable(Route.Map.path) {MapRoute(nav)}
-        composable(Route.ChangePassword.path) { ChangePasswordScreen(nav)}
+        composable(Route.Todo.path) { TodoScreen(nav) } // 테스트
+        composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) } // 테스트
+
+        composable(Route.EmployerHome.path) {EmployerHomeRoute(nav)} // 고용주 메인
+        composable(Route.EmployerNotice.path) {ManagementAnnouncementRoute(nav)} // 공고관리
+        composable(Route.EmployerApplicant.path) {ApplicantManagementRoute(nav)} // 지원자관리
+        composable(Route.SuggestInterview.path) {SuggestInterviewScreen(nav)} // 면접지원}
+        composable(Route.InformationOfApplicants.path) {ApplicantInformationScreen(nav)} // 지원자정보)
+        composable(Route.EmployerHumanResource.path) { EmployerHumanResourceScreen(nav)} // 인재)
+
+        composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)} // 활동 레벨
+        composable(Route.Map.path) {MapRoute(nav)} // 지도
+        composable(Route.ChangePassword.path) { ChangePasswordScreen(nav)} // 비밀번호 변경
+
+        // ✅ 복지 메인
+        composable("welfare/home") {
+            com.example.dodojob.ui.feature.welfare.WelfareHomeRoute(nav)
+        }
+
+        // ✅ 복지 카테고리 (탭 파라미터)
+        composable(
+            route = "welfare/category/{tab}",
+            arguments = listOf(navArgument("tab") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val tabArg = backStackEntry.arguments?.getString("tab")
+            com.example.dodojob.ui.feature.welfare.HealthLeisureRoute(
+                nav = nav,
+                startTabArg = tabArg   // "health" 또는 "leisure"
+            )
+        }
+
     }
 }
-
 
