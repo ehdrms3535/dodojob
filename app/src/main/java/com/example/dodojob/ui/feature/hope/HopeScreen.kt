@@ -161,7 +161,7 @@ fun HopeWorkFilterScreen(nav: NavController) {
 
                 Button(
                     onClick = {
-                        if (!canApply) return@Button
+                        // if (!canApply) return@Button
 
                         val username = CurrentUser.username
                         val timeFlag = timeOfDay != null
@@ -180,7 +180,7 @@ fun HopeWorkFilterScreen(nav: NavController) {
                                 val toSave = JobtypeDto(
                                     id      = username,
                                     jobtype = "0", // job 이동하는거 생성시 수정
-                                    locate        = region, // ← 개별 요일 비트
+                                    locate        = "태구", // ← 개별 요일 비트
                                     job_talent = jobTalentBin,
                                     job_manage = jobManageBin,
                                     job_service = jobServiceBin,
