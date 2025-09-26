@@ -55,4 +55,5 @@ sealed class Route(val path: String) {
 
     data object EmployerHumanResource : Route("employer_human_resource")
     data object ViewResourceDetail : Route("view_resource_detail")
+    data object ScrrapedHumanResource : Route("scrapped_human_resource")
 }
