@@ -84,7 +84,7 @@ fun HopeWorkFilterScreen(nav: NavController) {
     val careBits    = prev?.get<String>("sheet_care_bits")    ?: ""
     val healthy     = prev?.get<Boolean>("sheet_healthy") ?: false
     // ----- 내부 상태 -----
-    var region by rememberSaveable { mutableStateOf(CurrentUser.locate) }
+    var region by rememberSaveable { mutableStateOf<String?>(CurrentUser.locate) }
     var jobSelections by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) } // 별도 설계 전 임시 유지
     var period by remember { mutableStateOf<String?>(null) }
 
@@ -178,9 +178,9 @@ fun HopeWorkFilterScreen(nav: NavController) {
                         scope.launch {
                             runCatching {
                                 val toSave = JobtypeDto(
-                                    id      = username,
-                                    jobtype = "0", // job 이동하는거 생성시 수정
-                                    locate        = "태구", // ← 개별 요일 비트
+                                    id      =username,
+                                    jobtype = CurrentUser.jobtype, // job 이동하는거 생성시 수정
+                                    locate        = CurrentUser.locate, // ← 개별 요일 비트
                                     job_talent = jobTalentBin,
                                     job_manage = jobManageBin,
                                     job_service = jobServiceBin,
