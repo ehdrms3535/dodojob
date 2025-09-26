@@ -104,15 +104,20 @@ fun SignUpIdPwScreen(nav: NavController) {
                                     email = email,
                                     username = userId,
                                     password = pw,
-                                    job = "고용주"
+                                    job = "시니어"
                                 )
                                 repo.insertUser(toSave)
                                 toSave // onSuccess로 전달
                             }.onSuccess { created ->
-                                // ✅ 람다 파라미터로 받은 created 사용 (user 참조 에러 해결)
-                                CurrentUser.setLogin(created.id, created.username)
+                                CurrentUser.setAuthUserId(created.id)          // ✅ 가장 중요
 
-                                // 민감정보 파기
+                                // 2) 화면/표시용 계정명 저장
+                                CurrentUser.setUsername(created.username)      // ✅
+
+                                // 3) (선택) 로컬 로그인 상태도 유지해야 한다면: 시그니처는 (username, password)
+                                CurrentUser.setLogin(created.username, pw)     // ❗ 필요할 때만
+
+                                // 4) 민감정보 파기
                                 rrnFront = ""; rrnBackFirst = ""; pw = ""; pw2 = ""
 
                                 nav.navigate(Route.SignUpComplete.path) { launchSingleTop = true }

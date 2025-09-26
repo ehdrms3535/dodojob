@@ -4,6 +4,14 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- 카메라가 있으면 쓰고, 없어도 설치 가능 -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <!-- 오토포커스도 옵션이면 false -->
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <!-- 전면 카메라만 쓰는 기능이 있다면 (예: 셀피), 이것도 옵션으로 -->
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -23,6 +31,18 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- ✅ FileProvider 등록 (여기 추가) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 
 </manifest>
