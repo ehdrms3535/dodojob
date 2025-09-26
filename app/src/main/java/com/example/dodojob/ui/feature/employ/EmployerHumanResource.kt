@@ -89,7 +89,7 @@ fun EmployerHumanResourceScreen(nav: NavController) {
 
     var sort by remember { mutableStateOf("업데이트순") }
     val sortOptions = listOf("업데이트순", "이름순", "경력순")
-    val totalCountForHeader = 23_400
+    val totalCountForHeader = talents.size
 
     Scaffold(
         containerColor = ScreenBg,
@@ -121,7 +121,7 @@ fun EmployerHumanResourceScreen(nav: NavController) {
                     sortOptions = sortOptions,
                     sort = sort,
                     onSortChange = { sort = it },
-                    onStarClick = { /* TODO */ },
+                    onStarClick = { nav.safeNavigate("scrapped_human_resource") },
                     onFilterClick = { /* TODO */ }
                 )
             }
@@ -233,11 +233,13 @@ private fun TalentCard(
                 Spacer(Modifier.width(20.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("${maskName(data.name)} (${data.gender}, ${data.age}세)", fontFamily = Pretendard, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("${maskName(data.name)}", fontFamily = Pretendard, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.width(6.dp))
+                        Text("(${data.gender}, ${data.age}세)", fontSize = 15.sp, fontFamily = Pretendard, color = TextGray)
                         Spacer(Modifier.width(6.dp))
                         Icon(painterResource(medalResForLevel(data.seniorLevel)), contentDescription = "medal", tint = Color.Unspecified, modifier = Modifier.size(18.dp))
                     }
-                    Text("“${data.intro}”", fontFamily = Pretendard, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("“${data.intro}”", fontFamily = Pretendard, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(painterResource(R.drawable.location), null, tint = TextGray, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
