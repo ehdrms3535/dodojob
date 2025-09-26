@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.session.CurrentUser
 
 @Composable
 fun JobTypeScreen(nav: NavController) {
@@ -39,7 +40,11 @@ fun JobTypeScreen(nav: NavController) {
                     .padding(horizontal = 18.dp, vertical = 50.dp)
             ) {
                 Button(
-                    onClick = { nav.navigate(Route.Hope.path) },
+                    onClick = {
+                        CurrentUser.setJob(selected)
+                        nav.navigate(Route.Hope.path)
+                    },
+
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),

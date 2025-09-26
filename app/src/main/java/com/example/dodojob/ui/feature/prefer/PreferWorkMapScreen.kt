@@ -327,7 +327,7 @@ fun PreferWorkMapScreen(nav: NavController) {
             Button(
                 onClick = {
                     // 반경/모드와 함께 전달하고 싶으면 savedStateHandle에 같이 저장
-                    CurrentUser.setlocate(locate = picked, radium = searchRadiusM)
+                    CurrentUser.setLocate(locate = picked, radius = searchRadiusM)
 
                     nav.previousBackStackEntry?.savedStateHandle?.apply {
                         set("pickedRegion", picked)
