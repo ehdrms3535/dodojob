@@ -85,6 +85,7 @@ dependencies {
     implementation(libs.androidx.ui.text)
     implementation(libs.androidx.compose.foundation.foundation)
     implementation(libs.ui.text)
+    implementation(libs.androidx.runtime)
 
 
     testImplementation(libs.junit)
@@ -123,6 +124,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
 }
 
 /*configurations.configureEach {
