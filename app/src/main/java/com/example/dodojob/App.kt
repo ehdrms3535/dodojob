@@ -1,12 +1,15 @@
 package com.example.dodojob
 
 import android.app.Application
+import android.util.Log
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
-import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 
 class App : Application() {
     lateinit var supabase: SupabaseClient
@@ -15,17 +18,15 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        val url = BuildConfig.SUPABASE_URL
-        val key = BuildConfig.SUPABASE_ANON_KEY
-        require(url.isNotBlank() && key.isNotBlank()) {
-            "Supabase URL/KEY가 비어 있습니다. local.properties 또는 환경변수 확인."
+        supabase = createSupabaseClient(
+            supabaseUrl = BuildConfig.SUPABASE_URL,
+            supabaseKey = BuildConfig.SUPABASE_ANON_KEY
+        ) {
+            install(Auth)
+            install(Postgrest)   // 테이블 작업
+            install(Storage)     // 스토리지 업로드
         }
 
-        supabase = createSupabaseClient(url, key) {
-            install(Auth)
-            install(Postgrest)
-            install(Realtime)
-            install(Storage)
-        }
+        Log.d("SUPA", "App client storage ok = " + runCatching { supabase.storage }.isSuccess)
     }
 }

@@ -1,3 +1,7 @@
-<paths>
-    <cache-path name="cache" path="." />
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- createTempImageUri()에서 File(context.cacheDir, "images")를 쓰므로 -->
+    <cache-path
+        name="images"
+        path="images/" />
 </paths>
