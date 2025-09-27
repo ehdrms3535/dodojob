@@ -6,6 +6,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -35,16 +36,74 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.dodojob.App
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.UUID
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.compose.foundation.layout.BoxWithConstraints
+import com.example.dodojob.data.userimage.UserimageDto
+import com.example.dodojob.data.userimage.UserimageRepository
+import com.example.dodojob.data.userimage.UserimageSupabase
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import io.github.jan.supabase.storage.storage
+import io.ktor.http.ContentType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import io.github.jan.supabase.auth.auth
+
+data class UploadedImage(val url: String, val path: String)
+
+private suspend fun uploadProfileImage(
+    client: io.github.jan.supabase.SupabaseClient,
+    context: Context,
+    userId: String,
+    uri: Uri
+): UploadedImage {
+    val cr = context.contentResolver
+    val mime = cr.getType(uri) ?: "image/jpeg"
+    val ext = when {
+        mime.contains("png") -> "png"
+        mime.contains("webp") -> "webp"
+        else -> "jpg"
+    }
+    val bytes = cr.openInputStream(uri)?.use { it.readBytes() }
+        ?: error("이미지를 읽을 수 없습니다.")
+
+    // 경로: profiles/{uid}/timestamp.ext
+    val path = "profiles/$userId/${System.currentTimeMillis()}.$ext"
+    val bucket = client.storage.from("user-images")
+
+    val ct = when (ext) {
+        "png"        -> ContentType.Image.PNG
+        "jpg","jpeg" -> ContentType.Image.JPEG
+        "webp"       -> ContentType("image","webp")
+        else         -> ContentType.Image.JPEG
+    }
+
+    bucket.upload(path, bytes) {
+        upsert = true
+        contentType = ct
+    }
+
+    // 버킷이 public일 때만 즉시 접근 가능. private이면 createSignedUrl 사용하세요.
+    val url = bucket.publicUrl(path)
+    // val url = bucket.createSignedUrl(path, expiresIn = 3600) // private 버킷이라면 이걸 사용
+    return UploadedImage(url = url, path = path)
+}
 
 @Composable
 fun ExperienceScreen(nav: NavController) {
+    // Supabase 클라이언트 (App 싱글턴)
+    val app = LocalContext.current.applicationContext as App
+    val client = app.supabase
+    val repo: UserimageRepository = remember(client) { UserimageSupabase(client) }
+
     // ================== UI State ==================
     val Bg = Color(0xFFF1F5F7)
     val Primary = Color(0xFF005FFF)
@@ -62,16 +121,19 @@ fun ExperienceScreen(nav: NavController) {
     var tempCaptureUri by remember { mutableStateOf<Uri?>(null) }
     var tempLastCreatedFile by remember { mutableStateOf<File?>(null) }
 
-    // 권한 허용 후 실행할 지연 함수 (전역 ❌)
+    // 권한 허용 후 실행할 지연 함수
     var pendingCameraLaunch by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     // Composable 밖(콜백)에서도 안전하게 context 접근
     val contextState = rememberUpdatedState(LocalContext.current)
 
+    val scope = rememberCoroutineScope()
+
     // ================== Launchers ==================
     val takePictureLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
+        Log.d("Camera", "TakePicture success=$success, tempUri=$tempCaptureUri")
         isCapturing = false
         if (success && tempCaptureUri != null) {
             imageUri = tempCaptureUri
@@ -93,7 +155,6 @@ fun ExperienceScreen(nav: NavController) {
             tempLastCreatedFile?.delete()
             tempLastCreatedFile = null
             tempCaptureUri = null
-            // 영구 거부이면 설정 이동 안내를 띄우면 좋아요
         }
         pendingCameraLaunch = null
     }
@@ -102,6 +163,14 @@ fun ExperienceScreen(nav: NavController) {
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { imageUri = it }
+    }
+
+    LaunchedEffect(Unit) {
+        Log.d(
+            "SUPA",
+            "screen client hash=${System.identityHashCode(client)}, " +
+                    "storage ok=" + runCatching { client.storage }.isSuccess
+        )
     }
 
     // ================== UI ==================
@@ -115,7 +184,65 @@ fun ExperienceScreen(nav: NavController) {
                     .padding(horizontal = 18.dp, vertical = 50.dp)
             ) {
                 Button(
-                    onClick = { nav.navigate(Route.ExperienceComplete.path) },
+                    onClick = {
+                        scope.launch {
+                            val ctx = contextState.value
+
+                            val uid = "1234"
+
+                            // 이미지 업로드 (선택)
+                            var finalUrl = ""
+                            try {
+                                if (imageUri != null) {
+                                    Log.d("XL", "stage A: start upload, uri=$imageUri")
+                                    finalUrl = withContext(Dispatchers.IO) {
+                                        val uploaded = uploadProfileImage(client, ctx, uid, imageUri!!)
+                                        uploaded.url
+                                    }
+                                    Log.d("XL", "stage A: upload ok, url=$finalUrl")
+                                } else {
+                                    Log.d("XL", "stage A: no image, skip upload")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("XL", "stage A: upload failed", e)
+                                return@launch
+                            }
+
+                            // DTO 구성 (id 하드코딩 금지)
+                            val dto = try {
+                                Log.d("XL", "stage C: build dto, url=$finalUrl")
+                                UserimageDto(
+                                    id = uid,
+                                    img_url = finalUrl,
+                                    user_imform = description
+                                    // 필요 시 user_id = uid
+                                )
+                            } catch (e: Exception) {
+                                Log.e("XL", "stage C: build dto failed", e)
+                                return@launch
+                            }
+
+                            // insert 실행
+                            try {
+                                Log.d("XL", "stage D: insert start, dto=$dto")
+                                withContext(Dispatchers.IO) {
+                                    repo.insertUserimage(dto)
+                                }
+                                Log.d("XL", "stage D: insert ok")
+                            } catch (e: Exception) {
+                                Log.e("XL", "stage D: insert failed", e)
+                                return@launch
+                            }
+
+                            // 네비게이션
+                            try {
+                                Log.d("XL", "stage E: navigate")
+                                nav.navigate(Route.ExperienceComplete.path)
+                            } catch (e: Exception) {
+                                Log.e("XL", "stage E: navigate failed", e)
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
@@ -289,6 +416,7 @@ fun ExperienceScreen(nav: NavController) {
                     onPickCamera = {
                         // 1) 촬영용 파일/Uri 생성
                         val (file, uri) = createTempImageUri(contextState.value)
+                        Log.d("Camera", "created temp file=${file.absolutePath}, exists=${file.exists()}, uri=$uri")
                         tempLastCreatedFile = file
                         tempCaptureUri = uri
                         isCapturing = true
@@ -323,16 +451,18 @@ fun ExperienceScreen(nav: NavController) {
 
 /** 촬영 결과를 저장할 임시 이미지 파일과 해당 Uri(FileProvider)를 생성 */
 private fun createTempImageUri(context: Context): Pair<File, Uri> {
-    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(System.currentTimeMillis())
-    val imageFileName = "IMG_${timeStamp}.jpg"
-    val imagesDir = File(context.cacheDir, "images").apply { mkdirs() }
-    val file = File(imagesDir, imageFileName)
-    val uri = FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        file
-    )
-    return file to uri
+    return try {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+            .format(System.currentTimeMillis())
+        val file = File(File(context.cacheDir, "images").apply { mkdirs() }, "IMG_${timeStamp}.jpg")
+        val authority = "${context.packageName}.fileprovider"
+        Log.d("Camera", "authority=$authority")
+        val uri = FileProvider.getUriForFile(context, authority, file)
+        file to uri
+    } catch (e: Exception) {
+        Log.e("Camera", "createTempImageUri failed", e)
+        throw e
+    }
 }
 
 @Composable
