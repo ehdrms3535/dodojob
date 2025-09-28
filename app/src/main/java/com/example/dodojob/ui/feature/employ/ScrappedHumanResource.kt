@@ -331,14 +331,14 @@ private fun ActionButton(
 }
 
 /* =============== Utils =============== */
-@Composable
-fun ThinDivider(
-    modifier: Modifier = Modifier,
-    color: Color = DividerGray,
-    thickness: Dp = 1.dp
-) {
-    Divider(color = color, modifier = modifier, thickness = thickness)
-}
+    @Composable
+    fun ThinDivider(
+        modifier: Modifier = Modifier,
+        color: Color = DividerGray,
+        thickness: Dp = 1.dp
+    ) {
+        Divider(color = color, modifier = modifier, thickness = thickness)
+    }
 
 private fun formatWithComma(n: Int): String = "%,d".format(n)
 private fun maskName(name: String) = if (name.isNotEmpty()) name.first() + "**" else "**"
