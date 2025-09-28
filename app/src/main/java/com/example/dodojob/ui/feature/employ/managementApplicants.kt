@@ -141,8 +141,6 @@ fun ApplicantManagementRoute(nav: NavController) {
             contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { TopStatusBar() }
-
             // 타이틀 + 통계 2x2
             item {
                 Column(
