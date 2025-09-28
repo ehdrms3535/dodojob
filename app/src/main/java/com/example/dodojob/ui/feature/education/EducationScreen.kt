@@ -1,19 +1,11 @@
 package com.example.dodojob.ui.feature.education
 
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.unit.dp
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
+import com.example.dodojob.ui.feature.education.EducationViewModel
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -25,10 +17,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
+import androidx.compose.material3.CardDefaults.cardColors
+import androidx.compose.material3.CardDefaults.cardElevation
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -36,29 +32,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.dodojob.R
+import com.example.dodojob.navigation.Route
 import com.example.dodojob.ui.feature.profile.BottomNavBar
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.rememberNavController
 
 /* =========================
  * Colors
  * ========================= */
 private val ScreenBg   = Color(0xFFF1F5F7)
-private val CardBg     = Color(0xFFFFFFFF)
 private val TitleBlack = Color(0xFF000000)
-private val SubGray    = Color(0xFF848484)
 private val BrandBlue  = Color(0xFF005FFF)
-private val BorderGray = Color(0xFFC1D2ED)
-
-/* =========================
- * Route
- * ========================= */
-object EducationRoutes {
-    const val Home = "edu"
-}
 
 /* =========================
  * Data
@@ -67,7 +56,7 @@ data class Course(
     @DrawableRes val imageRes: Int,
     val title: String,
     val tag: String,    // 필터용
-    val sub: String,    // ✅ 새로 추가된 중간 라인
+    val sub: String,    // 중간 라인
     val desc: String
 )
 
@@ -75,7 +64,7 @@ data class Course(
 private val filterTabs = listOf("전체", "영어", "컴퓨터", "요리", "교육", "응대", "기타")
 
 /** 추천 강의 */
-private fun recommendedCourses() = listOf(
+fun recommendedCourses() = listOf(
     Course(
         R.drawable.edu_recom1,
         title = "영어 회화 입문",
@@ -107,7 +96,7 @@ private fun recommendedCourses() = listOf(
 )
 
 /** 실시간 인기 강의 */
-private fun liveHotCourses() = listOf(
+fun liveHotCourses() = listOf(
     Course(
         R.drawable.edu_live1,
         title = "고객 응대 스킬",
@@ -142,128 +131,32 @@ private fun liveHotCourses() = listOf(
  * Entry
  * ========================= */
 @Composable
-fun EducationHomeRoute(nav: NavController, userName: String = "홍길동") {
+fun EducationHomeRoute(
+    nav: NavController,
+    userName: String = "홍길동",
+    eduVm: EducationViewModel
+) {
     EducationHomeScreen(
         userName = userName,
-        onCourseClick = { /* TODO: 상세로 이동 */ },
+        onCourseClick = { /* TODO: 상세 이동 */ },
+        onOpenLibrary = { nav.navigate(Route.EduMy.path) }, // 내 강좌/프로필 → 단일 화면
         bottomBar = {
             BottomNavBar(
                 current = "edu",
                 onClick = { key ->
                     when (key) {
-                        "home"      -> nav.navigate("main") { launchSingleTop = true }
+                        "home"      -> nav.navigate(Route.Main.path) { launchSingleTop = true }
                         "edu"       -> {} // 현재
                         "welfare"   -> nav.navigate("welfare/home") { launchSingleTop = true }
                         "community" -> nav.navigate("community") { launchSingleTop = true }
-                        "my"        -> nav.navigate("my") { launchSingleTop = true }
+                        "my"        -> nav.navigate(Route.My.path) { launchSingleTop = true }
                     }
                 }
             )
-        }
+        },
+        favorites = eduVm.favorites,
+        onToggleFavorite = { title -> eduVm.toggleFavorite(title) }
     )
-}
-
-// ============== 출석/주간 카드 ==============
-@Composable
-private fun AttendanceCard(
-    userName: String,
-    modifier: Modifier = Modifier,
-    days: List<String> = listOf("일","월","화","수","목","금","토"),
-    dates: List<String> = listOf("1","2","3","4","5","6","7"),
-    initiallySelected: Set<Int> = emptySet(),
-    onMyCourseClick: () -> Unit = {},
-    dayFontSize: androidx.compose.ui.unit.TextUnit = 16.6.sp,
-    dateFontSize: androidx.compose.ui.unit.TextUnit = 16.6.sp,
-    dayDateGap: Dp = 4.dp,
-    dateButtonGap: Dp = 2.dp
-) {
-    val shape = RoundedCornerShape(10.dp)
-    val selectedSet = remember { mutableStateOf(initiallySelected.toMutableSet()) }
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 276.dp),
-        shape = shape,
-        elevation = CardDefaults.cardElevation(6.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = "안녕하세요 ${userName}님\n매일 출석하고 성장해요!",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold,
-                lineHeight = 36.sp,
-                letterSpacing = (-0.019).em,
-                color = Color(0xFF000000),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(dayDateGap),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    days.forEach { d ->
-                        Box(
-                            modifier = Modifier.size(width = 40.dp, height = 41.62.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(d, fontSize = dayFontSize, color = Color(0xFF000000))
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    dates.forEachIndexed { idx, d ->
-                        val selected = idx in selectedSet.value
-                        Box(
-                            modifier = Modifier
-                                .size(width = 40.dp, height = 41.62.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (selected) Color(0xFF005FFF) else Color.Transparent)
-                                .clickable {
-                                    val s = selectedSet.value.toMutableSet()
-                                    if (selected) s.remove(idx) else s.add(idx)
-                                    selectedSet.value = s
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                d,
-                                fontSize = dateFontSize,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selected) Color.White else Color(0xFF000000)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(dateButtonGap))
-
-            MyCourseButton(
-                onClick = onMyCourseClick,
-                modifier = Modifier.fillMaxWidth(),
-                height = 64.dp
-            )
-        }
-    }
 }
 
 /* =========================
@@ -273,10 +166,12 @@ private fun AttendanceCard(
 fun EducationHomeScreen(
     userName: String,
     onCourseClick: (Course) -> Unit,
-    bottomBar: @Composable () -> Unit
+    onOpenLibrary: () -> Unit,
+    bottomBar: @Composable () -> Unit,
+    favorites: Set<String>,
+    onToggleFavorite: (String) -> Unit
 ) {
     var pickedFilter by remember { mutableStateOf("전체") }
-    var favs by remember { mutableStateOf(setOf<String>()) }
 
     val recom = remember { recommendedCourses() }
     val live  = remember { liveHotCourses() }
@@ -295,12 +190,12 @@ fun EducationHomeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            /* ===== Hero ===== */
+            // ===== Hero =====
             HeroSection(
                 userName = userName,
                 heroImageRes = R.drawable.edu_recom4,
-                onBellClick = { /* ... */ },
-                onProfileClick = { /* ... */ },
+                onBellClick = { /* TODO */ },
+                onProfileClick = onOpenLibrary, // 프로필 아이콘 → 단일 화면
                 topBarHorizontal = 16.dp,
                 topBarTop = 0.dp,
                 logoSize = 29.dp,
@@ -315,7 +210,7 @@ fun EducationHomeScreen(
                 descMaxLines = 2
             )
 
-            /* ===== 검색/필터 ===== */
+            // ===== 검색/필터 =====
             Spacer(Modifier.height(18.dp))
             SearchBar(
                 modifier = Modifier
@@ -335,25 +230,28 @@ fun EducationHomeScreen(
 
             Spacer(Modifier.height(28.dp))
 
-            AttendanceCard(userName = userName, modifier = Modifier.padding(horizontal = 16.dp))
+            AttendanceCard(
+                userName = userName,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                onMyCourseClick = onOpenLibrary // 버튼 → 단일 화면
+            )
 
             Spacer(Modifier.height(16.dp))
             SectionTitle(
                 text = "${userName}님을 위한 추천 강의",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
             )
-
             Spacer(Modifier.height(12.dp))
 
             CourseCarousel(
                 courses = recom.applyFilter(),
-                favs = favs,
-                onToggleFav = { title -> favs = if (title in favs) favs - title else favs + title },
+                favs = favorites,
+                onToggleFav = onToggleFavorite,
                 onClick = onCourseClick,
                 modifier = Modifier.padding(start = 16.dp)
             )
-            Spacer(Modifier.height(24.dp))
 
+            Spacer(Modifier.height(24.dp))
             SectionTitle(
                 text = "실시간 인기 강의",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
@@ -362,8 +260,8 @@ fun EducationHomeScreen(
 
             CourseCarousel(
                 courses = live.applyFilter(),
-                favs = favs,
-                onToggleFav = { title -> favs = if (title in favs) favs - title else favs + title },
+                favs = favorites,
+                onToggleFav = onToggleFavorite,
                 onClick = onCourseClick,
                 modifier = Modifier.padding(start = 16.dp, bottom = 24.dp)
             )
@@ -636,7 +534,7 @@ private fun CourseCard(
 ) {
     Column(
         modifier = Modifier
-            .width(375.dp) // 요구대로 가로 넓힘
+            .width(375.dp)
             .clickable { onClick() }
     ) {
         Box(
@@ -680,7 +578,7 @@ private fun CourseCard(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = data.sub, // ✅ 새로 추가된 중간 라인
+                text = data.sub,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = (-0.019).em,
@@ -701,7 +599,116 @@ private fun CourseCard(
     }
 }
 
-/* ---------- 독립 버튼 컴포넌트 ---------- */
+/* ---------- 출석/주간 카드 ---------- */
+@Composable
+private fun AttendanceCard(
+    userName: String,
+    modifier: Modifier = Modifier,
+    days: List<String> = listOf("일","월","화","수","목","금","토"),
+    dates: List<String> = listOf("1","2","3","4","5","6","7"),
+    initiallySelected: Set<Int> = emptySet(),
+    onMyCourseClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val selectedSet = remember { mutableStateOf(initiallySelected.toMutableSet()) }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 276.dp),
+        shape = shape,
+        elevation = cardElevation(6.dp),
+        colors = cardColors(containerColor = Color.White)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = "안녕하세요 ${userName}님\n매일 출석하고 성장해요!",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                lineHeight = 36.sp,
+                letterSpacing = (-0.019).em,
+                color = Color(0xFF000000),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    days.forEach { d ->
+                        Box(
+                            modifier = Modifier.size(width = 40.dp, height = 41.62.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(d, fontSize = 16.6.sp, color = Color(0xFF000000))
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    dates.forEachIndexed { idx, d ->
+                        val selected = idx in selectedSet.value
+                        Box(
+                            modifier = Modifier
+                                .size(width = 40.dp, height = 41.62.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (selected) BrandBlue else Color.Transparent)
+                                .clickable {
+                                    val s = selectedSet.value.toMutableSet()
+                                    if (selected) s.remove(idx) else s.add(idx)
+                                    selectedSet.value = s
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                d,
+                                fontSize = 16.6.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) Color.White else Color(0xFF000000)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(2.dp))
+
+            MyCourseButton(
+                onClick = onMyCourseClick,
+                modifier = Modifier.fillMaxWidth(),
+                height = 64.dp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth().heightIn(min = 36.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = TitleBlack)
+    }
+}
+
+/* ---------- 독립 버튼 ---------- */
 @Composable
 fun MyCourseButton(
     onClick: () -> Unit,
@@ -726,7 +733,7 @@ fun MyCourseButton(
             vertical = verticalPadding
         ),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF005FFF),
+            containerColor = BrandBlue,
             contentColor = Color.White
         )
     ) {
@@ -740,22 +747,3 @@ fun MyCourseButton(
     }
 }
 
-@Composable
-private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth().heightIn(min = 36.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = TitleBlack)
-    }
-}
-
-/* =========================
- * Preview
- * ========================= */
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun PreviewEducation() {
-    val nav = rememberNavController()
-    EducationHomeRoute(nav = nav, userName = "홍길동")
-}

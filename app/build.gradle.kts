@@ -86,6 +86,8 @@ dependencies {
     implementation(libs.androidx.compose.foundation.foundation)
     implementation(libs.ui.text)
     implementation(libs.androidx.runtime)
+    implementation(libs.androidx.compose.foundation.foundation2)
+    implementation(libs.androidx.animation.core)
 
 
     testImplementation(libs.junit)
