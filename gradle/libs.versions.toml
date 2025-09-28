@@ -25,7 +25,9 @@ lifecycle = "2.9.0" # ← 사용 중인 버전으로 맞추기
 coroutines = "1.8.1"
 foundationVersion = "1.9.1"
 uiTextVersion = "1.9.1"
-runtime = "1.9.2" # ← 위에서 확인한 resolved 버전으로
+runtime = "1.9.2"
+androidxFoundation = "1.9.2"
+animationCore = "1.9.2" # ← 위에서 확인한 resolved 버전으로
 
 
 [libraries]
@@ -84,6 +86,8 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 androidx-compose-foundation-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiTextVersion" }
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
+androidx-compose-foundation-foundation2 = { group = "androidx.compose.foundation", name = "foundation", version.ref = "androidxFoundation" }
+androidx-animation-core = { group = "androidx.compose.animation", name = "animation-core", version.ref = "animationCore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
