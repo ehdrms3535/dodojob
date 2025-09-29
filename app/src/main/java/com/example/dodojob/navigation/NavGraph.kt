@@ -53,9 +53,11 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.navigation
 import com.example.dodojob.ui.feature.education.*
 import com.example.dodojob.ui.feature.education.EducationViewModel
+import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
+
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-    NavHost(navController = nav,startDestination = Route.EmployerMy.path) {
+    NavHost(navController = nav,startDestination = Route.Intro.path) {
 
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
@@ -100,7 +102,8 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.EmployerHumanResource.path) { EmployerHumanResourceScreen(nav) } // 인재)
         composable(Route.ViewResourceDetail.path) { ViewResourceDetailScreen(nav) } //인재 상세보기
         composable(Route.ScrrapedHumanResource.path) { ScrappedHumanResourceScreen(nav) } //인재 스크랩
-        composable(Route.EmployerMy.path) { EmployerMyRoute(nav) }
+        composable(Route.EmployerMy.path) { EmployerMyRoute(nav) } // 고용주 마이
+        composable(Route.EditEmployerInformation.path) { EditEmployerInformationScreen(nav) }
 
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav) } // 활동 레벨
         composable(Route.Map.path) { MapRoute(nav) } // 지도
