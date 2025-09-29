@@ -34,11 +34,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
-
-// ✅ 공용 BottomNavBar 임포트
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
-// ✅ 얇은 구분선 임포트 (employ.ScrappedHumanResource.kt)
-import com.example.dodojob.ui.feature.employ.ThinDivider
 
 /* ================= Font ================= */
 private val PretendardFamily = FontFamily(
@@ -107,16 +103,14 @@ fun EmployerMyRoute(nav: NavController) {
                             .fillMaxWidth()
                             .background(White)
                     ) {
-                        // 🔻 회색 빈칸(상단 24dp status bar) 제거 완료
 
                         // Title row
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(72.dp)
-                                .padding(vertical = 20.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                                .padding(vertical = 20.dp, horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = "마이페이지",
@@ -131,7 +125,10 @@ fun EmployerMyRoute(nav: NavController) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .clickable {
+                                    nav.navigate(Route.EditEmployerInformation.path)
+                                },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // 프로필 사진: employermyprofile
@@ -268,13 +265,13 @@ fun EmployerMyRoute(nav: NavController) {
                 /* ===== 섹션 리스트 (기본정보 등) ===== */
                 item {
                     InfoSectionList(
-                        sections = listOf("기본정보", "보안설정", "알림설정", "결제 · 정산"),
+                        sections = listOf("기본정보", "인증 및 보안", "알림 설정", "기업 인증"),
                         onRowClick = { /* TODO: 각 섹션 상세 라우트 연결 */ }
                     )
                 }
                 item {
                     InfoSectionList(
-                        sections = listOf("약관 및 정책", "고객센터", "앱 정보"),
+                        sections = listOf("공지 사항", "도움말 & 문의", "로그아웃"),
                         onRowClick = { /* TODO: 라우트 연결 */ }
                     )
                 }
