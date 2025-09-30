@@ -127,6 +127,10 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.github.jan-tennert.supabase:storage-kt")
+
+
+
+
 }
 
 /*configurations.configureEach {

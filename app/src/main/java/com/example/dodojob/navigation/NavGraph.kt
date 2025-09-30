@@ -1,7 +1,6 @@
 package com.example.dodojob.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -54,6 +53,7 @@ import androidx.navigation.compose.navigation
 import com.example.dodojob.ui.feature.education.*
 import com.example.dodojob.ui.feature.education.EducationViewModel
 import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
+//import com.example.dodojob.ui.feature.employ.ScrappedHumanResourceScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
@@ -157,5 +157,4 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         }
     }
 }
-
 
