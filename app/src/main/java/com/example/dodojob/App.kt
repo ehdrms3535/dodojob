@@ -25,6 +25,7 @@ class App : Application() {
             install(Auth)
             install(Postgrest)   // 테이블 작업
             install(Storage)     // 스토리지 업로드
+
         }
 
         Log.d("SUPA", "App client storage ok = " + runCatching { supabase.storage }.isSuccess)

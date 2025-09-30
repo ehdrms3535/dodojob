@@ -44,7 +44,7 @@ import com.example.dodojob.ui.feature.employ.SuggestInterviewScreen
 import com.example.dodojob.ui.feature.employ.ApplicantInformationScreen
 import com.example.dodojob.ui.feature.employ.EmployerHumanResourceScreen
 import com.example.dodojob.ui.feature.employ.ViewResourceDetailScreen
-import com.example.dodojob.ui.feature.employ.ScrappedHumanResourceScreen
+//import com.example.dodojob.ui.feature.employ.ScrappedHumanResourceScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
@@ -93,7 +93,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.InformationOfApplicants.path) {ApplicantInformationScreen(nav)} // 지원자정보)
         composable(Route.EmployerHumanResource.path) { EmployerHumanResourceScreen(nav)} // 인재)
         composable(Route.ViewResourceDetail.path) { ViewResourceDetailScreen(nav) } //인재 상세보기
-        composable(Route.ScrrapedHumanResource.path) { ScrappedHumanResourceScreen(nav) } //인재 스크랩
+        //composable(Route.ScrrapedHumanResource.path) { ScrappedHumanResourceScreen(nav) } //인재 스크랩
 
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav)} // 활동 레벨
         composable(Route.Map.path) {MapRoute(nav)} // 지도
