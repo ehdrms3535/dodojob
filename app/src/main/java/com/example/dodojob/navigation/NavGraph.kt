@@ -53,7 +53,6 @@ import androidx.navigation.compose.navigation
 import com.example.dodojob.ui.feature.education.*
 import com.example.dodojob.ui.feature.education.EducationViewModel
 import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
-//import com.example.dodojob.ui.feature.employ.ScrappedHumanResourceScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
@@ -95,13 +94,16 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) } // 테스트
 
         composable(Route.EmployerHome.path) { EmployerHomeRoute(nav) } // 고용주 메인
+
         composable(Route.EmployerNotice.path) { ManagementAnnouncementRoute(nav) } // 공고관리
+
         composable(Route.EmployerApplicant.path) { ApplicantManagementRoute(nav) } // 지원자관리
         composable(Route.SuggestInterview.path) { SuggestInterviewScreen(nav) } // 면접지원}
         composable(Route.InformationOfApplicants.path) { ApplicantInformationScreen(nav) } // 지원자정보)
         composable(Route.EmployerHumanResource.path) { EmployerHumanResourceScreen(nav) } // 인재)
         composable(Route.ViewResourceDetail.path) { ViewResourceDetailScreen(nav) } //인재 상세보기
         composable(Route.ScrrapedHumanResource.path) { ScrappedHumanResourceScreen(nav) } //인재 스크랩
+
         composable(Route.EmployerMy.path) { EmployerMyRoute(nav) } // 고용주 마이
         composable(Route.EditEmployerInformation.path) { EditEmployerInformationScreen(nav) }
 

@@ -1,4 +1,6 @@
-import kotlinx.serialization.Serializable
+package com.example.dodojob.dao
+
+/* import kotlinx.serialization.Serializable
 import com.example.dodojob.data.supabase.ProvideSupabase
 
 val supabase = ProvideSupabase.client
@@ -13,3 +15,5 @@ suspend fun fetchUserName(userId: String): String? {
         .decodeAs<UserNameRow>()
     return row.name
 }
+
+ */

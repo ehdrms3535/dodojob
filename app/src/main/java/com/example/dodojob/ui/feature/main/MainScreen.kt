@@ -132,7 +132,7 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
         onJobClick = { /* nav.navigate("job_detail/$it") */ },
         onTailoredClick = { /* nav.navigate("job_detail/$it") */ },
         onMoreRecommend = vm::refreshRecommendations,
-        onOpenCalendar = { /* nav.navigate("calendar") */ },
+        onOpenCalendar = { nav.navigate("support") },
         onShortcut = { key ->
             when (key) {
                 "home" -> nav.navigate("main") { launchSingleTop = true }
