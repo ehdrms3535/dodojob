@@ -126,8 +126,6 @@ fun ManagementAnnouncementRoute(nav: NavController) {
             contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { TopStatusBar() }
-
             item {
                 Column(
                     modifier = Modifier

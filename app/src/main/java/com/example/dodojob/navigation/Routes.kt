@@ -53,7 +53,14 @@ sealed class Route(val path: String) {
         // 혹은 enum 쓰면: fun welfareCategoryOf(tab: CategoryTab) = "welfare/category/${ if (tab==CategoryTab.Health) "health" else "leisure" }"
     }
 
+    data object EduHome : Route("edu")      // 교육 홈
+    data object EduMy   : Route("edu/my")   // 단일 화면(이어보기/찜한 강의 탭)
+
+    data object EduGraph : Route("edu_graph")
+
+
     data object EmployerHumanResource : Route("employer_human_resource")
     data object ViewResourceDetail : Route("view_resource_detail")
     data object ScrrapedHumanResource : Route("scrapped_human_resource")
+    data object EditEmployerInformation : Route("edit_employer_information")
 }
