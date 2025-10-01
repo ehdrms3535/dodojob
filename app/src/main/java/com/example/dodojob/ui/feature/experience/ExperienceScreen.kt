@@ -56,13 +56,14 @@ import io.ktor.http.ContentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import io.github.jan.supabase.auth.auth
+import com.example.dodojob.session.CurrentUser
 
 data class UploadedImage(val url: String, val path: String)
 
 private suspend fun uploadProfileImage(
     client: io.github.jan.supabase.SupabaseClient,
     context: Context,
-    userId: String,
+    userId: String?,
     uri: Uri
 ): UploadedImage {
     val cr = context.contentResolver
@@ -188,7 +189,7 @@ fun ExperienceScreen(nav: NavController) {
                         scope.launch {
                             val ctx = contextState.value
 
-                            val uid = "1234"
+                            val uid = CurrentUser.username
 
                             // 이미지 업로드 (선택)
                             var finalUrl = ""

@@ -55,18 +55,20 @@ class UserRepositorySupabase(
         }
     }
 
-    override suspend fun upsertIdPwByPhone(
+    override suspend fun upsertIdPw(
+        id: String?,                 // ❗ null 아님
         username: String,
-        rawPassword: String
+        password: String
     ) {
-        // ✅ phone UNIQUE 기준으로 충돌 시 username/password만 갱신
         client.from("users_tmp").upsert(
             mapOf(
+                "id" to id,         // ❗ 반드시 포함
                 "username" to username,
-                "password" to rawPassword,
+                "password" to password,
             )
         ) {
-            ignoreDuplicates = false   // 충돌 시 UPDATE(merge)
+            onConflict = "id"
+            ignoreDuplicates = false   // 충돌 시 병합(UPDATE)
         }
     }
 }

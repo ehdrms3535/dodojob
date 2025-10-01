@@ -35,7 +35,7 @@ import com.example.dodojob.session.SessionViewModel
 private data class LoginRow(
     val id: String,
     val username: String,
-    val password: String? = null,
+    val password: String,
     val name: String? = null,
     val job: String? = null
 )
@@ -165,7 +165,7 @@ fun LoginScreen(nav: NavController,sessionVm: SessionViewModel) {
                             if (currentJob != "시니어") error("시니어 전용 탭입니다. (현재: $currentJob)")
                             user
                         }.onSuccess { user ->
-                            CurrentUser.setLogin(user.id, user.username)
+                            CurrentUser.setLogin(user.username, user.password)
                             sessionVm.setLogin(
                                 id = user.id,
                                 name = user.username,

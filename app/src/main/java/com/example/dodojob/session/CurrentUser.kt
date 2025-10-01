@@ -6,17 +6,17 @@ import kotlinx.coroutines.flow.StateFlow
 object CurrentUser {
     private val _id = MutableStateFlow<String?>(null)           // Supabase auth user id (UUID)
     private val _username = MutableStateFlow<String?>(null)     // 로그인 아이디/이메일
-    private val _pw = MutableStateFlow<String?>(null)           // (필요시만 저장!)
-    private val _locate = MutableStateFlow<String?>(null)
+    private val _pw = MutableStateFlow<String>("")           // password
+    private val _locate = MutableStateFlow<String?>(null)       // 사용자 위치
     private val _radius = MutableStateFlow<Double>(0.0)
-    private val _jobtype = MutableStateFlow<String>("")
+    private val _jobtype = MutableStateFlow<String>("")         //직업
 
     val idFlow: StateFlow<String?> get() = _id
     val usernameFlow: StateFlow<String?> get() = _username
 
     val id: String? get() = _id.value
     val username: String? get() = _username.value
-    val password: String? get() = _pw.value
+    val password: String get() = _pw.value
     val locate: String? get() = _locate.value
     val radius: Double get() = _radius.value
     val jobtype: String get() = _jobtype.value
@@ -41,7 +41,7 @@ object CurrentUser {
     fun clear() {
         _id.value = null
         _username.value = null
-        _pw.value = null
+        _pw.value = ""
         _locate.value = null
         _radius.value = 0.0
         _jobtype.value = ""

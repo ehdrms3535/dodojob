@@ -54,6 +54,7 @@ fun EmployerSignupScreen(nav: NavController) {
     }
 
     // **** 데이터만 변경: 담당자명/연락처/이메일/사업자번호 ****
+    val generatedId = UUID.randomUUID().toString()
     var name by rememberSaveable { mutableStateOf(prefill?.name.orEmpty()) }
     var gender by rememberSaveable { mutableStateOf(prefill?.gender.orEmpty()) }
     var region by rememberSaveable { mutableStateOf(prefill?.region.orEmpty()) }
@@ -110,7 +111,7 @@ fun EmployerSignupScreen(nav: NavController) {
                                 // NOTE: 레포 스키마가 username/password를 요구해서
                                 // 임시로 bizNo/임시비밀번호를 넣었습니다. 실제 스키마에 맞게 교체하세요.
                                 val user = UserDto(
-                                    id = UUID.randomUUID().toString(),
+                                    id = generatedId,
                                     name = name,
                                     gender = prefill?.gender.orEmpty(),
                                     rrnFront = rrnFront,
@@ -132,6 +133,7 @@ fun EmployerSignupScreen(nav: NavController) {
 
                             }.onSuccess {
                                 // 민감정보 즉시 파기
+                                nav.currentBackStackEntry?.savedStateHandle?.set("userRowId", generatedId)
                                 rrnFront = ""; rrnBackFirst = ""
                                 nav.currentBackStackEntry?.savedStateHandle?.set("prefill", prefill)
                                 nav.navigate(Route.EmploySignupsec.path) {
