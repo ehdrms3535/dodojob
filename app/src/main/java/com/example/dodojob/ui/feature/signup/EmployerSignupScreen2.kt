@@ -47,7 +47,9 @@ fun EmploySignUpIdPwScreen(nav: NavController) {
     val prefill = remember {
         nav.previousBackStackEntry?.savedStateHandle?.get<SignUpPrefill>("prefill")
     }
-
+    val userRowId = remember {
+        nav.previousBackStackEntry?.savedStateHandle?.get<String>("userRowId")
+    }
     var userId by rememberSaveable { mutableStateOf("") }
 
     var rrnFront by remember { mutableStateOf(prefill?.rrnFront.orEmpty()) }
@@ -87,7 +89,7 @@ fun EmploySignUpIdPwScreen(nav: NavController) {
 
                         scope.launch {
                             runCatching {
-                                repo.upsertIdPwByPhone(username = userId,rawPassword = pw)
+                                repo.upsertIdPw(id = userRowId ,username = userId,rawPassword = pw)
                             }.onSuccess { created ->
                                 // ✅ 람다 파라미터로 받은 created 사용 (user 참조 에러 해결)
                                 CurrentUser.setLogin(username = userId, password = pw)
@@ -95,7 +97,7 @@ fun EmploySignUpIdPwScreen(nav: NavController) {
                                 // 민감정보 파기
                                 rrnFront = ""; rrnBackFirst = ""; pw = ""; pw2 = ""
 
-                                nav.navigate(Route.SignUpComplete.path) { launchSingleTop = true }
+                                nav.navigate(Route.PostingRegisterCompleteScreen.path) { launchSingleTop = true }
                             }.onFailure { e ->
                                 error = e.message ?: "회원가입 실패"
                             }
