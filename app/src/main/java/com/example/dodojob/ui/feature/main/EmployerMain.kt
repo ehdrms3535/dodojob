@@ -1,24 +1,27 @@
 package com.example.dodojob.ui.feature.main
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -31,6 +34,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
+import kotlinx.coroutines.delay
 
 /* ================= Colors ================= */
 private val ScreenBg  = Color(0xFFF1F5F7)
@@ -92,6 +96,110 @@ data class ApplicantUi(
     val age: Int
 )
 
+/* ---------- 광고 배너 데이터 ---------- */
+data class EmployerAdBanner(
+    @DrawableRes val imageRes: Int,
+    val onClick: () -> Unit = {}
+)
+
+/* ---------- 광고(자동 회전) ---------- */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun EmployerAutoRotatingAd(
+    banners: List<EmployerAdBanner>,
+    autoIntervalMs: Long = 5_000L,
+) {
+    val realCount = banners.size
+
+    // 배너가 없으면 플레이스홀더
+    if (realCount == 0) {
+        Card(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .height(154.dp),
+            shape = RoundedCornerShape(10.dp),
+            elevation = CardDefaults.cardElevation(4.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A77FF))
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "광고가 없습니다.",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        return
+    }
+
+    val pagerState = rememberPagerState(pageCount = { realCount })
+
+    // 자동 넘김
+    LaunchedEffect(realCount, autoIntervalMs) {
+        while (true) {
+            delay(autoIntervalMs)
+            val next = (pagerState.currentPage + 1) % realCount
+            pagerState.animateScrollToPage(next)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(154.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(4.dp)
+        ) {
+            HorizontalPager(state = pagerState) { page ->
+                val banner = banners[page]
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { banner.onClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = banner.imageRes),
+                        contentDescription = "ad_banner_$page",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+
+        // 인디케이터
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val current = pagerState.currentPage
+            repeat(realCount) { i ->
+                val isSelected = i == current
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(if (isSelected) 8.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(if (isSelected) BrandBlue else LineGray)
+                )
+            }
+        }
+    }
+}
+
 /* ================= Route Entry ================= */
 @Composable
 fun EmployerHomeRoute(nav: NavController) {
@@ -109,6 +217,15 @@ fun EmployerHomeRoute(nav: NavController) {
                 age = it.age
             )
         }
+    }
+
+    // ★ 광고 배너들: employeradvertisement1/2/3 사용
+    val adBanners = remember {
+        listOf(
+            EmployerAdBanner(R.drawable.employeradvertisement1) { /* 클릭 액션 1 */ },
+            EmployerAdBanner(R.drawable.employeradvertisement2) { /* 클릭 액션 2 */ },
+            EmployerAdBanner(R.drawable.employeradvertisement3) { /* 클릭 액션 3 */ },
+        )
     }
 
     Scaffold(
@@ -208,6 +325,11 @@ fun EmployerHomeRoute(nav: NavController) {
                         onClick = { nav.safeNavigate(Route.EmployerNotice.path) }
                     )
                 }
+            }
+
+            /* 2.5) 광고 배너 (공고등록 바로 아래) */
+            item {
+                EmployerAutoRotatingAd(banners = adBanners, autoIntervalMs = 5_000L)
             }
 
             /* 3) 최근 지원자 리스트 카드 */
@@ -531,8 +653,6 @@ private fun ApplicantRow(ap: ApplicantUi) {
     }
 }
 
-
-
 @Composable
 private fun HorizontalLine() {
     Spacer(
@@ -565,5 +685,6 @@ drawable/
 - unselected_home.png, selected_home.png
 - unselected_notice.png, unselected_applicant.png
 - unselected_my.png, selected_my.png
-- ic_location.png  // ← 위치 아이콘 (이름 확인 후 맞게 변경)
+- ic_location.png
+- employeradvertisement1.png, employeradvertisement2.png, employeradvertisement3.png
 */
