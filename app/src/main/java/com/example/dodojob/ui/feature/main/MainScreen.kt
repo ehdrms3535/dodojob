@@ -42,6 +42,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.em
+import com.example.dodojob.dao.getUsernameById
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.data.user.UserRepository
+import com.example.dodojob.data.user.UserRepositorySupabase
+import com.example.dodojob.navigation.Route
+import com.example.dodojob.session.CurrentUser
 
 
 /* ===================== 데이터 모델 ===================== */
@@ -132,7 +138,7 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
         onJobClick = { /* nav.navigate("job_detail/$it") */ },
         onTailoredClick = { /* nav.navigate("job_detail/$it") */ },
         onMoreRecommend = vm::refreshRecommendations,
-        onOpenCalendar = { nav.navigate("support") },
+        onOpenCalendar = { nav.navigate(Route.Map.path)  },
         onShortcut = { key ->
             when (key) {
                 "home" -> nav.navigate("main") { launchSingleTop = true }
@@ -159,6 +165,15 @@ fun MainScreen(
 ) {
     val brandBlue = Color(0xFF005FFF)
     val screenBg = Color(0xFFF1F5F7)
+    var user by remember { mutableStateOf<String?>(null) }
+    val client = LocalSupabase.current
+    val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
+    val currentuser = CurrentUser.username
+    LaunchedEffect(currentuser) {
+        user = getUsernameById(currentuser) // ✅ 안전하게 suspend 함수 호출
+    }
+
+
 
     var bannerIndex by remember { mutableStateOf(0) }
     LaunchedEffect(state.banners.size) {
@@ -194,7 +209,7 @@ fun MainScreen(
             /* 1) 상단 인사 */
                 item {
                     Text(
-                        text = "오늘도 좋은 하루입니다,\n${state.greetingName}님",
+                        text = "오늘도 좋은 하루입니다,\n${user}님",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.Black,
@@ -225,7 +240,7 @@ fun MainScreen(
             /* 4) (위) AI 추천 일자리 — 사진 없음 (2×2) */
             item {
                 Box(Modifier.padding(horizontal = 16.dp)) {
-                    SectionTitle("${state.greetingName}님을 위한 AI 추천 일자리")
+                    SectionTitle("${user}님을 위한 AI 추천 일자리")
                 }
             }
 
@@ -266,7 +281,7 @@ fun MainScreen(
             /* 6) (아래) 맞춤형 일자리 — 사진 + 설명(더 크게) */
             item {
                 Box(Modifier.padding(horizontal = 16.dp)) {
-                    SectionTitle("${state.greetingName}님을 위한 맞춤형 일자리")
+                    SectionTitle("${user}님을 위한 맞춤형 일자리")
                 }
             }
 

@@ -43,6 +43,7 @@ sealed class Route(val path: String) {
     data object ManagementApplicants : Route("management_applicants")
     data object SuggestInterview : Route("suggest_interview")
     data object InformationOfApplicants : Route("information_of_applicants")
+    data object PostingRegisterCompleteScreen : Route("postiongregistercomplet")
 
     data object WelfareHome : Route("welfare/home")
     data object WelfareCategory : Route("welfare/category/{tab}")

@@ -53,6 +53,7 @@ import androidx.navigation.compose.navigation
 import com.example.dodojob.ui.feature.education.*
 import com.example.dodojob.ui.feature.education.EducationViewModel
 import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
+import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
@@ -68,6 +69,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.SignUpComplete.path) { SignUpCompleteScreen(nav) } // 4-2. 회원가입 성공
         composable(Route.EmploySignupsec.path) { EmploySignUpIdPwScreen(nav) }
         composable(Route.EmploySignup.path) { EmployerSignupScreen(nav) }
+        composable(Route.PostingRegisterCompleteScreen.path) {PostingRegisterCompleteScreen(nav)}
 
         composable(Route.JobType.path) { JobTypeScreen(nav) }      // 5. 회원가입 이후
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }    //
