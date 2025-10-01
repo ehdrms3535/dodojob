@@ -114,7 +114,6 @@ object MainFakeRepository {
 class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(
         MainUiState(
-
             aiJobs = MainFakeRepository.loadAiJobs(),
             banners = MainFakeRepository.loadBanners(),
             tailoredJobs = MainFakeRepository.loadTailored()
