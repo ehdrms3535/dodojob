@@ -15,13 +15,6 @@ data class UsernameRow(
     val name: String? = null
 )
 
-val http = HttpClient(OkHttp) {
-    install(ContentNegotiation) {
-        json(Json {
-            ignoreUnknownKeys = true
-        })
-    }
-}
 
 suspend fun getUsernameById(
     username: String?,
