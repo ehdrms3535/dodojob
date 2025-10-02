@@ -38,6 +38,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.core.view.WindowCompat
+import com.example.dodojob.navigation.Route
 
 private val ScreenBg = Color(0xFFF1F5F7)
 private val BrandBlue = Color(0xFF005FFF)
@@ -176,7 +177,7 @@ fun EducationLibraryScreen(
                                 title = c.title,
                                 subtitle = c.sub,
                                 desc = c.desc,
-                                onPlay = { /* TODO: 재생 진입 */ }
+                                onPlay = { nav.navigate(Route.EduLectureNormal.of(c.id)) }
                             )
                             Spacer(Modifier.height(28.dp))
                         }
@@ -190,7 +191,8 @@ fun EducationLibraryScreen(
                                 title = c.title,
                                 subtitle = c.sub,
                                 desc = c.desc,
-                                thumbnailRes = c.imageRes
+                                thumbnailRes = c.imageRes,
+                                onClick = { nav.navigate(com.example.dodojob.navigation.Route.EduLectureNormal.of(c.id)) }
                             )
                             Spacer(Modifier.height(28.dp))
                         }
@@ -294,7 +296,7 @@ private fun MyCourseRowCard(
             Image(
                 painter = painterResource(R.drawable.play_button),
                 contentDescription = "재생",
-                modifier = Modifier.size(63.dp)
+                modifier = Modifier.size(60.dp)
             )
         }
         Column {
@@ -352,12 +354,14 @@ private fun FavoriteRowItem(
     title: String,
     subtitle: String,
     desc: String,
-    @DrawableRes thumbnailRes: Int
+    @DrawableRes thumbnailRes: Int,
+    onClick: () -> Unit // ← 추가
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min),
+            .height(IntrinsicSize.Min)
+            .clickable(onClick = onClick), // ← 클릭 가능
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.Top
     ) {

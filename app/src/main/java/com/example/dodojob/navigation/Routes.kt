@@ -58,7 +58,15 @@ sealed class Route(val path: String) {
     data object EduMy   : Route("edu/my")   // 단일 화면(이어보기/찜한 강의 탭)
 
     data object EduGraph : Route("edu_graph")
-
+    data object EduPaymentComplete : Route("edu_payment/{courseId}") {
+        fun of(courseId: String) = "edu_payment/$courseId"
+    }
+    data object EduLectureInitial : Route("edu_lecture_ini/{courseId}") {
+        fun of(courseId: String) = "edu_lecture_ini/$courseId"
+    }
+    data object EduLectureNormal  : Route("edu_lecture_nor/{courseId}") {
+        fun of(courseId: String) = "edu_lecture_nor/$courseId"
+    }
 
     data object EmployerHumanResource : Route("employer_human_resource")
     data object ViewResourceDetail : Route("view_resource_detail")
