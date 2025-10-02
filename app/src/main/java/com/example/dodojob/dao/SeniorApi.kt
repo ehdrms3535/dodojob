@@ -18,7 +18,7 @@ suspend fun getSeniorInformation(
     val rows: List<SeniorJoined> = http.get(url) {
         parameter(
             "select",
-            "username,applyCount,resumeViews,recentCount,likedCount,activityLevel," +
+            "username,applyCount,resumeViews,recentCount,likedCount,activityLevel,applyWithinYear,realWorkExpCount,eduCompleted," +
                     "users_tmp(username,name,gender,phone,email,password)"
         )
         parameter("username", "eq.$username")
