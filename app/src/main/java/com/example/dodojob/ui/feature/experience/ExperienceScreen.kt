@@ -2,6 +2,7 @@
 
 package com.example.dodojob.ui.feature.experience
 
+import androidx.compose.ui.unit.em
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -9,7 +10,9 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,35 +30,36 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.dodojob.App
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.UUID
-import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
-import androidx.compose.foundation.layout.BoxWithConstraints
 import com.example.dodojob.data.userimage.UserimageDto
 import com.example.dodojob.data.userimage.UserimageRepository
 import com.example.dodojob.data.userimage.UserimageSupabase
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 import io.github.jan.supabase.storage.storage
 import io.ktor.http.ContentType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import io.github.jan.supabase.auth.auth
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Locale
 import com.example.dodojob.session.CurrentUser
+
+/* ===============================
+   업로드 헬퍼
+   =============================== */
 
 data class UploadedImage(val url: String, val path: String)
 
@@ -76,7 +79,6 @@ private suspend fun uploadProfileImage(
     val bytes = cr.openInputStream(uri)?.use { it.readBytes() }
         ?: error("이미지를 읽을 수 없습니다.")
 
-    // 경로: profiles/{uid}/timestamp.ext
     val path = "profiles/$userId/${System.currentTimeMillis()}.$ext"
     val bucket = client.storage.from("user-images")
 
@@ -92,45 +94,46 @@ private suspend fun uploadProfileImage(
         contentType = ct
     }
 
-    // 버킷이 public일 때만 즉시 접근 가능. private이면 createSignedUrl 사용하세요.
-    val url = bucket.publicUrl(path)
-    // val url = bucket.createSignedUrl(path, expiresIn = 3600) // private 버킷이라면 이걸 사용
+    val url = bucket.publicUrl(path) // private 버킷이면 createSignedUrl 사용
     return UploadedImage(url = url, path = path)
 }
 
+/* ===============================
+   ExperienceScreen (Figma 반영)
+   =============================== */
+
+private val ScreenBg = Color(0xFFF1F5F7)
+private val Primary = Color(0xFF005FFF)
+private val BorderGray = Color(0xFF828282)
+private val PlaceholderGray = Color(0xFF727272)
+private val DividerGray = Color(0xFFCFCFCF)
+private val DimMask = Color(0x6A3E454B)
+
 @Composable
 fun ExperienceScreen(nav: NavController) {
-    // Supabase 클라이언트 (App 싱글턴)
     val app = LocalContext.current.applicationContext as App
     val client = app.supabase
     val repo: UserimageRepository = remember(client) { UserimageSupabase(client) }
 
-    // ================== UI State ==================
-    val Bg = Color(0xFFF1F5F7)
-    val Primary = Color(0xFF005FFF)
-
     var description by remember { mutableStateOf("") }
     var showPhotoSheet by remember { mutableStateOf(false) }
 
-    // 최종 프로필 이미지 Uri (성공 후에만 세팅)
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-
-    // 촬영 준비/진행 상태
     var isCapturing by remember { mutableStateOf(false) }
-
-    // 촬영 전 임시로 들고 있을 Uri/File
     var tempCaptureUri by remember { mutableStateOf<Uri?>(null) }
     var tempLastCreatedFile by remember { mutableStateOf<File?>(null) }
-
-    // 권한 허용 후 실행할 지연 함수
     var pendingCameraLaunch by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-    // Composable 밖(콜백)에서도 안전하게 context 접근
     val contextState = rememberUpdatedState(LocalContext.current)
+
+    // 추가 섹션 상태 (Figma 입력 필드들)
+    var workplace by remember { mutableStateOf("") }
+    var mainTasks by remember { mutableStateOf("") }
+    var period by remember { mutableStateOf("") }
+    var isHealthy by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
-    // ================== Launchers ==================
+    /* ----------------- 런처들 ----------------- */
     val takePictureLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
@@ -139,7 +142,6 @@ fun ExperienceScreen(nav: NavController) {
         if (success && tempCaptureUri != null) {
             imageUri = tempCaptureUri
         } else {
-            // 실패/취소 시 임시 파일 정리
             tempLastCreatedFile?.delete()
         }
         tempLastCreatedFile = null
@@ -166,146 +168,111 @@ fun ExperienceScreen(nav: NavController) {
         uri?.let { imageUri = it }
     }
 
-    LaunchedEffect(Unit) {
-        Log.d(
-            "SUPA",
-            "screen client hash=${System.identityHashCode(client)}, " +
-                    "storage ok=" + runCatching { client.storage }.isSuccess
-        )
-    }
-
-    // ================== UI ==================
+    /* ----------------- UI ----------------- */
     Scaffold(
-        containerColor = Bg,
+        containerColor = ScreenBg,
         bottomBar = {
-            Box(
+            // Figma: 하단 고정 White + 완료 버튼(328x55, radius 10)
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Bg)
-                    .padding(horizontal = 18.dp, vertical = 50.dp)
+                    .background(Color.White)
+                    .padding(top = 20.dp, bottom = 28.dp)
+                    .padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Button(
                     onClick = {
                         scope.launch {
                             val ctx = contextState.value
-
                             val uid = CurrentUser.username
-
-                            // 이미지 업로드 (선택)
                             var finalUrl = ""
+
                             try {
                                 if (imageUri != null) {
-                                    Log.d("XL", "stage A: start upload, uri=$imageUri")
                                     finalUrl = withContext(Dispatchers.IO) {
-                                        val uploaded = uploadProfileImage(client, ctx, uid, imageUri!!)
-                                        uploaded.url
+                                        uploadProfileImage(client, ctx, uid, imageUri!!).url
                                     }
-                                    Log.d("XL", "stage A: upload ok, url=$finalUrl")
-                                } else {
-                                    Log.d("XL", "stage A: no image, skip upload")
                                 }
                             } catch (e: Exception) {
                                 Log.e("XL", "stage A: upload failed", e)
                                 return@launch
                             }
 
-                            // DTO 구성 (id 하드코딩 금지)
                             val dto = try {
-                                Log.d("XL", "stage C: build dto, url=$finalUrl")
                                 UserimageDto(
                                     id = uid,
                                     img_url = finalUrl,
                                     user_imform = description
-                                    // 필요 시 user_id = uid
                                 )
                             } catch (e: Exception) {
                                 Log.e("XL", "stage C: build dto failed", e)
                                 return@launch
                             }
 
-                            // insert 실행
                             try {
-                                Log.d("XL", "stage D: insert start, dto=$dto")
                                 withContext(Dispatchers.IO) {
                                     repo.insertUserimage(dto)
                                 }
-                                Log.d("XL", "stage D: insert ok")
                             } catch (e: Exception) {
                                 Log.e("XL", "stage D: insert failed", e)
                                 return@launch
                             }
 
-                            // 네비게이션
-                            try {
-                                Log.d("XL", "stage E: navigate")
-                                nav.navigate(Route.ExperienceComplete.path)
-                            } catch (e: Exception) {
-                                Log.e("XL", "stage E: navigate failed", e)
-                            }
+                            runCatching { nav.navigate(Route.ExperienceComplete.path) }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
+                        .height(55.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Primary,
                         contentColor = Color.White
-                    )
+                    ),
+                    contentPadding = PaddingValues(vertical = 9.dp)
                 ) {
-                    Text("완료", fontSize = 25.sp, fontWeight = FontWeight.Medium)
+                    Text("완료", fontSize = 24.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
                 }
             }
         }
     ) { inner ->
-        BoxWithConstraints(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner)
+                .verticalScroll(rememberScrollState())
         ) {
-            val W = maxWidth
-            val H = maxHeight
-
-            val hPad = (W * 0.045f)
-            val titleTop = (H * 0.04f)
-            val titleSp = (W.value * 0.085f).sp
-            val backSp = (W.value * 0.065f).sp
-            val subTop = (H * 0.008f)
-
+            // 상단 White 영역 (뒤로가기 + 타이틀 + 프로필)
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = hPad)
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(horizontal = 16.dp, vertical = 20.dp)
             ) {
-                Spacer(Modifier.height(titleTop))
-
+                // Back: drawable/back.png
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "<",
-                        fontSize = backSp,
-                        color = Color.Black,
-                        modifier = Modifier.clickable { nav.popBackStack() }
+                    Image(
+                        painter = painterResource(R.drawable.back),
+                        contentDescription = "뒤로가기",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { nav.popBackStack() }
                     )
                 }
-
-                Spacer(Modifier.height(12.dp))
-
+                Spacer(Modifier.height(26.dp))
                 Text(
                     text = "프로필을 완성해볼까요?",
-                    fontSize = titleSp,
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = Color.Black,
+                    lineHeight = 48.sp // 150%
                 )
-
-                Spacer(Modifier.height(subTop))
                 Spacer(Modifier.height(20.dp))
 
-                // ===== 프로필 이미지 영역 =====
+                // 프로필 원형(178) — 사진 없으면 camera.png
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
@@ -317,140 +284,410 @@ fun ExperienceScreen(nav: NavController) {
                         contentAlignment = Alignment.Center
                     ) {
                         when {
-                            isCapturing -> {
-                                CircularProgressIndicator(strokeWidth = 3.dp)
-                            }
-                            imageUri != null -> {
-                                AsyncImage(
-                                    model = imageUri,
-                                    contentDescription = "프로필 사진",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                            else -> {
-                                Icon(
-                                    imageVector = Icons.Filled.AddAPhoto,
-                                    contentDescription = "사진 추가",
-                                    tint = Color(0xFF606060),
-                                    modifier = Modifier.size(64.dp)
-                                )
-                            }
+                            isCapturing -> CircularProgressIndicator(strokeWidth = 3.dp)
+                            imageUri != null -> AsyncImage(
+                                model = imageUri,
+                                contentDescription = "프로필 사진",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            else -> Image(
+                                painter = painterResource(R.drawable.camera),
+                                contentDescription = "카메라",
+                                modifier = Modifier.size(83.dp),
+                                contentScale = ContentScale.Fit
+                            )
                         }
                     }
                 }
+                Spacer(Modifier.height(14.dp))
+            }
+            Spacer(Modifier.height(18.dp))
 
-                Spacer(Modifier.height(35.dp))
-
-                Text(
-                    text = "경력사항을 적어주세요",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.Black,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+            // 섹션 1: 경력 입력 카드
+            SectionCard {
+                Label("근무장소를 적어주세요")
+                OutlinedBoxField(
+                    value = workplace,
+                    onValueChange = { workplace = it },
+                    placeholder = "ex) 카카오 주식회사"
                 )
+                Spacer(Modifier.height(15.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(3.dp, RoundedCornerShape(10.dp), clip = true)
-                        .background(Color.White, RoundedCornerShape(10.dp))
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                ) {
-                    TextField(
-                        value = description,
-                        onValueChange = { description = it },
+                Label("주요 업무 내용을 적어주세요")
+                OutlinedBoxField(
+                    value = mainTasks,
+                    onValueChange = { mainTasks = it },
+                    placeholder = "ex) 디지털 콘텐츠 기획/운영"
+                )
+                Spacer(Modifier.height(15.dp))
+
+                Label("근무기간")
+                OutlinedBoxField(
+                    value = period,
+                    onValueChange = { period = it },
+                    placeholder = "ex) 2013.01.01 ~ 2025.09.26"
+                )
+                Spacer(Modifier.height(20.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(
+                            if (isHealthy) R.drawable.checked_mark else R.drawable.unchecked_mark
+                        ),
+                        contentDescription = if (isHealthy) "체크됨" else "미체크",
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 180.dp),
-                        placeholder = {
-                            Text(
-                                "담당업무와 근무했던 회사명을 적어주세요",
-                                color = Color(0xFF999999),
-                                fontSize = 16.sp
-                            )
-                        },
-                        singleLine = false,
-                        minLines = 3,
-                        maxLines = 6,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            disabledContainerColor = Color.White,
-                            errorContainerColor = Color.White,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent,
-                            cursorColor = Color.Black
-                        )
+                            .size(width = 24.dp, height = 25.dp)
+                            .clickable { isHealthy = !isHealthy }
+                    )
+                    Spacer(Modifier.width(11.dp))
+                    Text(
+                        text = "(필수) 개인정보 제 3자 제공 동의",
+                        fontSize = 16.sp,
+                        color = Color(0xFFFF2F00),
+                        fontWeight = FontWeight.Medium
                     )
                 }
+                Spacer(Modifier.height(20.dp))
 
-                Spacer(Modifier.height(14.dp))
-
-                Button(
-                    onClick = { showPhotoSheet = true },
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .height(39.dp),
-                    shape = RoundedCornerShape(31.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0x2B005FFF),
-                        contentColor = Primary
-                    ),
-                    contentPadding = PaddingValues(horizontal = 15.dp, vertical = 8.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("추가", fontSize = 16.sp, textAlign = TextAlign.Center)
+                PrimaryFullButton(text = "추가하기") {
+                    // TODO: 항목 추가 핸들러
                 }
-
-                Spacer(Modifier.height(12.dp))
             }
 
-            // ===== 사진 선택 모달 =====
-            if (showPhotoSheet) {
-                PhotoOptionsDialog(
-                    onDismiss = { showPhotoSheet = false },
-                    onPickCamera = {
-                        // 1) 촬영용 파일/Uri 생성
-                        val (file, uri) = createTempImageUri(contextState.value)
-                        Log.d("Camera", "created temp file=${file.absolutePath}, exists=${file.exists()}, uri=$uri")
-                        tempLastCreatedFile = file
-                        tempCaptureUri = uri
-                        isCapturing = true
+            Spacer(Modifier.height(18.dp))
 
-                        // 2) 권한 체크 후 촬영 실행
-                        val granted = ContextCompat.checkSelfPermission(
-                            contextState.value, Manifest.permission.CAMERA
-                        ) == PackageManager.PERMISSION_GRANTED
+            // 섹션 2: 공고등록
+            SectionCard {
+                Label("관련 자격증")
+                OutlinedBoxField(
+                    value = description,
+                    onValueChange = { description = it },
+                    placeholder = "예: 컴퓨터 활용, 영어회화, 운전가능"
+                )
+                Spacer(Modifier.height(20.dp))
+                PrimaryFullButton(text = "추가하기") {
+                    // TODO: 공고등록 액션
+                }
+            }
 
-                        if (granted) {
-                            takePictureLauncher.launch(uri)
-                        } else {
-                            pendingCameraLaunch = { takePictureLauncher.launch(uri) }
-                            requestCameraPermission.launch(Manifest.permission.CAMERA)
+            Spacer(Modifier.height(18.dp))
+        }
+
+        // 사진 선택 모달 (Figma 수치 그대로)
+        if (showPhotoSheet) {
+            PhotoOptionsDialog330(
+                onDismiss = { showPhotoSheet = false },
+                onPickCamera = {
+                    val (file, uri) = createTempImageUri(contextState.value)
+                    Log.d("Camera", "created temp file=${file.absolutePath}, exists=${file.exists()}, uri=$uri")
+                    tempLastCreatedFile = file
+                    tempCaptureUri = uri
+                    isCapturing = true
+
+                    val granted = ContextCompat.checkSelfPermission(
+                        contextState.value, Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (granted) {
+                        takePictureLauncher.launch(uri)
+                    } else {
+                        pendingCameraLaunch = { takePictureLauncher.launch(uri) }
+                        requestCameraPermission.launch(Manifest.permission.CAMERA)
+                    }
+                    showPhotoSheet = false
+                },
+                onPickGallery = {
+                    galleryLauncher.launch("image/*")
+                    showPhotoSheet = false
+                },
+                onUseDefault = {
+                    imageUri = Uri.parse("android.resource://${contextState.value.packageName}/${R.drawable.basic_profile}")
+                    showPhotoSheet = false
+                }
+            )
+        }
+    }
+}
+
+/* ===============================
+   다이얼로그 (Figma 330 x 280.7)
+   =============================== */
+
+@Composable
+private fun PhotoOptionsDialog330(
+    onDismiss: () -> Unit,
+    onPickCamera: () -> Unit,
+    onPickGallery: () -> Unit,
+    onUseDefault: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        // Dim overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(DimMask)
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            // Frame 1707480511
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 48.dp)
+                    .width(330.dp)
+                    .height(280.7.dp)
+            ) {
+                // Frame 1707480510 (카드)
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .width(330.dp)
+                        .height(260.7.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White)
+                        .padding(start = 18.dp, end = 18.dp, top = 9.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // 타이틀 (Frame 3468994/3468993)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(47.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(135.dp)
+                                .height(47.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "프로필 사진 설정",
+                                color = Color(0xFF828282),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = (-0.019).em
+                            )
+                        }
+                    }
+
+                    // Divider
+                    HorizontalDivider(
+                        color = DividerGray,
+                        thickness = 1.dp,
+                        modifier = Modifier.width(294.dp)
+                    )
+
+                    Spacer(Modifier.height(15.dp))
+
+                    // 옵션 섹션 (Frame 3468998)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(169.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // 카메라로 찍기 (Frame 3468995)
+                        Column(
+                            modifier = Modifier
+                                .width(294.dp)
+                                .height(51.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(294.dp)
+                                    .height(39.dp)
+                                    .clickable { onPickCamera() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "카메라로 찍기",
+                                    color = Primary,
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = (-0.019).em,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
 
-                        showPhotoSheet = false
-                    },
-                    onPickGallery = {
-                        galleryLauncher.launch("image/*")
-                        showPhotoSheet = false
-                    },
-                    onUseDefault = {
-                        imageUri = Uri.parse("android.resource://${contextState.value.packageName}/${R.drawable.basic_profile}")
-                        showPhotoSheet = false
+                        // Divider
+                        HorizontalDivider(
+                            color = DividerGray,
+                            thickness = 1.dp,
+                            modifier = Modifier.width(294.dp)
+                        )
+
+                        Spacer(Modifier.height(15.dp))
+
+                        // 앨범/기본 이미지 (Frame 3468997)
+                        Column(
+                            modifier = Modifier
+                                .width(294.dp)
+                                .height(103.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // 앨범에서 사진 선택 (Frame 3468996)
+                            Column(
+                                modifier = Modifier
+                                    .width(294.dp)
+                                    .height(49.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(294.dp)
+                                        .height(39.dp)
+                                        .clickable { onPickGallery() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "앨범에서 사진 선택",
+                                        color = Primary,
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        letterSpacing = (-0.019).em,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+
+                            // Divider
+                            HorizontalDivider(
+                                color = DividerGray,
+                                thickness = 1.dp,
+                                modifier = Modifier.width(294.dp)
+                            )
+
+                            Spacer(Modifier.height(15.dp))
+
+                            // 기본 이미지 적용
+                            Box(
+                                modifier = Modifier
+                                    .width(294.dp)
+                                    .height(39.dp)
+                                    .clickable { onUseDefault() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "기본 이미지 적용",
+                                    color = Primary,
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = (-0.019).em,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                     }
-                )
+                }
             }
         }
     }
 }
 
-/** 촬영 결과를 저장할 임시 이미지 파일과 해당 Uri(FileProvider)를 생성 */
+/* ===============================
+   재사용 컴포넌트
+   =============================== */
+
+@Composable
+private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(vertical = 20.dp, horizontal = 18.dp), // 👈 여기서 양옆 패딩 조절
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            content = content
+        )
+    }
+}
+
+@Composable
+private fun PrimaryFullButton(text: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()  // Figma width
+            .height(55.dp),  // Figma height
+        shape = RoundedCornerShape(10.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Primary,
+            contentColor = Color.White
+        ),
+        contentPadding = PaddingValues(vertical = 9.dp)
+    ) {
+        Text(text, fontSize = 24.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun Label(text: String) {
+    Text(
+        text = text,
+        fontSize = 24.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = Color.Black,
+        modifier = Modifier.padding(bottom = 15.dp)
+    )
+}
+
+@Composable
+private fun OutlinedBoxField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(47.dp)
+            .border(1.dp, BorderGray, RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        if (value.isEmpty()) {
+            Text(placeholder, color = PlaceholderGray, fontSize = 18.sp)
+        }
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(27.dp),
+            singleLine = true,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                errorContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                cursorColor = Color.Black,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black
+            ),
+            textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
+        )
+    }
+}
+
+/* ===============================
+   촬영용 임시 파일/Uri
+   =============================== */
 private fun createTempImageUri(context: Context): Pair<File, Uri> {
     return try {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
@@ -463,80 +700,5 @@ private fun createTempImageUri(context: Context): Pair<File, Uri> {
     } catch (e: Exception) {
         Log.e("Camera", "createTempImageUri failed", e)
         throw e
-    }
-}
-
-@Composable
-private fun PhotoOptionsDialog(
-    onDismiss: () -> Unit,
-    onPickCamera: () -> Unit,
-    onPickGallery: () -> Unit,
-    onUseDefault: () -> Unit
-) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0x6A3E454B))
-                .clickable { onDismiss() },
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(bottom = 48.dp)
-                    .width(340.dp)
-                    .wrapContentHeight()
-                    .background(Color.White, RoundedCornerShape(20.dp))
-                    .padding(horizontal = 18.dp, vertical = 9.dp)
-                    .clickable(enabled = false) {},
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "프로필 사진 설정",
-                        color = Color(0xFF828282),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    HorizontalDivider(thickness = 1.dp, color = Color(0xFFCFCFCF))
-
-                    OptionRow(text = "카메라로 찍기", onClick = onPickCamera)
-                    HorizontalDivider(thickness = 1.dp, color = Color(0xFFCFCFCF))
-
-                    OptionRow(text = "앨범에서 사진 선택", onClick = onPickGallery)
-                    HorizontalDivider(thickness = 1.dp, color = Color(0xFFCFCFCF))
-
-                    OptionRow(text = "기본 이미지 적용", onClick = onUseDefault)
-
-                    Spacer(Modifier.height(6.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun OptionRow(text: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(51.dp)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = Color(0xFF005FFF),
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center
-        )
     }
 }
