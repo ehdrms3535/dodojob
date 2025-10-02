@@ -11,7 +11,10 @@ private data class SeniorRow(
     val resumeViews: Long = 0,
     val recentCount: Long = 0,
     val likedCount: Long = 0,
-    val activityLevel: Long = 1
+    val activityLevel: Long = 1,
+    val applyWithinYear: Long = 0,
+    val realWorkExpCount: Long = 0,
+    val eduCompleted: Boolean = false
 )
 
 class SeniorRepositorySupabase(
@@ -19,14 +22,14 @@ class SeniorRepositorySupabase(
 ) : SeniorRepository {
 
     override suspend fun insertSenior(senior: SeniorDto) {
-        client.from("Senior").insert(
+        client.from("senior").insert(
             SeniorRow(
                 username = senior.id,
                 applyCount = senior.applyCount,
                 resumeViews = senior.resumeViews,
                 recentCount = senior.recentCount,
                 likedCount = senior.likedCount,
-                activityLevel = senior.activityLevel
+                activityLevel = senior.activityLevel,
             )
         )
     }
