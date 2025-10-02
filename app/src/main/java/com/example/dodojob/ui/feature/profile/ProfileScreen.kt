@@ -73,6 +73,10 @@ fun ProfileRoute(nav: NavController) {
     val resumeViews = s.resumeViews
     val recentCount = s.recentCount
     val likedCount = s.likedCount
+    val activityLevel = s.activityLevel
+    val applyWithinYear = s.applyWithinYear
+    val realWorkExpCount = s.realWorkExpCount
+    val eduCompleted = s.eduCompleted
 
     ProfileScreen(
         name = displayName,
@@ -84,7 +88,24 @@ fun ProfileRoute(nav: NavController) {
         onClickResumeManage = {},
         onClickBookmarks = { nav.navigate("liked_job") },
         onClickRecent = { nav.navigate("recently_viewed") },
-        onClickActivityLevel = { nav.navigate("activity_level") },
+        onClickActivityLevel = {
+            // 화면에 보이는 현재 사용자 지표들을 바로 페이로드로 구성
+            val payload = ActivityLevelData(
+                name = displayName ?: "사용자",
+                level = (activityLevel.coerceIn(1, 3)),
+                applyWithinYear = applyWithinYear,
+                realWorkExpCount = realWorkExpCount,
+                eduCompleted = eduCompleted,
+                joinedDate = "2025년 9월 3일"
+            )
+
+            nav.currentBackStackEntry
+                ?.savedStateHandle
+                ?.set("activity_level_payload", payload)
+
+            // 이동
+            nav.navigate("activity_level")
+        },
         onClickEditProfile = {},
         onClickChangePw = { nav.navigate("change_password") },
         onClickLogout = { showLogout = true },

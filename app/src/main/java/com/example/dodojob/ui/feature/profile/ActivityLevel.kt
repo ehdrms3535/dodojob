@@ -1,6 +1,7 @@
 // app/src/main/java/com/example/dodojob/ui/feature/profile/ActivityLevelRoute.kt
 package com.example.dodojob.ui.feature.profile
 
+import android.os.Parcelable
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -23,13 +24,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
+import kotlinx.parcelize.Parcelize
+
+/* ===================== 전달 페이로드 ===================== */
+@Parcelize
+data class ActivityLevelData(
+    val name: String,
+    val level: Long,             // DB/도메인과 동일하게 Long 유지
+    val applyWithinYear: Long,
+    val realWorkExpCount: Long,
+    val eduCompleted: Boolean,
+    val joinedDate: String       // "2025년 9월 3일" 고정 전달
+) : Parcelable
 
 /* =============== 팔레트 =============== */
 data class LevelPalette(
@@ -43,35 +54,22 @@ private fun paletteFor(level: Int): LevelPalette = when (level) {
     else -> LevelPalette(Color(0xFF6D69FE), Color(0xFF9997FF), Color(0xFF6D69FE)) // 레벨3(블루)
 }
 
-/* =============== 데이터 모델 (실제에선 서버 응답 매핑) =============== */
-data class ActivityLevelData(
-    val name: String,
-    val level: Int,
-    val applyWithinYear: Int,
-    val realWorkExpCount: Int,
-    val eduCompleted: Boolean,
-    val joinedDate: String
-)
-object ActivityLevelFakeDb {
-    fun get(level: Int): ActivityLevelData = when (level) {
-        1 -> ActivityLevelData("홍길동", 1, 2, 0, false, "2025.08.20")
-        2 -> ActivityLevelData("홍길동", 2, 5, 1, true,  "2025.08.21")
-        else -> ActivityLevelData("홍길동", 3, 11, 5, true, "2025.08.23")
-    }
-}
 
-/* =============== 리소스 맵핑 (PNG 대체/재활용 지점) =============== */
-@DrawableRes private fun badgeResFor(level: Int) = when (level) {
+/* =============== 리소스 맵핑 =============== */
+@DrawableRes
+private fun badgeResFor(level: Int) = when (level) {
     1 -> R.drawable.red_medal
     2 -> R.drawable.yellow_medal
     else -> R.drawable.blue_medal
 }
-@DrawableRes private fun levelBannerResFor(level: Int) = when (level) {
+@DrawableRes
+private fun levelBannerResFor(level: Int) = when (level) {
     1 -> R.drawable.level1_banner
     2 -> R.drawable.level2_banner
     else -> R.drawable.level3_banner
 }
-@DrawableRes private fun benefitsImageResFor(level: Int) = when (level) {
+@DrawableRes
+private fun benefitsImageResFor(level: Int) = when (level) {
     1 -> R.drawable.benefits_level1
     2 -> R.drawable.benefits_level2
     else -> R.drawable.benefits_level3
@@ -80,11 +78,34 @@ object ActivityLevelFakeDb {
 /* =============== Route =============== */
 @Composable
 fun ActivityLevelRoute(
-    nav: NavController,
-    levelArg: Int = 3
+    nav: NavController
 ) {
+    // Profile 화면에서 저장한 값을 이전 back stack entry에서 1회 읽어오기
+    val payload: ActivityLevelData? = remember(nav) {
+        nav.previousBackStackEntry
+            ?.savedStateHandle
+            ?.get<ActivityLevelData>("activity_level_payload")
+    }
+
+    if (payload == null) {
+        // 잘못된 진입(직접 경로 진입 등) 대응
+        MissingPayloadScreen(
+            onBackToProfile = { nav.navigate(Route.My.path) { launchSingleTop = true } }
+        )
+        return
+    }
+
+    val data = ActivityLevelData(
+        name = payload.name,
+        level = payload.level,
+        applyWithinYear = payload.applyWithinYear,
+        realWorkExpCount = payload.realWorkExpCount,
+        eduCompleted = payload.eduCompleted,
+        joinedDate = payload.joinedDate
+    )
+
     ActivityLevelScreen(
-        level = levelArg,
+        data = data,
         onShortcut = { key ->
             when (key) {
                 "home"      -> nav.navigate("main") { launchSingleTop = true }
@@ -95,30 +116,20 @@ fun ActivityLevelRoute(
             }
         },
         onBackToProfile = { nav.navigate(Route.My.path) { launchSingleTop = true } },
-        bottomBar = {
-            // 프로젝트에 이미 있는 실제 BottomNavBar 사용
-            BottomNavBar(current = "my", onClick = { key ->
-                when (key) {
-                    "home","edu","welfare","community","my" -> {} // label 목적
-                }
-                // 위의 라벨링은 미리보기에서 IDE 인스펙션 경고 방지용
-                // 실제 네비게이션은 onShortcut으로 전달
-                // (아래에서 동일 키로 라우팅)
-            })
-        }
+        bottomBar = { BottomNavBar(current = "my", onClick = { /* 라벨용, onShortcut 사용 */ }) }
     )
 }
 
 /* =============== Screen =============== */
 @Composable
 fun ActivityLevelScreen(
-    level: Int,
+    data: ActivityLevelData,
     onShortcut: (String) -> Unit,
     onBackToProfile: () -> Unit,
     bottomBar: @Composable () -> Unit
 ) {
-    val data = remember(level) { ActivityLevelFakeDb.get(level) }
-    val pal  = remember(level) { paletteFor(level) }
+    val levelInt = data.level.coerceIn(1, 3).toInt()
+    val pal      = remember(levelInt) { paletteFor(levelInt) }
 
     val screenBg  = Color(0xFFF1F5F7)
     val brandBlue = Color(0xFF005FFF)
@@ -137,7 +148,7 @@ fun ActivityLevelScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(264.dp) // 디자인 스펙 반영
+                    .height(264.dp)
                     .clip(RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp))
                     .background(Brush.verticalGradient(listOf(pal.primary, pal.primaryLight)))
             ) {
@@ -161,10 +172,10 @@ fun ActivityLevelScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.senior_id), // drawable/senior_id.png
+                            painter = painterResource(R.drawable.senior_id),
                             contentDescription = "프로필 사진",
                             modifier = Modifier
-                                .size(104.dp) // 원 디자인 103.96
+                                .size(104.dp)
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
@@ -172,14 +183,14 @@ fun ActivityLevelScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = " ${data.name}님",
-                                    color = if (level == 2) Color.Black else Color.White,
+                                    color = if (levelInt == 2) Color.Black else Color.White,
                                     fontSize = 32.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Image(
-                                    painter = painterResource(id = badgeResFor(data.level)),
+                                    painter = painterResource(id = badgeResFor(levelInt)),
                                     contentDescription = "레벨 뱃지",
                                     modifier = Modifier.size(60.dp),
                                     contentScale = ContentScale.Fit
@@ -192,7 +203,7 @@ fun ActivityLevelScreen(
 
             /* ----- 활동레벨 배너 카드 ----- */
             FloatingRoundedImageCard(
-                resId = levelBannerResFor(data.level),
+                resId = levelBannerResFor(levelInt),
                 borderColor = pal.border,
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
@@ -212,7 +223,6 @@ fun ActivityLevelScreen(
                 Column(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
                 ) {
-                    // 제목
                     Text(
                         "나의 활동",
                         fontSize = 24.sp,
@@ -220,12 +230,10 @@ fun ActivityLevelScreen(
                         color = Color.Black
                     )
 
-                    // 제목과 첫 번째 행 사이 간격 (예: 16dp)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 행들 (전체 간격은 Arrangement.spacedBy로)
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp) // 전체 행 간격 (예: 12dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         ActivityRow("1년 이내 일자리 지원", "${data.applyWithinYear}건", valueColor = brandBlue)
                         ActivityRow("실제 근무 경험", "${data.realWorkExpCount}건", valueColor = brandBlue)
@@ -243,7 +251,7 @@ fun ActivityLevelScreen(
                     .offset(y = (-60).dp)
             ) {
                 Image(
-                    painter = painterResource(id = benefitsImageResFor(data.level)),
+                    painter = painterResource(id = benefitsImageResFor(levelInt)),
                     contentDescription = "레벨별 혜택 이미지",
                     modifier = Modifier
                         .fillMaxWidth()
@@ -293,24 +301,24 @@ private fun FloatingRoundedImageCard(
     }
 }
 
-/* =============== 미리보기 (실구동과 동일하게 Route 호출) =============== */
-@Preview(name = "Activity Level - Lv.1", showBackground = true, showSystemUi = true)
+/* =============== 페이로드 누락 화면 =============== */
 @Composable
-private fun PreviewActivityLevel_Lv1() {
-    val nav = rememberNavController()
-    ActivityLevelRoute(nav = nav, levelArg = 1)
-}
-
-@Preview(name = "Activity Level - Lv.2", showBackground = true, showSystemUi = true)
-@Composable
-private fun PreviewActivityLevel_Lv2() {
-    val nav = rememberNavController()
-    ActivityLevelRoute(nav = nav, levelArg = 2)
-}
-
-@Preview(name = "Activity Level - Lv.3", showBackground = true, showSystemUi = true)
-@Composable
-private fun PreviewActivityLevel_Lv3() {
-    val nav = rememberNavController()
-    ActivityLevelRoute(nav = nav, levelArg = 3)
+private fun MissingPayloadScreen(
+    onBackToProfile: () -> Unit
+) {
+    val screenBg = Color(0xFFF1F5F7)
+    Scaffold(containerColor = screenBg) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("필요한 데이터가 없습니다.", fontSize = 18.sp, color = Color(0xFF222222))
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onBackToProfile) { Text("프로필로 돌아가기") }
+            }
+        }
+    }
 }
