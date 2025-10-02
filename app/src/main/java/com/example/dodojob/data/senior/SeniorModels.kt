@@ -38,5 +38,8 @@ data class SeniorJoined(
     val recentCount: Long = 0,
     val likedCount: Long = 0,
     val activityLevel: Long = 1,
+    val applyWithinYear: Long = 0,
+    val realWorkExpCount: Long = 0,
+    val eduCompleted: Boolean = false,
     @SerialName("users_tmp") val user: UserTmpLite? = null
 )
