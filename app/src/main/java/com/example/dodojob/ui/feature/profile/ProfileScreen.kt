@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.profile
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -30,6 +31,7 @@ import com.example.dodojob.ui.feature.common.LogoutDialog
 import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
+import io.github.jan.supabase.storage.storage
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -77,6 +79,15 @@ fun ProfileRoute(nav: NavController) {
     val applyWithinYear = s.applyWithinYear
     val realWorkExpCount = s.realWorkExpCount
     val eduCompleted = s.eduCompleted
+    val createdAt = s.user?.created_at
+
+    val StringBuilder = StringBuilder()
+    StringBuilder.append(
+        createdAt?.substring(0,4)+"."+createdAt?.substring(5,7) + "." + createdAt?.substring(8,10)
+    )
+    val joinedDate = StringBuilder.toString()
+
+
 
     ProfileScreen(
         name = displayName,
@@ -96,7 +107,7 @@ fun ProfileRoute(nav: NavController) {
                 applyWithinYear = applyWithinYear,
                 realWorkExpCount = realWorkExpCount,
                 eduCompleted = eduCompleted,
-                joinedDate = "2025년 9월 3일"
+                joinedDate = joinedDate
             )
 
             nav.currentBackStackEntry

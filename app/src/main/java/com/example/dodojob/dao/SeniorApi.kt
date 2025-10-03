@@ -19,7 +19,7 @@ suspend fun getSeniorInformation(
         parameter(
             "select",
             "username,applyCount,resumeViews,recentCount,likedCount,activityLevel,applyWithinYear,realWorkExpCount,eduCompleted," +
-                    "users_tmp(username,name,gender,phone,email,password)"
+                    "users_tmp(username,name,gender,phone,email,password,created_at)"
         )
         parameter("username", "eq.$username")
         parameter("limit", "1")
