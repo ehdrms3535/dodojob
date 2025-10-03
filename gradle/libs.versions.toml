@@ -28,7 +28,8 @@ uiTextVersion = "1.9.1"
 runtime = "1.9.2"
 androidxFoundation = "1.9.2"
 animationCore = "1.9.2"
-material3 = "1.4.0" # ← 위에서 확인한 resolved 버전으로
+material3 = "1.4.0"
+uiGeometry = "1.9.2" # ← 위에서 확인한 resolved 버전으로
 
 
 [libraries]
@@ -90,6 +91,7 @@ androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", versi
 androidx-compose-foundation-foundation2 = { group = "androidx.compose.foundation", name = "foundation", version.ref = "androidxFoundation" }
 androidx-animation-core = { group = "androidx.compose.animation", name = "animation-core", version.ref = "animationCore" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+androidx-ui-geometry = { group = "androidx.compose.ui", name = "ui-geometry", version.ref = "uiGeometry" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
