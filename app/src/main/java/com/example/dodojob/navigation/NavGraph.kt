@@ -1,5 +1,8 @@
 package com.example.dodojob.navigation
 
+import com.example.dodojob.ui.feature.main.AdOneScreen
+import com.example.dodojob.ui.feature.main.AdTwoScreen
+import com.example.dodojob.ui.feature.main.AdThreeScreen
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -57,7 +60,7 @@ import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
+    NavHost(navController = nav,startDestination = Route.Main.path) {
 
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
@@ -113,9 +116,16 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.Map.path) { MapRoute(nav) } // 지도
         composable(Route.ChangePassword.path) { ChangePasswordScreen(nav) } // 비밀번호 변경
 
+        composable("ad/1") { AdOneScreen(nav) }
+        composable("ad/2") { AdTwoScreen(nav) }
+        composable("ad/3") { AdThreeScreen(nav) }
+
         //  복지 메인
         composable("welfare/home") {
-            com.example.dodojob.ui.feature.welfare.WelfareHomeRoute(nav)
+            com.example.dodojob.ui.feature.welfare.WelfareHomeRoute(
+                nav = nav,
+                userName = com.example.dodojob.session.CurrentUser.username ?: "guest"
+            )
         }
 
 
