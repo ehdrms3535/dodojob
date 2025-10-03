@@ -89,6 +89,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation.foundation2)
     implementation(libs.androidx.animation.core)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.ui.geometry)
 
 
     testImplementation(libs.junit)
