@@ -33,19 +33,28 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.dodojob.R
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.data.welfare.*
+import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.feature.profile.BottomNavBar
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import com.example.dodojob.dao.getSeniorInformation
 
 /* =========================================================
- * 공통 팔레트/토큰
+ * 팔레트/토큰
  * ========================================================= */
 private val ScreenBg   = Color(0xFFF1F5F7)
 private val CardBg     = Color(0xFFFFFFFF)
 private val SubGray    = Color(0xFF848484)
 private val TitleBlack = Color(0xFF000000)
-
 private val BrandBlue  = Color(0xFF005FFF)
 private val BorderGray = Color(0xFFC1D2ED)
 private val TextGray   = Color(0xFF9C9C9C)
@@ -74,7 +83,7 @@ private data class WelfareItem(
 )
 
 /* =========================================================
- * 카테고리 화면(건강관리/여가교육) 모델
+ * 카테고리 모델
  * ========================================================= */
 enum class CategoryTab { Health, Leisure }
 
@@ -87,13 +96,10 @@ data class WelfareInfo(
 )
 
 /* =========================================================
- * Route constants
+ * Route
  * ========================================================= */
 object WelfareRoutes {
-    // 홈
     const val Home = "welfare/home"
-
-    // 카테고리 화면: welfare/category/{tab}, tab in ["health","leisure"]
     private const val CategoryBase = "welfare/category"
     const val ArgTab = "tab"
     const val Category = "$CategoryBase/{$ArgTab}"
@@ -106,58 +112,173 @@ object WelfareRoutes {
 }
 
 /* =========================================================
- * Welfare Home Route
+ * ViewModel + UiState
  * ========================================================= */
-@Composable
-fun WelfareHomeRoute(
-    nav: NavController,
-    userName: String = "홍길동"
-) {
-    WelfareHomeScreen(
-        userName = userName,
-        onBottomClick = { key ->
-            when (key) {
-                "home"      -> nav.navigate("main") { launchSingleTop = true }
-                "edu"       -> nav.navigate("edu") { launchSingleTop = true }
-                "welfare"   -> {} // 현재 화면
-                "community" -> nav.navigate("community") { launchSingleTop = true }
-                "my"        -> nav.navigate("my") { launchSingleTop = true }
+private data class WelfareHomeUi(
+    val applications: List<WelfareItem> = emptyList(),
+    val loading: Boolean = false
+)
+
+private data class WelfareCategoryUi(
+    val health: List<WelfareInfo> = emptyList(),
+    val leisure: List<WelfareInfo> = emptyList(),
+    val loading: Boolean = false
+)
+
+private class WelfareVm(private val repo: WelfareRepository) : ViewModel() {
+
+    private val _home = MutableStateFlow(WelfareHomeUi())
+    val home: StateFlow<WelfareHomeUi> = _home
+
+    private val _category = MutableStateFlow(WelfareCategoryUi())
+    val category: StateFlow<WelfareCategoryUi> = _category
+
+    fun loadHome(username: String) = viewModelScope.launch {
+        _home.value = _home.value.copy(loading = true)
+
+        val rows = repo.myApplicationsJoined(username)
+
+        val items = rows.map { row ->
+            val date = (row.createdAt ?: "").take(10).replace("-", ".").let {
+                if (it.isNotBlank()) "$it 지원" else "지원"
             }
-        },
-        bottomBar = { BottomNavBar(current = "welfare", onClick = { /* 라벨 처리 */ }) },
-        onCardClick = { /* TODO: 상세 이동 */ },
-        onClickHealth = { nav.navigate(WelfareRoutes.categoryOf(CategoryTab.Health)) },
-        onClickLeisure = { nav.navigate(WelfareRoutes.categoryOf(CategoryTab.Leisure)) }
+            val status = (row.status ?: WelfareStatus.REVIEW)
+            val title  = row.welfare?.title ?: "복지 신청 #${row.welfareId}"
+
+            WelfareItem(
+                date = date,
+                title = title,
+                status = status.toStatusKind(),
+                progress = status.progressPercent()
+            )
+        }
+        _home.value = WelfareHomeUi(applications = items, loading = false)
+    }
+
+    fun loadCategories(query: String? = null) = viewModelScope.launch {
+        _category.value = _category.value.copy(loading = true)
+
+        val health = repo.list(category = WelfareCategory.HEALTH, query = query).map { it.toWelfareInfo() }
+        val leisure = repo.list(category = WelfareCategory.LEISURE, query = query).map { it.toWelfareInfo() }
+
+        _category.value = WelfareCategoryUi(health = health, leisure = leisure, loading = false)
+    }
+}
+
+private class WelfareVmFactory(
+    private val repo: WelfareRepository
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = WelfareVm(repo) as T
+}
+
+/* =========================================================
+ * 매핑 Helper
+ * ========================================================= */
+private fun WelfareStatus.toStatusKind(): StatusKind = when (this) {
+    WelfareStatus.REVIEW   -> StatusKind.REVIEW
+    WelfareStatus.APPROVED -> StatusKind.APPROVED
+    WelfareStatus.PENDING  -> StatusKind.PENDING
+}
+
+private fun WelfareStatus.progressPercent(): Int = when (this) {
+    WelfareStatus.PENDING  -> 5
+    WelfareStatus.REVIEW   -> 60
+    WelfareStatus.APPROVED -> 100
+}
+
+private fun Welfare.toWelfareInfo(): WelfareInfo {
+    val (bg, fg) = when (category) {
+        WelfareCategory.HEALTH  -> PillPinkBG to PillPinkFG
+        WelfareCategory.LEISURE -> PillBlueBG to PillBlueFG
+        null -> PillYelBG to PillYelFG
+    }
+    return WelfareInfo(
+        supportType = supportType ?: "지원유형 정보 없음",
+        title = title,
+        agencyLabel = AgencyLabel(agency ?: "기관 미상", bg, fg),
+        description = description ?: "상세 설명이 없습니다."
     )
 }
 
 /* =========================================================
- * Welfare Home Screen
+ * 홈 Route
  * ========================================================= */
 @Composable
-fun WelfareHomeScreen(
+fun WelfareHomeRoute(
+    nav: NavController,
+    userName: String
+) {
+    val client = LocalSupabase.current
+    val repo = remember(client) { WelfareRepositoryImpl(client) }
+    val vm: WelfareVm = androidx.lifecycle.viewmodel.compose.viewModel(factory = WelfareVmFactory(repo))
+    val homeUi by vm.home.collectAsState()
+
+    val username = remember { CurrentUser.username ?: "guest" }
+
+    var displayName by remember { mutableStateOf(userName) }
+
+    LaunchedEffect(username) {
+        vm.loadHome(username)
+        vm.loadCategories()
+
+
+        runCatching {
+            getSeniorInformation(username)
+        }.onSuccess { info ->
+            val name = info?.user?.name
+            if (!name.isNullOrBlank()) {
+                displayName = name
+            } else {
+                displayName = username
+            }
+        }.onFailure {
+            displayName = username
+        }
+    }
+
+    WelfareHomeScreen(
+        userName = displayName,
+        onBottomClick = { key ->
+            when (key) {
+                "home"      -> nav.navigate("main") { launchSingleTop = true }
+                "edu"       -> nav.navigate("edu") { launchSingleTop = true }
+                "welfare"   -> {}
+                "community" -> nav.navigate("community") { launchSingleTop = true }
+                "my"        -> nav.navigate("my") { launchSingleTop = true }
+            }
+        },
+        bottomBar = { BottomNavBar(current = "welfare", onClick = { }) },
+        onCardClick = { /* 상세 이동 */ },
+        onClickHealth = { nav.navigate(WelfareRoutes.categoryOf(CategoryTab.Health)) },
+        onClickLeisure = { nav.navigate(WelfareRoutes.categoryOf(CategoryTab.Leisure)) },
+        applications = homeUi.applications,
+        loading = homeUi.loading
+    )
+}
+
+
+/* =========================================================
+ * 홈 Screen
+ * ========================================================= */
+@Composable
+private fun WelfareHomeScreen(
     userName: String,
     onBottomClick: (String) -> Unit,
     bottomBar: @Composable () -> Unit,
     onCardClick: () -> Unit,
     onClickHealth: () -> Unit,
-    onClickLeisure: () -> Unit
+    onClickLeisure: () -> Unit,
+    applications: List<WelfareItem>,
+    loading: Boolean
 ) {
-    // 샘플 데이터 (서버 연동 시 치환)
-    val allItems = remember {
-        listOf(
-            WelfareItem("2025.08.25 지원", "건강검진 지원 프로그램", StatusKind.REVIEW,    75),
-            WelfareItem("2025.08.25 지원", "온라인 취미 강좌 (수강권 지원)", StatusKind.APPROVED, 100),
-            WelfareItem("2025.08.25 지원", "돌봄 서비스 (가정 방문 지원)", StatusKind.PENDING,    5)
-        )
-    }
     var selectedFilter by remember { mutableStateOf(Filter.ALL) }
 
-    val filteredItems = remember(selectedFilter, allItems) {
+    val filteredItems = remember(selectedFilter, applications) {
         when (selectedFilter) {
-            Filter.ALL      -> allItems
-            Filter.PENDING  -> allItems.filter { it.status == StatusKind.PENDING }
-            Filter.APPROVED -> allItems.filter { it.status == StatusKind.APPROVED }
+            Filter.ALL      -> applications
+            Filter.PENDING  -> applications.filter { it.status == StatusKind.PENDING }
+            Filter.APPROVED -> applications.filter { it.status == StatusKind.APPROVED }
         }
     }
 
@@ -209,7 +330,6 @@ fun WelfareHomeScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // ✅ 여기서 각 버튼 클릭 시 카테고리 라우트로 이동
             CategoryButtons(
                 leftImage = R.drawable.health_manage_button,
                 rightImage = R.drawable.leisure_education_button,
@@ -223,37 +343,55 @@ fun WelfareHomeScreen(
             Spacer(Modifier.height(20.dp))
 
             ApplicationSummary(
-                total = allItems.size,
+                total = applications.size,
                 selected = selectedFilter,
                 onSelect = { selectedFilter = it },
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             Spacer(Modifier.height(10.dp))
-            filteredItems.forEach { item ->
-                WelfareCard(
-                    date = item.date,
-                    title = item.title,
-                    statusText = when (item.status) {
-                        StatusKind.REVIEW   -> "심사중"
-                        StatusKind.APPROVED -> "승인"
-                        StatusKind.PENDING  -> "접수대기"
-                    },
-                    statusKind = item.status,
-                    progressPercent = item.progress,
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 10.dp),
-                    onClick = onCardClick
-                )
+
+            when {
+                loading -> {
+                    Box(
+                        Modifier.fillMaxWidth().padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) { CircularProgressIndicator() }
+                }
+                filteredItems.isEmpty() -> {
+                    Box(
+                        Modifier.fillMaxWidth().padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) { Text("신청 내역이 없습니다.") }
+                }
+                else -> {
+                    filteredItems.forEach { item ->
+                        WelfareCard(
+                            date = item.date,
+                            title = item.title,
+                            statusText = when (item.status) {
+                                StatusKind.REVIEW   -> "심사중"
+                                StatusKind.APPROVED -> "승인"
+                                StatusKind.PENDING  -> "접수대기"
+                            },
+                            statusKind = item.status,
+                            progressPercent = item.progress,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 10.dp),
+                            onClick = onCardClick
+                        )
+                    }
+                }
             }
+
             Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 /* =========================================================
- * 공통 UI 조각 - 홈
+ * 공통 UI
  * ========================================================= */
 @Composable
 private fun GreetingHeader(userName: String) {
@@ -510,48 +648,34 @@ private fun ProgressLine(percent: Int) {
 }
 
 /* =========================================================
- * 카테고리 화면 (건강관리/여가교육)
+ * 카테고리 Route (실데이터)
  * ========================================================= */
 @Composable
-private fun BackButtonBar(
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier, // 배경은 부모 Surface가 흰색으로 통일
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Image(
-                painter = painterResource(R.drawable.back),
-                contentDescription = "뒤로가기",
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-/** NavRoute:  welfare/category/{tab} → 화면 진입용 */
-@Composable
 fun HealthLeisureRoute(nav: NavController, startTabArg: String?) {
+    val client = LocalSupabase.current
+    val repo = remember(client) { WelfareRepositoryImpl(client) }
+    val vm: WelfareVm = androidx.lifecycle.viewmodel.compose.viewModel(factory = WelfareVmFactory(repo))
+    val ui by vm.category.collectAsState()
+
     val start = remember(startTabArg) { WelfareRoutes.parseTab(startTabArg) }
-    HealthLeisureScreen(
+    LaunchedEffect(Unit) { vm.loadCategories() }
+
+    HealthLeisureScreenWithData(
         startTab = start,
+        ui = ui,
         onBack = { nav.popBackStack() }
     )
 }
 
 @Composable
-fun HealthLeisureScreen(
+private fun HealthLeisureScreenWithData(
     startTab: CategoryTab,
+    ui: WelfareCategoryUi,
     onBack: () -> Unit
 ) {
     var tab by rememberSaveable { mutableStateOf(startTab) }
 
-    Scaffold(
-        containerColor = ScreenBg,
-        topBar = {}
-    ) { padding ->
+    Scaffold(containerColor = ScreenBg) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -574,18 +698,52 @@ fun HealthLeisureScreen(
                 }
             }
 
-            val items = if (tab == CategoryTab.Health) healthItems() else leisureItems()
-
-            items.forEachIndexed { i, item ->
-                WelfareInfoCard(item)
-                if (i != items.lastIndex) Spacer(Modifier.height(4.dp))
+            val items = when (tab) {
+                CategoryTab.Health  -> ui.health
+                CategoryTab.Leisure -> ui.leisure
             }
+
+            when {
+                ui.loading -> {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                items.isEmpty() -> {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text("검색 결과가 없습니다.")
+                    }
+                }
+                else -> {
+                    items.forEachIndexed { i, item ->
+                        WelfareInfoCard(item)
+                        if (i != items.lastIndex) Spacer(Modifier.height(4.dp))
+                    }
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-/* 상단 토글 */
+/* 상단 토글/카드/공통 */
+@Composable
+private fun BackButtonBar(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) {
+            Image(
+                painter = painterResource(R.drawable.back),
+                contentDescription = "뒤로가기",
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
 @Composable
 private fun CategoryToggleHeader(
     selected: CategoryTab,
@@ -600,25 +758,18 @@ private fun CategoryToggleHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         CategoryImageButton(
-            resId = if (selected == CategoryTab.Health)
-                R.drawable.health_manage_button
-            else
-                R.drawable.unselected_health_button,
+            resId = if (selected == CategoryTab.Health) R.drawable.health_manage_button else R.drawable.unselected_health_button,
             onClick = onLeftClick,
             modifier = Modifier.weight(1f).height(67.dp)
         )
         CategoryImageButton(
-            resId = if (selected == CategoryTab.Leisure)
-                R.drawable.leisure_education_button
-            else
-                R.drawable.unselected_leisure_button,
+            resId = if (selected == CategoryTab.Leisure) R.drawable.leisure_education_button else R.drawable.unselected_leisure_button,
             onClick = onRightClick,
             modifier = Modifier.weight(1f).height(67.dp)
         )
     }
 }
 
-/* 카드 */
 @Composable
 private fun WelfareInfoCard(data: WelfareInfo) {
     Card(
@@ -701,75 +852,8 @@ private fun AgencyPill(label: AgencyLabel) {
     }
 }
 
-/* 더미 데이터 */
-private fun healthItems() = listOf(
-    WelfareInfo(
-        "지원유형 : 서비스(의료), 의료지원",
-        "인플루엔자 국가예방접종 지원",
-        AgencyLabel("질병관리청", PillPinkBG, PillPinkFG),
-        "인플루엔자 접종 대상자(어린이, 임신부, 어르신)의 예방접종률 향상과 질병 부담 감소"
-    ),
-    WelfareInfo(
-        "지원유형 : 서비스(의료), 의료지원",
-        "무료 건강검진 지원 안내",
-        AgencyLabel("질병관리청", PillPinkBG, PillPinkFG),
-        "생활에 꼭 필요한 기본 의약품을 정기적으로 지원합니다"
-    ),
-    WelfareInfo(
-        "지원유형 : 서비스(의료), 의료지원",
-        "노인성 질환 의료비 지원",
-        AgencyLabel("질병관리청", PillPinkBG, PillPinkFG),
-        "노인성 질환을 앓고 있는 사람은 경제적 부담 능력에 따라 국가 또는 지방자치단체로부터 노인성 질환의 예방교육,"
-    ),
-    WelfareInfo(
-        "지원유형 : 서비스(의료), 의료지원",
-        "치매 조기검진 지원",
-        AgencyLabel("질병관리청", PillPinkBG, PillPinkFG),
-        "치매를 빠르게 발견하고 맞춤형 상담을 받을 수 있습니다."
-    ),
-    WelfareInfo(
-        "지원유형 : 서비스(의료), 의료지원",
-        "재활·물리치료 지원",
-        AgencyLabel("질병관리청", PillPinkBG, PillPinkFG),
-        "노약자, 수술 후 회복 대상자"
-    )
-)
-
-private fun leisureItems() = listOf(
-    WelfareInfo(
-        "11월 개강, 4주 과정",
-        "수채화 기초 강좌 지원",
-        AgencyLabel("문화체육관광", PillBlueBG, PillBlueFG),
-        "온라인 강의 + 기초 교재 PDF 제공"
-    ),
-    WelfareInfo(
-        "무료 온라인 강의 + 교재 제공",
-        "평생직업 교육 강좌 (컴퓨터 기초반)",
-        AgencyLabel("고용노동부", PillYelBG, PillYelFG),
-        "한글 문서 작성부터 인터넷 활용까지 차근차근 배웁니다."
-    ),
-    WelfareInfo(
-        "창업 교육 + 초기 자금 일부 지원",
-        "중장년 창업 지원 프로그램",
-        AgencyLabel("고용노동부", PillYelBG, PillYelFG),
-        "창업 교육 + 초기 자금 일부 지원으로 은퇴 후 제2의 삶을 위한 창업 준비를 돕습니다."
-    ),
-    WelfareInfo(
-        "사회활동 지원사업",
-        "현장실습훈련(시니어인턴십) 지원사업",
-        AgencyLabel("보건복지부", PillPurpBG, PillPurpFG),
-        "2025년 현장실습훈련(시니어인턴십) 지원사업 운영안내"
-    ),
-    WelfareInfo(
-        "지원유형 : 서비스(의료), 의료지원",
-        "낙상 예방 운동 프로그램",
-        AgencyLabel("질병관리청", PillPinkBG, PillPinkFG),
-        "넘어짐을 예방하는 근력·균형 운동을 배워 안전한 생활을 돕습니다."
-    )
-)
-
 /* =========================================================
- * Preview
+ * Preview (미리보기는 더미/로딩만 표시)
  * ========================================================= */
 @Preview(showBackground = true, showSystemUi = true, name = "Welfare Home")
 @Composable
@@ -781,11 +865,21 @@ private fun PreviewWelfareHome() {
 @Preview(showBackground = true, showSystemUi = true, name = "Category - Health Start")
 @Composable
 private fun PreviewHealthStart() {
-    HealthLeisureScreen(startTab = CategoryTab.Health, onBack = {})
+    HealthLeisureScreenWithData(
+        startTab = CategoryTab.Health,
+        ui = WelfareCategoryUi(loading = true),
+        onBack = {}
+    )
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Category - Leisure Start")
 @Composable
 private fun PreviewLeisureStart() {
-    HealthLeisureScreen(startTab = CategoryTab.Leisure, onBack = {})
+    HealthLeisureScreenWithData(
+        startTab = CategoryTab.Leisure,
+        ui = WelfareCategoryUi(loading = false, leisure = listOf(
+            WelfareInfo("지원유형", "예시 타이틀", AgencyLabel("기관", PillBlueBG, PillBlueFG), "설명")
+        )),
+        onBack = {}
+    )
 }
