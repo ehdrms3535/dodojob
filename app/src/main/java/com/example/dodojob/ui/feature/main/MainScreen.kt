@@ -143,7 +143,7 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
             when (key) {
                 "home" -> nav.navigate("main") { launchSingleTop = true }
                 "edu" -> nav.navigate("edu")
-                "welfare" -> nav.navigate("welfare")
+                "welfare" -> nav.navigate("welfare/home")
                 "community" -> nav.navigate("community")
                 "my" -> nav.navigate("my")
             }

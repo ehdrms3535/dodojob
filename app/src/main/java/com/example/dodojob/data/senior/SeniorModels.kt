@@ -26,7 +26,8 @@ data class UserTmpLite(
     val phone: String? = null,
     val email: String? = null,
     val password: String? = null,
-    val username: String? = null
+    val username: String? = null,
+    @SerialName("created_at") val created_at: String? = null
 )
 
 
