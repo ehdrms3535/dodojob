@@ -48,6 +48,10 @@ sealed class Route(val path: String) {
     data object WelfareHome : Route("welfare/home")
     data object WelfareCategory : Route("welfare/category/{tab}")
 
+    data object Ad1        : Route("ad/1")
+    data object Ad2        : Route("ad/2")
+    data object Ad3        : Route("ad/3")
+
     companion object {
         // ✅ 편의 함수 (탭에 따라 실제 네비게이션 경로 생성)
         fun welfareCategoryOf(tab: String) = "welfare/category/$tab"
