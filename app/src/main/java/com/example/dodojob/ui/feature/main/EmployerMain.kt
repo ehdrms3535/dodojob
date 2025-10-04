@@ -1,5 +1,10 @@
 package com.example.dodojob.ui.feature.main
 
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -222,11 +227,18 @@ fun EmployerHomeRoute(nav: NavController) {
     // ★ 광고 배너들: employeradvertisement1/2/3 사용
     val adBanners = remember {
         listOf(
-            EmployerAdBanner(R.drawable.employeradvertisement1) { /* 클릭 액션 1 */ },
-            EmployerAdBanner(R.drawable.employeradvertisement2) { /* 클릭 액션 2 */ },
-            EmployerAdBanner(R.drawable.employeradvertisement3) { /* 클릭 액션 3 */ },
+            EmployerAdBanner(R.drawable.employeradvertisement1) {
+                nav.navigate("employer/ad/1")   // 또는 Route.EmployerAd1
+            },
+            EmployerAdBanner(R.drawable.employeradvertisement2) {
+                nav.navigate("employer/ad/2")
+            },
+            EmployerAdBanner(R.drawable.employeradvertisement3) {
+                nav.navigate("employer/ad/3")
+            },
         )
     }
+    var showPopup by remember { mutableStateOf(true) }
 
     Scaffold(
         containerColor = ScreenBg,
@@ -274,9 +286,9 @@ fun EmployerHomeRoute(nav: NavController) {
                                 fontWeight = FontWeight.SemiBold
                             )
                         ) { append(employerName) }
-                        append("님")
+                        append(" 담당자님")
                     },
-                    fontSize = 28.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
                     lineHeight = 40.sp,
@@ -320,7 +332,7 @@ fun EmployerHomeRoute(nav: NavController) {
             item {
                 Box(Modifier.padding(horizontal = 16.dp)) {
                     PrimaryButton(
-                        text = "공고등록",
+                        text = "공고등록 하기",
                         height = 43.dp,
                         onClick = { nav.safeNavigate(Route.EmployerNotice.path) }
                     )
@@ -341,11 +353,15 @@ fun EmployerHomeRoute(nav: NavController) {
                     shape = RoundedCornerShape(10.dp),
                     colors = CardDefaults.cardColors(containerColor = White),
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                    ) {
+                        Spacer(Modifier.height(24.dp)) // 제목 위 여백
+
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 10.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -365,18 +381,25 @@ fun EmployerHomeRoute(nav: NavController) {
                                     fontWeight = FontWeight.SemiBold,
                                     color = BrandBlue
                                 )
-                                Icon(
-                                    imageVector = Icons.Outlined.ChevronRight,
-                                    contentDescription = null,
-                                    tint = BrandBlue
+                                Image(
+                                    painter = painterResource(id = R.drawable.blue_right_back), // ✅ 파란 화살표
+                                    contentDescription = "blue_arrow",
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
 
-                        ApplicantList(applicants = applicantsUi)
+                        Spacer(Modifier.height(24.dp)) // 제목 아래 여백
                     }
+                    ApplicantList(applicants = applicantsUi)
                 }
             }
+        }
+        if (showPopup) {
+            EmployerMainPopupDialog(
+                onDismiss = { showPopup = false },
+                onCloseToday = { showPopup = false } // TODO: 하루 숨김 처리
+            )
         }
     }
 }
@@ -488,13 +511,13 @@ private fun StatCard(
                     color = Color.Black,
                     modifier = Modifier.weight(1f)
                 )
-                Icon(
-                    imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = null,
-                    tint = TextGray,
+                Image(
+                    painter = painterResource(id = R.drawable.right_back),
+                    contentDescription = "chevron_right",
                     modifier = Modifier
                         .size(24.dp)
-                        .clickable { onClickChevron() }
+                        .clickable { onClickChevron() },
+                    contentScale = ContentScale.Fit
                 )
             }
 
@@ -548,10 +571,93 @@ fun ApplicantList(applicants: List<ApplicantUi>) {
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
     ) {
+        Separator() // 맨 위 선
+
         applicants.forEachIndexed { idx, ap ->
-            if (idx == 0) HorizontalLine()
+            Spacer(Modifier.height(8.dp))   // 행 위 여백
             ApplicantRow(ap)
-            HorizontalLine()
+            Spacer(Modifier.height(8.dp))   // 행 아래 여백
+
+            if (idx != applicants.lastIndex) {
+                Separator()                 // 사이사이 선
+            }
+        }
+    }
+}
+
+@Composable
+fun EmployerMainPopupDialog(
+    onDismiss: () -> Unit,
+    onCloseToday: () -> Unit
+) {
+    val context = LocalContext.current
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            // ✅ 바깥을 한 번 더 감싸서 전체 모서리도 안전하게 자르기
+            Surface(
+                shape = RoundedCornerShape(15.dp),
+                color = Color.Transparent,         // ← 카드 바탕 투명
+                shadowElevation = 0.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                    // .background(Color.White)  ❌ 제거: 이게 상단 흰 꼭짓점 원인
+                ) {
+                    // 상단 이미지: 모서리를 "상단만" 잘라서 흰색 안 비치게
+                    val painter = painterResource(R.drawable.employer_main_popup)
+                    val ratio = remember(painter) {
+                        val s = painter.intrinsicSize
+                        val w = s.width; val h = s.height
+                        if (w.isFinite() && h.isFinite() && h > 0f) w / h else 360f / 270f
+                    }
+
+                    Image(
+                        painter = painter,
+                        contentDescription = "Employer main popup",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp)) // ✅ 핵심
+                            .aspectRatio(ratio)
+                            .clickable {
+                                val i = Intent(Intent.ACTION_VIEW, Uri.parse("https://shiftee.io/ko"))
+                                context.startActivity(i)
+                            },
+                        contentScale = ContentScale.Fit
+                    )
+
+                    // 하단 버튼 바: 여기만 흰 배경
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(63.dp)
+                            .background(Color.White) // ← 밑부분만 흰색
+                            .clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp)) // ✅ 하단 모서리
+                            .padding(horizontal = 25.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onCloseToday) {
+                            Text("오늘 그만보기", fontSize = 18.sp, color = Color(0xFF828282), fontWeight = FontWeight.Medium)
+                        }
+                        TextButton(onClick = onDismiss) {
+                            Text("닫기", fontSize = 18.sp, color = Color(0xFF005FFF), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -573,6 +679,7 @@ private fun ApplicantRow(ap: ApplicantUi) {
                 // 사람 아이콘 (연한 파란 원)
                 Box(
                     modifier = Modifier
+                        .offset(x = (-2).dp)
                         .size(24.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFDEEAFF)),
@@ -598,9 +705,9 @@ private fun ApplicantRow(ap: ApplicantUi) {
                 Spacer(Modifier.width(6.dp))
 
                 // 나이
-                Text("${ap.age}세", fontSize = 13.sp, color = TextGray)
+                Text("(${ap.age}세)", fontSize = 13.sp, color = TextGray)
 
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(2.dp))
 
                 // 메달
                 Image(
@@ -644,13 +751,22 @@ private fun ApplicantRow(ap: ApplicantUi) {
             }
         }
 
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = BrandBlue,
-            modifier = Modifier.size(24.dp)
+        Image(
+            painter = painterResource(id = R.drawable.right_back), // 리소스 사용
+            contentDescription = "go_detail",
+            modifier = Modifier.size(24.dp),
+            colorFilter = ColorFilter.tint(BrandBlue)              // 파란색
         )
     }
+}
+
+@Composable
+private fun Separator() {
+    Divider(
+        color = LineGray,     // #DDDDDD
+        thickness = 1.dp,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
