@@ -56,6 +56,9 @@ import androidx.navigation.compose.navigation
 import com.example.dodojob.ui.feature.education.*
 import com.example.dodojob.ui.feature.education.EducationViewModel
 import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
+import com.example.dodojob.ui.feature.main.EmployerAdOneScreen
+import com.example.dodojob.ui.feature.main.EmployerAdThreeScreen
+import com.example.dodojob.ui.feature.main.EmployerAdTwoScreen
 import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
@@ -99,6 +102,9 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) } // 테스트
 
         composable(Route.EmployerHome.path) { EmployerHomeRoute(nav) } // 고용주 메인
+        composable("employer/ad/1") { EmployerAdOneScreen(nav) }
+        composable("employer/ad/2") { EmployerAdTwoScreen(nav) }
+        composable("employer/ad/3") { EmployerAdThreeScreen(nav) }
 
         composable(Route.EmployerNotice.path) { ManagementAnnouncementRoute(nav) } // 공고관리
 
