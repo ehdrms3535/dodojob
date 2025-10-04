@@ -366,6 +366,8 @@ fun HomePopupDialog(
     onDismiss: () -> Unit,
     onCloseToday: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -403,8 +405,15 @@ fun HomePopupDialog(
                     contentDescription = "홈 팝업 광고",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(ratio),       // 원본 비율 유지
-                    contentScale = ContentScale.Fit // 가로 꽉 + 세로 비율 (잘림 없음)
+                        .aspectRatio(ratio)
+                        .clickable {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://www.lifis.co.kr/?c=shop&m=product&cate_cd=000002&sval=")
+                            )
+                            context.startActivity(intent)
+                        },
+                    contentScale = ContentScale.Fit
                 )
 
                 // 🔹 하단 컨트롤 바
