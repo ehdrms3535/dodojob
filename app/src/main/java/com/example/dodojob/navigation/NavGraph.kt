@@ -53,6 +53,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.navigation
+import com.example.dodojob.ui.feature.announcement.Announcement2Route
+import com.example.dodojob.ui.feature.announcement.Announcement3Route
 import com.example.dodojob.ui.feature.education.*
 import com.example.dodojob.ui.feature.education.EducationViewModel
 import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
@@ -63,7 +65,7 @@ import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
+    NavHost(navController = nav,startDestination = Route.Announcement2.path) {
 
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
@@ -88,6 +90,8 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.Main.path) { MainRoute(nav) } // main
 
         composable(Route.Announcement.path) { Announcement1Route(nav) } // 공고등록1
+        composable(Route.Announcement2.path) { Announcement2Route(nav) }   //공고등록 2
+        composable(Route.Announcement3.path) { Announcement3Route(nav) }   //공고등록 3
         composable(Route.Announcement4.path) { Announcement4Route(nav) } // 공고등록 4
         composable(Route.Announcement5.path) { Announcement5Route(nav) } // 공고등록 5
 
