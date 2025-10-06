@@ -33,8 +33,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
+import com.example.dodojob.dao.getUsernameById
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.data.user.UserRepository
+import com.example.dodojob.data.user.UserRepositorySupabase
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.session.CurrentUser
 import kotlinx.coroutines.delay
+import com.example.dodojob.dao.getUsernameById
 
 /* ================= Colors ================= */
 private val ScreenBg  = Color(0xFFF1F5F7)
@@ -205,6 +211,15 @@ fun EmployerAutoRotatingAd(
 fun EmployerHomeRoute(nav: NavController) {
     // fakeDB 로드
     val stats = remember { FakeEmployerRepo.getDashboardStats() }
+    var user by remember { mutableStateOf<String?>(null) }
+    val client = LocalSupabase.current
+    val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
+    val currentuser = CurrentUser.username
+    LaunchedEffect(currentuser)
+    {
+        user = getUsernameById(currentuser) // ✅ 안전하게 suspend 함수 호출
+    }
+
     val applicantsUi = remember {
         FakeEmployerRepo.getRecentApplicants().map {
             ApplicantUi(
@@ -264,7 +279,7 @@ fun EmployerHomeRoute(nav: NavController) {
 
             /* 인사말: 이름만 파란색 */
             item {
-                val employerName = remember { FakeEmployerRepo.employerName }
+                val employerName = user
                 Text(
                     text = buildAnnotatedString {
                         append("안녕하세요, ")
@@ -322,7 +337,7 @@ fun EmployerHomeRoute(nav: NavController) {
                     PrimaryButton(
                         text = "공고등록",
                         height = 43.dp,
-                        onClick = { nav.safeNavigate(Route.EmployerNotice.path) }
+                        onClick = { nav.safeNavigate(Route.Announcement.path) }
                     )
                 }
             }
