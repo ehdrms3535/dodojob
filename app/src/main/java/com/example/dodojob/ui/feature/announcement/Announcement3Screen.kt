@@ -603,6 +603,7 @@ private enum class PayType { Hourly, Daily, Monthly, Yearly }
 private enum class Gender { Male, Female, Any }
 private enum class Experience { Entry, Y1, Y3, None }
 
+/*
 /* -------- Preview -------- */
 @Preview(showSystemUi = true, device = Devices.PIXEL_7, locale = "ko")
 @Composable
@@ -612,4 +613,4 @@ private fun PreviewAnnouncement3() {
         onBack = {},
         onTabClick = {}
     )
-}
+}*/
