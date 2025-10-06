@@ -42,7 +42,7 @@ import com.example.dodojob.R
 import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.data.welfare.*
 import com.example.dodojob.session.CurrentUser
-import com.example.dodojob.ui.feature.profile.BottomNavBar
+import com.example.dodojob.ui.feature.main.BottomNavBar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -206,8 +206,7 @@ private fun Welfare.toWelfareInfo(): WelfareInfo {
  * ========================================================= */
 @Composable
 fun WelfareHomeRoute(
-    nav: NavController,
-    userName: String
+    nav: NavController
 ) {
     val client = LocalSupabase.current
     val repo = remember(client) { WelfareRepositoryImpl(client) }
@@ -216,7 +215,7 @@ fun WelfareHomeRoute(
 
     val username = remember { CurrentUser.username ?: "guest" }
 
-    var displayName by remember { mutableStateOf(userName) }
+    var displayName by remember { mutableStateOf(username) }
 
     LaunchedEffect(username) {
         vm.loadHome(username)
@@ -237,18 +236,23 @@ fun WelfareHomeRoute(
         }
     }
 
+    val handleBottomClick: (String) -> Unit = { key ->
+        when (key) {
+            "home"      -> nav.navigate("main") { launchSingleTop = true }
+            "edu"       -> nav.navigate("edu")
+            "welfare","welfare/home"   -> {}
+            "my"        -> nav.navigate("my") { launchSingleTop = true }
+        }
+    }
+
     WelfareHomeScreen(
         userName = displayName,
-        onBottomClick = { key ->
-            when (key) {
-                "home"      -> nav.navigate("main") { launchSingleTop = true }
-                "edu"       -> nav.navigate("edu") { launchSingleTop = true }
-                "welfare"   -> {}
-                "community" -> nav.navigate("community") { launchSingleTop = true }
-                "my"        -> nav.navigate("my") { launchSingleTop = true }
-            }
-        },
-        bottomBar = { BottomNavBar(current = "welfare", onClick = { }) },
+        onBottomClick = handleBottomClick,
+        bottomBar = {
+            BottomNavBar(
+                current = "welfare/home",
+                onClick = handleBottomClick
+            )},
         onCardClick = { /* 상세 이동 */ },
         onClickHealth = { nav.navigate(WelfareRoutes.categoryOf(CategoryTab.Health)) },
         onClickLeisure = { nav.navigate(WelfareRoutes.categoryOf(CategoryTab.Leisure)) },
@@ -859,7 +863,7 @@ private fun AgencyPill(label: AgencyLabel) {
 @Composable
 private fun PreviewWelfareHome() {
     val nav = rememberNavController()
-    WelfareHomeRoute(nav = nav, userName = "홍길동")
+    WelfareHomeRoute(nav = nav)
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Category - Health Start")

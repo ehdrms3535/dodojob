@@ -128,10 +128,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
 
         //  복지 메인
         composable("welfare/home") {
-            com.example.dodojob.ui.feature.welfare.WelfareHomeRoute(
-                nav = nav,
-                userName = com.example.dodojob.session.CurrentUser.username ?: "guest"
-            )
+            com.example.dodojob.ui.feature.welfare.WelfareHomeRoute(nav)
         }
 
 
