@@ -71,20 +71,19 @@ fun ChangePasswordScreen(nav: NavController) {
                         if (!canSubmit || loading) return@Button
                         error = null
                         loading = true
-                        /*scope.launch {
+                        scope.launch {
                             runCatching {
                                 // 현재 로그인 사용자 기준으로 비밀번호 변경
-                                // UserRepository에 구현 필요: suspend fun changePassword(currentPassword: String, newPassword: String)
                                 repo.changePassword(currPw, newPw)
                             }.onSuccess {
                                 currPw = ""; newPw = ""; newPw2 = ""
                                 done = true
-                                // nav.popBackStack() // 필요하면 성공 후 뒤로가기
+                                nav.popBackStack() // 성공 후 뒤로가기
                             }.onFailure { e ->
                                 error = e.message ?: "비밀번호 변경 실패"
                             }
                             loading = false
-                        }*/
+                        }
                     },
                     enabled = canSubmit && !loading,
                     modifier = Modifier
@@ -111,7 +110,6 @@ fun ChangePasswordScreen(nav: NavController) {
             val W = maxWidth
             val H = maxHeight
 
-            // 회원가입 화면과 동일한 비율 기반 치수
             val hPad = (W * 0.045f)
             val titleTop = (H * 0.03f)
             val titleSp = (W.value * 0.09f).sp
