@@ -589,7 +589,7 @@ fun DebugBuildTag() {
             .padding(horizontal = 8.dp, vertical = 4.dp)
     )
 }
-
+/*
 @Preview(
     showSystemUi = true,
     device = Devices.PIXEL_7,
@@ -602,4 +602,4 @@ private fun PreviewAnnouncement1() {
         onUploadPhoto = {},
         onTabClick = {}
     )
-}
+}*/
