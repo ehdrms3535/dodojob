@@ -11,6 +11,8 @@ object CurrentUser {
     private val _radius = MutableStateFlow<Double>(0.0)
     private val _jobtype = MutableStateFlow<String>("")         //직업
 
+
+
     val idFlow: StateFlow<String?> get() = _id
     val usernameFlow: StateFlow<String?> get() = _username
 
