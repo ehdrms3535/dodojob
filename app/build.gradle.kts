@@ -128,10 +128,16 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Realtime(채널/구독) 쓰면 이거도 추가
+    implementation("io.github.jan-tennert.supabase:realtime-kt")
+
     implementation("io.github.jan-tennert.supabase:storage-kt")
 
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.4.0") // 너가 쓰는 2.x 최신으로
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.4.0")    // (로그인 쓰면)
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.4.0") // (로그인 쓰면)
+
+
 
 }
 

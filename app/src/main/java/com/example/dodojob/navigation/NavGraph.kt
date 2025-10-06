@@ -89,9 +89,9 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
 
         composable(Route.Main.path) { MainRoute(nav) } // main
 
-        composable(Route.Announcement.path) { Announcement1Route(nav) } // 공고등록1
-        composable(Route.Announcement2.path) { Announcement2Route(nav) }   //공고등록 2
-        composable(Route.Announcement3.path) { Announcement3Route(nav) }   //공고등록 3
+        composable(Route.Announcement.path) { Announcement1Route(nav) } // 공고등록 1
+        composable(Route.Announcement2.path) { Announcement2Route(nav) }   // 공고등록 2
+        composable(Route.Announcement3.path) { Announcement3Route(nav) }   // 공고등록 3
         composable(Route.Announcement4.path) { Announcement4Route(nav) } // 공고등록 4
         composable(Route.Announcement5.path) { Announcement5Route(nav) } // 공고등록 5
 
