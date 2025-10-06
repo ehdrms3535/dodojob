@@ -48,6 +48,10 @@ sealed class Route(val path: String) {
     data object WelfareHome : Route("welfare/home")
     data object WelfareCategory : Route("welfare/category/{tab}")
 
+    data object Ad1        : Route("ad/1")
+    data object Ad2        : Route("ad/2")
+    data object Ad3        : Route("ad/3")
+
     companion object {
         // ✅ 편의 함수 (탭에 따라 실제 네비게이션 경로 생성)
         fun welfareCategoryOf(tab: String) = "welfare/category/$tab"
@@ -58,7 +62,15 @@ sealed class Route(val path: String) {
     data object EduMy   : Route("edu/my")   // 단일 화면(이어보기/찜한 강의 탭)
 
     data object EduGraph : Route("edu_graph")
-
+    data object EduPaymentComplete : Route("edu_payment/{courseId}") {
+        fun of(courseId: String) = "edu_payment/$courseId"
+    }
+    data object EduLectureInitial : Route("edu_lecture_ini/{courseId}") {
+        fun of(courseId: String) = "edu_lecture_ini/$courseId"
+    }
+    data object EduLectureNormal  : Route("edu_lecture_nor/{courseId}") {
+        fun of(courseId: String) = "edu_lecture_nor/$courseId"
+    }
 
     data object EmployerHumanResource : Route("employer_human_resource")
     data object ViewResourceDetail : Route("view_resource_detail")

@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
-import com.example.dodojob.ui.feature.profile.BottomNavBar
+import com.example.dodojob.ui.feature.main.BottomNavBar
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 
@@ -53,6 +53,7 @@ private val BrandBlue  = Color(0xFF005FFF)
  * Data
  * ========================= */
 data class Course(
+    val id: String, //강의 클릭하면 해당 강의로 가게 할려고 둿음
     @DrawableRes val imageRes: Int,
     val title: String,
     val tag: String,    // 필터용
@@ -66,28 +67,32 @@ private val filterTabs = listOf("전체", "영어", "컴퓨터", "요리", "교�
 /** 추천 강의 */
 fun recommendedCourses() = listOf(
     Course(
-        R.drawable.edu_recom1,
+        id = "eng-conv-basic",
+        imageRes = R.drawable.edu_recom1,
         title = "영어 회화 입문",
         tag   = "영어",
         sub   = "일상 표현부터 차근차근",
         desc  = "기초 패턴과 상황별 회화로 부담없이 시작"
     ),
     Course(
-        R.drawable.edu_recom2,
+        id = "pc-basic-master",
+        imageRes = R.drawable.edu_recom2,
         title = "컴퓨터 기초 마스터",
         tag   = "컴퓨터",
         sub   = "문서·인터넷·이메일 한 번에",
         desc  = "실습 위주로 바로 따라하는 필수 기능"
     ),
     Course(
-        R.drawable.edu_recom3,
+        id = "home-cooking",
+        imageRes = R.drawable.edu_recom3,
         title = "집에서 즐기는 홈쿠킹",
         tag   = "요리",
         sub   = "기초 재료 손질과 간단 레시피",
         desc  = "매일 먹는 반찬부터 근사한 일품요리까지"
     ),
     Course(
-        R.drawable.edu_recom4,
+        id = "group-tutoring",
+        imageRes = R.drawable.edu_recom4,
         title = "그룹 스터디 튜터링",
         tag   = "교육",
         sub   = "주 1회 온라인 그룹 학습",
@@ -95,38 +100,41 @@ fun recommendedCourses() = listOf(
     )
 )
 
-/** 실시간 인기 강의 */
+// ✅ 실시간 인기 강의
 fun liveHotCourses() = listOf(
     Course(
-        R.drawable.edu_live1,
+        id = "cs-customer",
+        imageRes = R.drawable.edu_live1,
         title = "고객 응대 스킬",
         tag   = "응대",
         sub   = "전화·대면 응대 기본",
         desc  = "상황별 말하기와 친절한 커뮤니케이션"
     ),
     Course(
-        R.drawable.edu_live2,
+        id = "smartphone-pro",
+        imageRes = R.drawable.edu_live2,
         title = "스마트폰 200% 활용",
         tag   = "컴퓨터",
         sub   = "결제·사진·앱 활용 전반",
         desc  = "초보도 쉽게 따라하는 실전 가이드"
     ),
     Course(
-        R.drawable.edu_live3,
+        id = "watercolor-begin",
+        imageRes = R.drawable.edu_live3,
         title = "물감과 친해지는 수채화",
         tag   = "기타",
         sub   = "기초 드로잉과 색감 연습",
         desc  = "간단한 소묘부터 분위기 있는 채색까지"
     ),
     Course(
-        R.drawable.edu_live4,
+        id = "english-news-listening",
+        imageRes = R.drawable.edu_live4,
         title = "영어 뉴스 리스닝",
         tag   = "영어",
         sub   = "쉬운 뉴스로 리스닝 감 만들기",
         desc  = "핵심 단어·표현으로 이해력 향상"
     )
 )
-
 /* =========================
  * Entry
  * ========================= */
@@ -138,7 +146,9 @@ fun EducationHomeRoute(
 ) {
     EducationHomeScreen(
         userName = userName,
-        onCourseClick = { /* TODO: 상세 이동 */ },
+        onCourseClick = { course ->
+            nav.navigate(Route.EduLectureInitial.of(course.id))
+        },
         onOpenLibrary = { nav.navigate(Route.EduMy.path) }, // 내 강좌/프로필 → 단일 화면
         bottomBar = {
             BottomNavBar(
@@ -148,7 +158,6 @@ fun EducationHomeRoute(
                         "home"      -> nav.navigate(Route.Main.path) { launchSingleTop = true }
                         "edu"       -> {} // 현재
                         "welfare"   -> nav.navigate("welfare/home") { launchSingleTop = true }
-                        "community" -> nav.navigate("community") { launchSingleTop = true }
                         "my"        -> nav.navigate(Route.My.path) { launchSingleTop = true }
                     }
                 }

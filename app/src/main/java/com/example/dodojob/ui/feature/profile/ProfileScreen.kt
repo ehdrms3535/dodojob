@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.profile
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -30,6 +31,8 @@ import com.example.dodojob.ui.feature.common.LogoutDialog
 import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
+import io.github.jan.supabase.storage.storage
+import com.example.dodojob.ui.feature.main.BottomNavBar
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -77,6 +80,15 @@ fun ProfileRoute(nav: NavController) {
     val applyWithinYear = s.applyWithinYear
     val realWorkExpCount = s.realWorkExpCount
     val eduCompleted = s.eduCompleted
+    val createdAt = s.user?.created_at
+
+    val StringBuilder = StringBuilder()
+    StringBuilder.append(
+        createdAt?.substring(0,4)+"."+createdAt?.substring(5,7) + "." + createdAt?.substring(8,10)
+    )
+    val joinedDate = StringBuilder.toString()
+
+
 
     ProfileScreen(
         name = displayName,
@@ -96,7 +108,7 @@ fun ProfileRoute(nav: NavController) {
                 applyWithinYear = applyWithinYear,
                 realWorkExpCount = realWorkExpCount,
                 eduCompleted = eduCompleted,
-                joinedDate = "2025년 9월 3일"
+                joinedDate = joinedDate
             )
 
             nav.currentBackStackEntry
@@ -421,51 +433,4 @@ private fun SectionRow(text: String, suffix: String? = null, onClick: () -> Unit
     }
 }
 
-/* 하단 네비 */
-@Composable
-fun BottomNavBar(current: String, onClick: (String) -> Unit) {
-    val brandBlue = Color(0xFF005FFF)
 
-    data class NavItem(
-        val key: String,
-        val unselectedRes: Int,
-        val selectedRes: Int? = null
-    )
-    val items = listOf(
-        NavItem("home",      R.drawable.unselected_home,      R.drawable.selected_home),
-        NavItem("edu",       R.drawable.unselected_education, null),
-        NavItem("welfare",   R.drawable.unselected_welfare,   null),
-        NavItem("community", R.drawable.unselected_talent,    null),
-        NavItem("my",        R.drawable.unselected_my,        R.drawable.selected_my),
-    )
-
-    NavigationBar(containerColor = Color.White) {
-        items.forEach { item ->
-            val isSelected = item.key == current
-            val iconRes = if (isSelected && item.selectedRes != null) item.selectedRes else item.unselectedRes
-
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = { onClick(item.key) },
-                icon = {
-                    Image(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = item.key,
-                        modifier = Modifier.size(55.dp),
-                        colorFilter = if (isSelected && item.selectedRes == null)
-                            ColorFilter.tint(brandBlue)
-                        else null
-                    )
-                },
-                label = null,
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor   = Color.Unspecified,
-                    selectedTextColor   = Color.Unspecified,
-                    unselectedIconColor = Color.Unspecified,
-                    unselectedTextColor = Color.Unspecified,
-                    indicatorColor      = Color.Transparent
-                )
-            )
-        }
-    }
-}

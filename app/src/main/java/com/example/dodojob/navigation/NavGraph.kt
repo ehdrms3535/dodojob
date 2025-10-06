@@ -1,5 +1,8 @@
 package com.example.dodojob.navigation
 
+import com.example.dodojob.ui.feature.main.AdOneScreen
+import com.example.dodojob.ui.feature.main.AdTwoScreen
+import com.example.dodojob.ui.feature.main.AdThreeScreen
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -55,6 +58,9 @@ import com.example.dodojob.ui.feature.announcement.Announcement3Route
 import com.example.dodojob.ui.feature.education.*
 import com.example.dodojob.ui.feature.education.EducationViewModel
 import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
+import com.example.dodojob.ui.feature.main.EmployerAdOneScreen
+import com.example.dodojob.ui.feature.main.EmployerAdThreeScreen
+import com.example.dodojob.ui.feature.main.EmployerAdTwoScreen
 import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
@@ -100,6 +106,9 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) } // 테스트
 
         composable(Route.EmployerHome.path) { EmployerHomeRoute(nav) } // 고용주 메인
+        composable("employer/ad/1") { EmployerAdOneScreen(nav) }
+        composable("employer/ad/2") { EmployerAdTwoScreen(nav) }
+        composable("employer/ad/3") { EmployerAdThreeScreen(nav) }
 
         composable(Route.EmployerNotice.path) { ManagementAnnouncementRoute(nav) } // 공고관리
 
@@ -116,6 +125,10 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.ActivityLevel.path) { ActivityLevelRoute(nav) } // 활동 레벨
         composable(Route.Map.path) { MapRoute(nav) } // 지도
         composable(Route.ChangePassword.path) { ChangePasswordScreen(nav) } // 비밀번호 변경
+
+        composable("ad/1") { AdOneScreen(nav) }
+        composable("ad/2") { AdTwoScreen(nav) }
+        composable("ad/3") { AdThreeScreen(nav) }
 
         //  복지 메인
         composable("welfare/home") {
@@ -160,6 +173,55 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                     userName = "홍길동",
                     favorites = eduVm.favorites,
                     allCourses = all
+                )
+            }
+
+            // ✅ 강의 초기 진입(수강신청 시트 자동 오픈) — courseId 인자 추가
+            composable(
+                route = Route.EduLectureInitial.path, // "edu_lecture_ini/{courseId}"
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+                EducationLectureScreen(
+                    courseId = courseId,
+                    showEnrollOnLaunch = true,
+                    showEnrollTrigger = false,
+                    onNavigatePaymentComplete = { nav.navigate(Route.EduPaymentComplete.of(courseId)) },
+                    onBack = { nav.popBackStack() }
+                )
+            }
+
+            // 결제 완료
+            composable(
+                route = Route.EduPaymentComplete.path, // "edu_payment/{courseId}"
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+
+                PaymentCompleteScreen(
+                    onDone = {
+                        // ✅ 같은 코스로 일반 강의 화면 진입 + 초기 진입 화면 제거
+                        nav.navigate(Route.EduLectureNormal.of(courseId)) {
+                            popUpTo(Route.EduLectureInitial.path) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
+
+            // ✅ 일반 강의 화면 — courseId 인자 추가
+            composable(
+                route = Route.EduLectureNormal.path, // "edu_lecture_nor/{courseId}"
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+                EducationLectureScreen(
+                    courseId = courseId,
+                    showEnrollOnLaunch = false,
+                    showEnrollTrigger = false,
+                    onNavigatePaymentComplete = { /* not used */ },
+                    onBack = { nav.popBackStack() }
                 )
             }
         }

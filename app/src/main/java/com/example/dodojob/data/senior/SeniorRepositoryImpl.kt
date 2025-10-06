@@ -14,7 +14,8 @@ private data class SeniorRow(
     val activityLevel: Long = 1,
     val applyWithinYear: Long = 0,
     val realWorkExpCount: Long = 0,
-    val eduCompleted: Boolean = false
+    val eduCompleted: Boolean = false,
+    val created_at: String?= null
 )
 
 class SeniorRepositorySupabase(
@@ -29,7 +30,7 @@ class SeniorRepositorySupabase(
                 resumeViews = senior.resumeViews,
                 recentCount = senior.recentCount,
                 likedCount = senior.likedCount,
-                activityLevel = senior.activityLevel,
+                activityLevel = senior.activityLevel
             )
         )
     }
