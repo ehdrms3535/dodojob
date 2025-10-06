@@ -8,4 +8,10 @@ interface UserRepository {
         username: String,
         rawPassword: String
     )
+
+    suspend fun changePassword(
+        currentPassword: String,
+        newPassword: String
+    )
+
 }

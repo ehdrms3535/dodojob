@@ -1,8 +1,11 @@
 package com.example.dodojob.data.user
 
+import com.example.dodojob.session.CurrentUser
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import java.time.LocalDate
+
 
 fun rrnToBirthDate(rrnFront: String, rrnBackFirst: String): LocalDate {
     require(rrnFront.length == 6 && rrnBackFirst.length == 1)
@@ -70,5 +73,33 @@ class UserRepositorySupabase(
             onConflict = "id"
             ignoreDuplicates = false   // 충돌 시 병합(UPDATE)
         }
+    }
+
+    override suspend fun changePassword(
+        currentPassword: String,
+        newPassword: String
+    ) {
+        val username = CurrentUser.username
+            ?: error("로그인 정보가 없습니다.")
+
+        val users = client.from("users_tmp").select {
+            filter {
+                eq("username", username)
+                eq("password", currentPassword)
+            }
+            limit(1)
+        }.decodeList<JsonObject>()
+
+        if (users.isEmpty()) {
+            error("현재 비밀번호가 올바르지 않습니다.")
+        }
+
+        client.from("users_tmp").update(
+            mapOf("password" to newPassword)
+        ) {
+            filter { eq("username", username) }
+        }
+
+        CurrentUser.setLogin(username, newPassword)
     }
 }

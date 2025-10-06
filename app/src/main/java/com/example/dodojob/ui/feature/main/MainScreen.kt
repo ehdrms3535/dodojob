@@ -156,8 +156,7 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
             when (key) {
                 "home" -> nav.navigate("main") { launchSingleTop = true }
                 "edu" -> nav.navigate("edu")
-                "welfare" -> nav.navigate("welfare/home")
-                "community" -> nav.navigate("community")
+                "welfare", "welfare/home" -> nav.navigate("welfare/home")
                 "my" -> nav.navigate("my")
             }
         },
@@ -206,7 +205,14 @@ fun MainScreen(
 
     Scaffold(
         containerColor = screenBg,
-        bottomBar = { BottomNavBar(current = "home", onClick = onShortcut) }
+        bottomBar = { BottomNavBar(
+            current = "home",
+            onClick = { key->
+                if(showPopup) showPopup=false
+                onShortcut(key)
+            }
+        )
+        }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -591,9 +597,8 @@ fun BottomNavBar(current: String, onClick: (String) -> Unit) {
 
     val items = listOf(
         NavItem("home",      R.drawable.unselected_home,      R.drawable.selected_home),
-        NavItem("edu",       R.drawable.unselected_education, null),
-        NavItem("welfare",   R.drawable.unselected_welfare,   null),
-        NavItem("community", R.drawable.unselected_talent,    null),
+        NavItem("edu",       R.drawable.unselected_education, R.drawable.selected_education),
+        NavItem("welfare/home",   R.drawable.unselected_welfare,   R.drawable.selected_welfare),
         NavItem("my",        R.drawable.unselected_my,        R.drawable.selected_my),
     )
 

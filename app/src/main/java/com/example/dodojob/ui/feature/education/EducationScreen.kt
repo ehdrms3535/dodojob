@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
-import com.example.dodojob.ui.feature.profile.BottomNavBar
+import com.example.dodojob.ui.feature.main.BottomNavBar
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 
@@ -158,7 +158,6 @@ fun EducationHomeRoute(
                         "home"      -> nav.navigate(Route.Main.path) { launchSingleTop = true }
                         "edu"       -> {} // 현재
                         "welfare"   -> nav.navigate("welfare/home") { launchSingleTop = true }
-                        "community" -> nav.navigate("community") { launchSingleTop = true }
                         "my"        -> nav.navigate(Route.My.path) { launchSingleTop = true }
                     }
                 }
