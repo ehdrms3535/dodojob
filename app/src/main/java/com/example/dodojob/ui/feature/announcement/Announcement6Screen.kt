@@ -270,10 +270,3 @@ fun AnnSectionCard(
         )
     }
 }
-
-/* -------- Preview -------- */
-@Preview(showSystemUi = true, device = Devices.PIXEL_7, locale = "ko")
-@Composable
-private fun PreviewAnnouncement6() {
-    Announcement6Screen()
-}
