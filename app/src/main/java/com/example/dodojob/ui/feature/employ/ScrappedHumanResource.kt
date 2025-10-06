@@ -33,6 +33,7 @@ private val ScreenBg   = Color(0xFFF1F5F7)
 private val BrandBlue  = Color(0xFF005FFF)
 private val TextGray   = Color(0xFF828282)
 private val CardBg     = Color(0xFFFFFFFF)
+
 private val TitleBlack = Color(0xFF000000)
 private val DividerGray= Color(0xFFE6E9ED)
 

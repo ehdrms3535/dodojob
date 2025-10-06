@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.ui.feature.main.BottomNavBar
 import kotlinx.parcelize.Parcelize
 
 /* ===================== 전달 페이로드 ===================== */
@@ -111,7 +112,6 @@ fun ActivityLevelRoute(
                 "home"      -> nav.navigate("main") { launchSingleTop = true }
                 "edu"       -> nav.navigate("edu")
                 "welfare"   -> nav.navigate("welfare")
-                "community" -> nav.navigate("community")
                 "my"        -> nav.navigate(Route.My.path) { launchSingleTop = true }
             }
         },
