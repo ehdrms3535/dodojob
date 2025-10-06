@@ -40,7 +40,7 @@ import com.example.dodojob.session.SessionViewModel
 private data class PreLoginRow(
     val id: String,
     val username: String,
-    val password: String? = null,
+    val password: String,
     val name: String? = null,
     val job: String? = null
 )
@@ -170,13 +170,13 @@ fun PreLoginScreen(nav: NavController,sessionvm:SessionViewModel) {
                             if (currentJob != "고용주") error("고용주 전용 탭입니다. (현재: $currentJob)")
                             user
                         }.onSuccess { user ->
-                            CurrentUser.setLogin(user.id, user.username)
+                            CurrentUser.setLogin(user.username, user.password)
                             sessionvm.setLogin(
                                 id = user.id,
                                 name = user.username,
                                 role = "고용주" // 혹은 "고용주"
                             )
-                            nav.navigate(Route.Main.path) {
+                            nav.navigate(Route.EmployerHome.path) {
                                 popUpTo(Route.Login.path) { inclusive = true }
                                 launchSingleTop = true
                             }
