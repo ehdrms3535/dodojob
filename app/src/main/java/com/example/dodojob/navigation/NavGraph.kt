@@ -61,11 +61,12 @@ import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
 import com.example.dodojob.ui.feature.main.EmployerAdOneScreen
 import com.example.dodojob.ui.feature.main.EmployerAdThreeScreen
 import com.example.dodojob.ui.feature.main.EmployerAdTwoScreen
+import com.example.dodojob.ui.feature.profile.ResumeManageScreen
 import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-    NavHost(navController = nav,startDestination = Route.Announcement5.path) {
+    NavHost(navController = nav,startDestination = Route.Intro.path) {
 
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
@@ -101,6 +102,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.Support.path) { SupportRoute(nav) } // 지원 내역
         composable(Route.RecentlyViewed.path) { RecentViewedRoute(nav) } // 최근 본 공고
         composable(Route.LikedJob.path) { LikedJobsRoute(nav) } // 좋아요한 공고
+        composable(Route.Resume.path) { ResumeManageScreen(nav) } // 이력서 관리
 
         composable(Route.Todo.path) { TodoScreen(nav) } // 테스트
         composable(Route.TodoRealtime.path) { RealtimeTodoScreen(nav) } // 테스트
