@@ -46,6 +46,11 @@ import com.example.dodojob.navigation.Route
 import com.example.dodojob.session.CurrentUser
 import kotlinx.coroutines.delay
 import com.example.dodojob.dao.getUsernameById
+import com.example.dodojob.dao.getCompanyIdByUsername
+import com.example.dodojob.dao.getCompanyRowCount
+import com.example.dodojob.dao.getannounce
+import com.example.dodojob.dao.getannounce24
+
 
 /* ================= Colors ================= */
 private val ScreenBg  = Color(0xFFF1F5F7)
@@ -219,11 +224,23 @@ fun EmployerHomeRoute(nav: NavController) {
     var user by remember { mutableStateOf<String?>(null) }
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
+
+    var newApplicantsToday by remember { mutableStateOf(0)}
+    var unreadResumes by remember { mutableStateOf(0)}        // 미열람 이력서 수
+    var activeNotices by remember { mutableStateOf(0) }         // 진행 중 공고 수
+
     val currentuser = CurrentUser.username
     LaunchedEffect(currentuser)
     {
         user = getUsernameById(currentuser) // ✅ 안전하게 suspend 함수 호출
+        val companyId = getCompanyIdByUsername(currentuser)
+        activeNotices = getCompanyRowCount(companyId)
+        newApplicantsToday = getannounce24(companyId)
+        unreadResumes = getannounce(companyId)
     }
+
+
+
 
     val applicantsUi = remember {
         FakeEmployerRepo.getRecentApplicants().map {
@@ -319,8 +336,8 @@ fun EmployerHomeRoute(nav: NavController) {
                 StatCard(
                     leading = { SmallIconBox(resId = R.drawable.new_applicant, contentDescription = "신규 지원자") },
                     title = "신규 지원자",
-                    number = stats.newApplicantsToday.toString(),
-                    subtitle = "오늘 ${stats.newApplicantsToday}명이 지원했습니다.",
+                    number = newApplicantsToday.toString(),
+                    subtitle = "오늘 ${newApplicantsToday}명이 지원했습니다.",
                     onClickChevron = {}
                 )
             }
@@ -328,8 +345,8 @@ fun EmployerHomeRoute(nav: NavController) {
                 StatCard(
                     leading = { SmallIconBox(resId = R.drawable.unread_resume, contentDescription = "미열람 이력서") },
                     title = "미열람 이력서",
-                    number = stats.unreadResumes.toString(),
-                    subtitle = "총 ${stats.unreadResumes}개의 이력서를 확인해보세요",
+                    number = unreadResumes.toString(),
+                    subtitle = "총 ${unreadResumes}개의 이력서를 확인해보세요",
                     onClickChevron = {}
                 )
             }
@@ -337,8 +354,8 @@ fun EmployerHomeRoute(nav: NavController) {
                 StatCard(
                     leading = { SmallIconBox(resId = R.drawable.processing_announ, contentDescription = "진행 중인 공고") },
                     title = "진행 중인 공고",
-                    number = stats.activeNotices.toString(),
-                    subtitle = "현재 ${stats.activeNotices}개의 공고가 진행 중입니다",
+                    number = activeNotices.toString(),
+                    subtitle = "현재 ${activeNotices}개의 공고가 진행 중입니다",
                     onClickChevron = {}
                 )
             }
