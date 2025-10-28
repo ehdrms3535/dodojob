@@ -530,18 +530,3 @@ private fun BottomNavPlaceholder() {
     )
 }
 
-/* -------- Preview -------- */
-@Preview(showSystemUi = true, device = Devices.PIXEL_7, locale = "ko")
-@Composable
-private fun PreviewAnnouncement4() {
-    Announcement4Screen(
-        onSubmit = {},   // 미리보기에서는 내비 사용 안 함
-        onBack = {},
-        onEditBasic = {},
-        onEditJob = {},
-        onEditWorkCond = {},
-        onEditPayBenefit = {},
-        onEditRequirements = {},
-        onTabClick = {}
-    )
-}

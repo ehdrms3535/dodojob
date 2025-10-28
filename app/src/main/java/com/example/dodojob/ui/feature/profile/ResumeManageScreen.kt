@@ -32,7 +32,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.dodojob.R
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.postgrest.from
+import kotlinx.serialization.Serializable
+import com.example.dodojob.data.career.CareerModels
+import com.example.dodojob.data.career.CareerRepositoryImpl
+import com.example.dodojob.data.license.LicenseModels
+import com.example.dodojob.data.license.LicenseRepositoryImpl
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.session.CurrentUser
+import kotlinx.coroutines.launch
 
 /* ===== 컬러 ===== */
 private val BrandBlue = Color(0xFF005FFF)
@@ -41,6 +52,98 @@ private val LineGray  = Color(0xFFDDDDDD)
 private val LabelGray = Color(0xFF9C9C9C)
 private val BgGray    = Color(0xFFF1F5F7)
 private val TagGray   = Color(0xFFE0E0E0)
+
+/* ===== Filled Inputs (캡슐형) ===== */
+private val InputBg         = Color(0xFFEFEFEF)
+private val PlaceholderGray = Color(0xFF959595)
+
+@Composable
+private fun FilledInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = true,
+    height: Dp = 56.dp,
+    radius: Dp = 10.dp
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = singleLine,
+        placeholder = { Text(placeholder, fontSize = 16.sp, color = PlaceholderGray) },
+        shape = RoundedCornerShape(radius),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = InputBg,
+            unfocusedContainerColor = InputBg,
+            disabledContainerColor = InputBg,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            cursorColor = Color.Black,
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+    )
+}
+
+@Composable
+private fun FilledMultilineInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    minLines: Int = 4,
+    radius: Dp = 10.dp
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = false,
+        minLines = minLines,
+        placeholder = { Text(placeholder, fontSize = 16.sp, color = PlaceholderGray) },
+        shape = RoundedCornerShape(radius),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = InputBg,
+            unfocusedContainerColor = InputBg,
+            disabledContainerColor = InputBg,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            cursorColor = Color.Black,
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 110.dp)
+    )
+}
+
+
+@Serializable
+private data class UserTmpRow(
+    val name: String? = null,
+    val gender: String? = null,
+    val birthdate: String? = null,  // YYYY-MM-DD
+    val region: String? = null,
+    val phone: String? = null,
+    val email: String? = null,
+    val username: String? = null
+)
+
+private class ProfileRepositoryImpl(
+    private val client: SupabaseClient
+) {
+    suspend fun getUser(username: String): UserTmpRow? {
+        val list = client.from("users_tmp")
+            .select { filter { eq("username", username) } }
+            .decodeList<UserTmpRow>()
+        return list.firstOrNull()
+    }
+}
 
 /* ===== 공통 컴포넌트 ===== */
 @Composable
@@ -57,7 +160,6 @@ private fun SectionCard(
     ) { content() }
 }
 
-/* 접기/펼치기 타이틀 (아이콘 리소스 복구) */
 @Composable
 private fun SectionTitle(
     title: String,
@@ -160,30 +262,15 @@ private fun ThinDivider(insetStart: Dp = 16.dp, insetEnd: Dp = 16.dp) {
     )
 }
 
-@Composable
-private fun GrayInputHint(text: String) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .background(TagGray, RoundedCornerShape(10.dp))
-            .height(38.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Text(
-            text,
-            fontSize = 16.sp,
-            color = Color(0xFFA6A6A6),
-            modifier = Modifier.padding(horizontal = 12.dp)
-        )
-    }
-}
-
 /* ===== 메인 ===== */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ResumeManageScreen() {
+fun ResumeManageScreen(nav: NavController) {
+    val username = remember { CurrentUser.username ?: "guest" }
+    val client = LocalSupabase.current
+
     val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
 
     var personalExpanded by remember { mutableStateOf(true) }
     var careerExpanded by remember { mutableStateOf(true) }
@@ -191,9 +278,69 @@ fun ResumeManageScreen() {
     var hopeExpanded by remember { mutableStateOf(true) }
 
     var selectedJob by remember { mutableStateOf("서비스업") }
-
-    // 바텀시트 표시
     var showSheet by remember { mutableStateOf(false) }
+
+    /* -------- 인적사항 상태/로드 -------- */
+    val profileRepo = remember { ProfileRepositoryImpl(client) }
+    var user by remember { mutableStateOf<UserTmpRow?>(null) }
+    var userLoading by remember { mutableStateOf(false) }
+    var userError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(username) {
+        userLoading = true
+        userError = null
+        try {
+            user = profileRepo.getUser(username)
+        } catch (e: Exception) {
+            userError = "인적사항을 불러오지 못했어요: ${e.message}"
+        } finally {
+            userLoading = false
+        }
+    }
+
+    /* -------- 경력 -------- */
+    val careerRepo = remember { CareerRepositoryImpl(client) }
+    var careers by remember { mutableStateOf<List<CareerModels>>(emptyList()) }
+    var careerLoading by remember { mutableStateOf(false) }
+    var cTitle by remember { mutableStateOf("") }
+    var cCompany by remember { mutableStateOf("") }
+    var cStart by remember { mutableStateOf("") }
+    var cEnd by remember { mutableStateOf("") }
+    var cDesc by remember { mutableStateOf("") }
+    var careerError by remember { mutableStateOf<String?>(null) }
+    var careerAddedOnce by remember { mutableStateOf(false) }
+
+    LaunchedEffect(username) {
+        careerLoading = true
+        try {
+            careers = careerRepo.list(username)
+        } catch (e: Exception) {
+            careerError = "경력 목록을 불러오지 못했어요: ${e.message}"
+        } finally {
+            careerLoading = false
+        }
+    }
+
+    /* -------- 자격증  -------- */
+    val licenseRepo = remember { LicenseRepositoryImpl(client) }
+    var licenses by remember { mutableStateOf<List<LicenseModels>>(emptyList()) }
+    var licenseLoading by remember { mutableStateOf(false) }
+    var lName by remember { mutableStateOf("") }
+    var lLocation by remember { mutableStateOf("") }
+    var lNumber by remember { mutableStateOf("") }
+    var licenseError by remember { mutableStateOf<String?>(null) }
+    var licenseAddedOnce by remember { mutableStateOf(false) }
+
+    LaunchedEffect(username) {
+        licenseLoading = true
+        try {
+            licenses = licenseRepo.list(username)
+        } catch (e: Exception) {
+            licenseError = "자격증 목록을 불러오지 못했어요: ${e.message}"
+        } finally {
+            licenseLoading = false
+        }
+    }
 
     Scaffold(
         containerColor = BgGray,
@@ -235,33 +382,55 @@ fun ResumeManageScreen() {
                 SectionCard {
                     SectionTitle(
                         title = " 인적사항",
-                        iconRes = R.drawable.app_manage_personal,  // ✅ 복구
+                        iconRes = R.drawable.app_manage_personal,
                         expanded = personalExpanded,
                         onToggle = { personalExpanded = !personalExpanded }
                     )
 
                     if (personalExpanded) {
                         Spacer(Modifier.height(20.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                            Image(                               // ✅ 복구
-                                painter = painterResource(id = R.drawable.senior_id),
-                                contentDescription = "프로필",
-                                modifier = Modifier
-                                    .size(150.dp)
-                                    .clip(RoundedCornerShape(20.dp))
+
+                        if (userLoading) {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        } else if (userError != null) {
+                            Text(
+                                userError!!,
+                                color = Color(0xFFD32F2F),
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
-                            Spacer(Modifier.width(20.dp))
+                        } else {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.senior_id),
+                                    contentDescription = "프로필",
+                                    modifier = Modifier
+                                        .size(150.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                )
+                                Spacer(Modifier.width(20.dp))
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+                            KeyValueRow("이름", user?.name ?: "-",
+                                startPadding = 24.dp, endPadding = 24.dp)
+                            KeyValueRow(
+                                "생년월일",
+                                user?.birthdate?.let { formatBirthdateKR(it) } ?: "-",
+                                startPadding = 24.dp, endPadding = 24.dp
+                            )
+                            KeyValueRow("전화번호", user?.phone ?: "-",
+                                startPadding = 24.dp, endPadding = 24.dp)
+                            KeyValueRow("주소", user?.region ?: "-",
+                                startPadding = 24.dp, endPadding = 24.dp)
+                            KeyValueRow("이메일", user?.email ?: "-",
+                                startPadding = 24.dp, endPadding = 24.dp)
+
+                            Spacer(Modifier.height(16.dp))
+                            BlueButton("수정")
                         }
-
-                        Spacer(Modifier.height(12.dp))
-                        KeyValueRow("이름", "홍길동", startPadding = 24.dp, endPadding = 24.dp)
-                        KeyValueRow("생년월일", "1964년 3월 15일", startPadding = 24.dp, endPadding = 24.dp)
-                        KeyValueRow("전화번호", "010-1234-1234", startPadding = 24.dp, endPadding = 24.dp)
-                        KeyValueRow("주소", "경북 경산시", startPadding = 24.dp, endPadding = 24.dp)
-                        KeyValueRow("이메일", "Hong_11@naver.com", startPadding = 24.dp, endPadding = 24.dp)
-
-                        Spacer(Modifier.height(16.dp))
-                        BlueButton("수정")
                     }
                 }
 
@@ -271,32 +440,131 @@ fun ResumeManageScreen() {
                 SectionCard {
                     SectionTitle(
                         title = " 경력",
-                        iconRes = R.drawable.app_manage_career,   // ✅ 복구
+                        iconRes = R.drawable.app_manage_career,
                         expanded = careerExpanded,
                         onToggle = { careerExpanded = !careerExpanded }
                     )
 
                     if (careerExpanded) {
                         Spacer(Modifier.height(20.dp))
-                        ThinDivider()
-                        Spacer(Modifier.height(20.dp))
 
-                        CareerItem("프랜차이즈 카페 점장", "2008.03", "2010.01")
+                        if (careerLoading) {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        } else {
+                            if (careers.isEmpty()) {
+                                Text(
+                                    "등록된 경력이 없어요.",
+                                    color = TextGray,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                ThinDivider()
+                            } else {
+                                careers.forEachIndexed { idx, c ->
+                                    Spacer(Modifier.height(20.dp))
+                                    CareerItem(
+                                        title = c.title ?: (c.company ?: "경력"),
+                                        start = c.startDate ?: "-",
+                                        end   = c.endDate ?: "-"
+                                    )
+                                    if (!c.description.isNullOrBlank()) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            c.description!!,
+                                            fontSize = 14.sp,
+                                            color = Color(0xFF616161),
+                                            modifier = Modifier.padding(horizontal = 16.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.height(20.dp))
+                                    ThinDivider()
+                                }
+                            }
 
-                        Spacer(Modifier.height(20.dp))
-                        ThinDivider()
-                        Spacer(Modifier.height(20.dp))
+                            Spacer(Modifier.height(24.dp))
 
-                        CareerItem("기업체 인사/총무 담당 과장", "2010.01", "2020.06")
+                            // ---- 새 경력 추가 (캡슐형 입력) ----
+                            Column(Modifier.padding(horizontal = 16.dp)) {
+                                Text("새 경력 추가", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(10.dp))
 
-                        Spacer(Modifier.height(30.dp))
-                        GrayInputHint("추가 경력을 적어주세요")
+                                FilledInput(
+                                    value = cTitle, onValueChange = { cTitle = it },
+                                    placeholder = "직무/직책 (career_title)"
+                                )
+                                Spacer(Modifier.height(8.dp))
 
-                        Spacer(Modifier.height(12.dp))
-                        ConsentRow(fontSize = 16.sp)
+                                FilledInput(
+                                    value = cCompany, onValueChange = { cCompany = it },
+                                    placeholder = "회사/기관 (company)"
+                                )
+                                Spacer(Modifier.height(8.dp))
 
-                        Spacer(Modifier.height(16.dp))
-                        BlueButton("추가하기")
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilledInput(
+                                        value = cStart, onValueChange = { cStart = it },
+                                        placeholder = "시작 (예: 2008.03)",
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    FilledInput(
+                                        value = cEnd, onValueChange = { cEnd = it },
+                                        placeholder = "종료 (예: 2015.03)",
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                Spacer(Modifier.height(8.dp))
+
+                                FilledMultilineInput(
+                                    value = cDesc, onValueChange = { cDesc = it },
+                                    placeholder = "상세 업무"
+                                )
+
+                                if (careerError != null) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(careerError!!, color = Color(0xFFD32F2F), fontSize = 14.sp)
+                                }
+                                if (careerAddedOnce) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("경력이 추가되었습니다.", color = BrandBlue, fontSize = 14.sp)
+                                }
+
+                                Spacer(Modifier.height(12.dp))
+                                ConsentRow(fontSize = 16.sp)
+
+                                Spacer(Modifier.height(12.dp))
+                                BlueButton("추가하기") {
+                                    if (cTitle.isBlank() && cCompany.isBlank()) {
+                                        careerError = "직무 또는 회사 중 하나는 입력해주세요."
+                                        careerAddedOnce = false
+                                        return@BlueButton
+                                    }
+                                    scope.launch {
+                                        careerLoading = true
+                                        careerError = null
+                                        careerAddedOnce = false
+                                        try {
+                                            careerRepo.add(
+                                                username = username,
+                                                title = cTitle,
+                                                company = cCompany,
+                                                startDate = cStart,
+                                                endDate = cEnd,
+                                                description = cDesc.ifBlank { null }
+                                            )
+                                            careers = careerRepo.list(username)
+                                            cTitle = ""; cCompany = ""; cStart = ""; cEnd = ""; cDesc = ""
+                                            careerAddedOnce = true
+                                        } catch (e: Exception) {
+                                            careerError = "추가 실패: ${e.message}"
+                                        } finally {
+                                            careerLoading = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -306,33 +574,100 @@ fun ResumeManageScreen() {
                 SectionCard {
                     SectionTitle(
                         title = " 자격증",
-                        iconRes = R.drawable.app_manage_certi,    // ✅ 복구
+                        iconRes = R.drawable.app_manage_certi,
                         expanded = licenseExpanded,
                         onToggle = { licenseExpanded = !licenseExpanded }
                     )
 
                     if (licenseExpanded) {
-                        Spacer(Modifier.height(22.dp))
-                        ThinDivider()
-                        Spacer(Modifier.height(22.dp))
-                        LicenseItem("한국서비스산업진흥원", "고객 서비스 매니저 1급 자격증", "CSM-2018-1103-1023")
-                        Spacer(Modifier.height(22.dp))
-                        ThinDivider()
-                        Spacer(Modifier.height(22.dp))
-                        LicenseItem("대구문화센터", "문화·여가 프로그램 지도사 자격증", "CPC-2021-0420-0789")
-                        Spacer(Modifier.height(22.dp))
-                        ThinDivider()
-                        Spacer(Modifier.height(22.dp))
-                        LicenseItem("대한시니어평생교육원", "시니어 케어 코디네이터 2급 자격증", "SCC-2020-0612-0457")
-
-                        Spacer(Modifier.height(22.dp))
-                        GrayInputHint("추가 자격증을 적어주세요")
-
                         Spacer(Modifier.height(12.dp))
-                        ConsentRow(fontSize = 16.sp)
 
-                        Spacer(Modifier.height(16.dp))
-                        BlueButton("추가하기")
+                        if (licenseLoading) {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        } else {
+                            if (licenses.isEmpty()) {
+                                Text(
+                                    "등록된 자격증이 없어요.",
+                                    color = TextGray,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                ThinDivider()
+                            } else {
+                                licenses.forEachIndexed { idx, lic ->
+                                    Spacer(Modifier.height(18.dp))
+                                    LicenseItem(
+                                        org = lic.location ?: "발급기관 미입력",
+                                        title = lic.name ?: "자격증명 미입력",
+                                        code = lic.number ?: "-"
+                                    )
+                                    
+                                }
+                            }
+
+                            Spacer(Modifier.height(22.dp))
+
+                            // ---- 새 자격증 추가 (캡슐형 입력) ----
+                            Column(Modifier.padding(horizontal = 16.dp)) {
+                                Text("새 자격증 추가", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(10.dp))
+
+                                FilledInput(
+                                    value = lName, onValueChange = { lName = it },
+                                    placeholder = "자격증명 (license_name)"
+                                )
+                                Spacer(Modifier.height(8.dp))
+
+                                FilledInput(
+                                    value = lLocation, onValueChange = { lLocation = it },
+                                    placeholder = "발급기관 (license_location)"
+                                )
+                                Spacer(Modifier.height(8.dp))
+
+                                FilledInput(
+                                    value = lNumber, onValueChange = { lNumber = it },
+                                    placeholder = "자격번호 (license_number)"
+                                )
+
+                                if (licenseError != null) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(licenseError!!, color = Color(0xFFD32F2F), fontSize = 14.sp)
+                                }
+                                if (licenseAddedOnce) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("추가되었습니다.", color = BrandBlue, fontSize = 14.sp)
+                                }
+
+                                Spacer(Modifier.height(12.dp))
+                                ConsentRow(fontSize = 16.sp)
+
+                                Spacer(Modifier.height(12.dp))
+                                BlueButton("추가하기") {
+                                    if (lName.isBlank() && lLocation.isBlank() && lNumber.isBlank()) {
+                                        licenseError = "한 가지 이상 입력해주세요."
+                                        licenseAddedOnce = false
+                                        return@BlueButton
+                                    }
+                                    scope.launch {
+                                        licenseLoading = true
+                                        licenseError = null
+                                        licenseAddedOnce = false
+                                        try {
+                                            licenseRepo.add(username, lName, lLocation, lNumber)
+                                            licenses = licenseRepo.list(username)
+                                            lName = ""; lLocation = ""; lNumber = ""
+                                            licenseAddedOnce = true
+                                        } catch (e: Exception) {
+                                            licenseError = "추가 실패: ${e.message}"
+                                        } finally {
+                                            licenseLoading = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -342,7 +677,7 @@ fun ResumeManageScreen() {
                 SectionCard {
                     SectionTitle(
                         title = " 희망직무",
-                        iconRes = R.drawable.app_manage_hope,     // ✅ 복구
+                        iconRes = R.drawable.app_manage_hope,
                         expanded = hopeExpanded,
                         onToggle = { hopeExpanded = !hopeExpanded }
                     )
@@ -425,17 +760,26 @@ fun ResumeManageScreen() {
         }
     }
 
-    /* ===== PreferWorkScreen 스타일을 그대로 쓴 모달 시트 ===== */
     if (showSheet) {
         ExperiencePickerSheet(
             preselected = emptySet(),
-            onApply = { /* 선택 결과 사용 */ showSheet = false },
+            onApply = { showSheet = false },
             onDismiss = { showSheet = false }
         )
     }
 }
 
-/* ===== 경력/자격증/동의 ===== */
+/* ===== 유틸: YYYY-MM-DD -> "YYYY년 M월 D일" ===== */
+private fun formatBirthdateKR(iso: String): String {
+    return runCatching {
+        val y = iso.substring(0, 4)
+        val m = iso.substring(5, 7).trimStart('0').ifBlank { "0" }
+        val d = iso.substring(8, 10).trimStart('0').ifBlank { "0" }
+        "${y}년 ${m}월 ${d}일"
+    }.getOrElse { iso }
+}
+
+/* ===== 경력/자격증/동의/칩 ===== */
 @Composable
 private fun CareerItem(title: String, start: String, end: String) {
     Column(Modifier.padding(horizontal = 16.dp)) {
@@ -487,7 +831,6 @@ private fun ConsentRow(fontSize: androidx.compose.ui.unit.TextUnit) {
     }
 }
 
-/* ===== 희망직무 요약 칩 ===== */
 @Composable
 private fun JobChip(
     title: String,
@@ -517,10 +860,10 @@ private fun JobChip(
     }
 }
 
-/* ===== PreferWorkScreen 스타일 모달 (요청사항 반영) ===== */
+/* ===== PreferWorkSheet ===== */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExperiencePickerSheet(
+private fun ExperiencePickerSheet(
     preselected: Set<String>,
     onApply: (Set<String>) -> Unit,
     onDismiss: () -> Unit
@@ -540,7 +883,7 @@ fun ExperiencePickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 35.dp, topEnd = 35.dp),
-        dragHandle = null // ✅ 위 바 하나만 (커스텀) 쓰기 위해 제거
+        dragHandle = null
     ) {
         Column(
             Modifier
@@ -549,25 +892,24 @@ fun ExperiencePickerSheet(
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(Modifier.height(18.dp))
-            SheetDragHandle() // ✅ 아래꺼 하나만
+            SheetDragHandle()
             Spacer(Modifier.height(28.dp))
 
             Text(
                 "경험을 살릴 일을 설정해주세요",
-                fontSize = 26.sp,                 // ✅ 26sp
+                fontSize = 26.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black
             )
 
             Spacer(Modifier.height(18.dp))
 
-            // ✅ 배경 #EFEFEF, radius 10, 오른쪽(트레일링) 아이콘, placeholder #959595
             TextField(
                 value = query,
                 onValueChange = { query = it },
                 singleLine = true,
                 placeholder = { Text("직종 키워드", fontSize = 18.sp, color = Color(0xFF959595)) },
-                trailingIcon = {                  // ← 오른쪽 아이콘
+                trailingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Search,
                         contentDescription = null,
@@ -577,7 +919,7 @@ fun ExperiencePickerSheet(
                 },
                 shape = RoundedCornerShape(10.dp),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = TagGray,     // #EFEFEF
+                    focusedContainerColor = TagGray,
                     unfocusedContainerColor = TagGray,
                     disabledContainerColor = TagGray,
                     focusedIndicatorColor = Color.Transparent,
@@ -594,7 +936,6 @@ fun ExperiencePickerSheet(
             Divider(color = Color(0xFFCFCFCF))
             Spacer(Modifier.height(14.dp))
 
-            // 본문 리스트
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -609,12 +950,12 @@ fun ExperiencePickerSheet(
                     item {
                         Text(
                             title,
-                            fontSize = 26.sp,                  // ✅ 섹션 타이틀 26sp
+                            fontSize = 26.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.Black,
                             modifier = Modifier.padding(start = 6.dp)
                         )
-                        Spacer(Modifier.height(16 .dp))
+                        Spacer(Modifier.height(16.dp))
                         TwoColumnChipsEqualWidth(
                             options = filtered,
                             isSelected = { it in selected },
@@ -682,7 +1023,7 @@ fun ExperiencePickerSheet(
     }
 }
 
-/* ----- 칩 2열 레이아웃 (PreferWorkScreen과 동일) ----- */
+/* ----- 칩 2열 레이아웃 ----- */
 @Composable
 private fun TwoColumnChipsEqualWidth(
     options: List<String>,
@@ -716,18 +1057,18 @@ private fun TwoColumnChipsEqualWidth(
     }
 }
 
-/* ----- 칩 스타일 (요청 스펙 반영) ----- */
+/* ----- 칩 스타일 ----- */
 @Composable
 private fun SimpleChoiceChip(
     text: String,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    radius: Dp = 10.dp // 디자인 radius 10
+    radius: Dp = 10.dp
 ) {
     val bg = if (selected) Color(0xFFC1D2ED) else Color(0xFFE0E0E0)
     val border = if (selected) Color(0xFF005FFF) else Color.Transparent
-    val textColor = if (selected) Color(0xFF005FFF) else Color(0xFF111111) // 미선택 연회색
+    val textColor = if (selected) Color(0xFF005FFF) else Color(0xFF111111)
 
     Box(
         modifier = modifier
@@ -740,13 +1081,13 @@ private fun SimpleChoiceChip(
             text = text,
             color = textColor,
             fontWeight = FontWeight.Medium,
-            fontSize = 24.sp,          // 요청: 24sp
+            fontSize = 24.sp,
             textAlign = TextAlign.Center
         )
     }
 }
 
-/* ----- 체크박스 (PreferWorkScreen 동일) ----- */
+/* ----- 체크박스 ----- */
 @Composable
 private fun OptionCheckBox(
     checked: Boolean,
@@ -772,20 +1113,20 @@ private fun OptionCheckBox(
     }
 }
 
-/* ----- 상단 드래그 핸들 (하나만 사용) ----- */
+/* ----- 상단 드래그 핸들 ----- */
 @Composable
 private fun SheetDragHandle() {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box(
             Modifier
-                .width(122.89.dp)       // 프레임 값과 비슷하게
+                .width(122.89.dp)
                 .height(4.16.dp)
                 .background(Color(0xFFB3B3B3), RoundedCornerShape(10395.dp))
         )
     }
 }
 
-/* ----- 미리보기 ----- */
+/* ----- 미리보기 (네트워크 없음) ----- */
 @Preview(
     device = Devices.PHONE,
     showBackground = true,
@@ -795,5 +1136,6 @@ private fun SheetDragHandle() {
 )
 @Composable
 private fun PreviewResumeManageScreen() {
-    ResumeManageScreen()
+    // Preview에서는 실제 호출 생략
+    // ResumeManageScreen(nav = rememberNavController())
 }
