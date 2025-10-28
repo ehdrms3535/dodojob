@@ -97,7 +97,7 @@ fun ProfileRoute(nav: NavController) {
         recentCount = recentCount,
         likedCount = likedCount,
         onClickResumeCreate = {},
-        onClickResumeManage = {},
+        onClickResumeManage = {nav.navigate("Resume")},
         onClickBookmarks = { nav.navigate("liked_job") },
         onClickRecent = { nav.navigate("recently_viewed") },
         onClickActivityLevel = {

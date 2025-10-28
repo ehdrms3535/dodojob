@@ -742,6 +742,7 @@ private enum class PayType { Hourly, Daily, Monthly, Yearly }
 private enum class Gender { Male, Female, Any }
 private enum class Experience { Entry, Y1, Y3, None }
 
+
 private fun genderToCode(g: Gender): String = when (g) {
     Gender.Male -> "male"
     Gender.Female -> "female"
@@ -756,6 +757,7 @@ private fun experienceToCode(e: Experience): String = when (e) {
 }
 
 /* -------- Preview -------- */
+/*
 @Preview(showSystemUi = true, device = Devices.PIXEL_7, locale = "ko")
 @Composable
 private fun PreviewAnnouncement3() {
@@ -765,3 +767,4 @@ private fun PreviewAnnouncement3() {
         onTabClick = {}
     )
 }
+*/

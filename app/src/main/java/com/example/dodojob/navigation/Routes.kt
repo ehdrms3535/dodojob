@@ -22,11 +22,13 @@ sealed class Route(val path: String) {
     data object Announcement3 : Route("announcement3")
     data object Announcement4 : Route("announcement4")
     data object Announcement5 : Route("announcement5")
+    data object Announcement6 : Route("announcement6")
     data object Hope : Route("hope")
     data object SignUp : Route("signup")
     data object SignUpComplete : Route("signup_complete")
     data object Main : Route("main")
     data object My : Route("my")
+    data object Resume : Route("resume")
     data object Application : Route("application")
     data object Support : Route("support")
     data object Todo : Route("todo")
@@ -76,4 +78,6 @@ sealed class Route(val path: String) {
     data object ViewResourceDetail : Route("view_resource_detail")
     data object ScrrapedHumanResource : Route("scrapped_human_resource")
     data object EditEmployerInformation : Route("edit_employer_information")
+
+
 }
