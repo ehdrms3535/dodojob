@@ -53,10 +53,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.navigation
+import com.example.dodojob.data.announcement.AnnouncementRepositorySupabase
+import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.ui.feature.announcement.Announcement2Route
 import com.example.dodojob.ui.feature.announcement.Announcement3Route
 import com.example.dodojob.ui.feature.education.*
 import com.example.dodojob.ui.feature.education.EducationViewModel
+import com.example.dodojob.ui.feature.employ.AnnouncementsProvider
 import com.example.dodojob.ui.feature.employ.EditEmployerInformationScreen
 import com.example.dodojob.ui.feature.main.EmployerAdOneScreen
 import com.example.dodojob.ui.feature.main.EmployerAdThreeScreen
@@ -64,8 +67,30 @@ import com.example.dodojob.ui.feature.main.EmployerAdTwoScreen
 import com.example.dodojob.ui.feature.profile.ResumeManageScreen
 import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
+
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
+
+    // AppNavGraph.kt 어딘가(클래스 바깥, 최상위)
+    fun com.example.dodojob.data.announcement.AnnouncementRow.toUi():
+            com.example.dodojob.ui.feature.employ.AnnouncementUi? {
+        val idSafe = id ?: return null
+        // created_at이 "2025-10-28T12:34:56Z" 처럼 와도 앞의 yyyy-MM-dd만 사용
+        val created = runCatching { java.time.LocalDate.parse(created_at?.take(10)) }
+            .getOrNull() ?: java.time.LocalDate.now()
+
+        val title = company_name ?: "(무제)"
+        val loc = listOfNotNull(company_locate, detail_locate)
+            .filter { !it.isNullOrBlank() }
+            .joinToString(" ")
+
+        return com.example.dodojob.ui.feature.employ.AnnouncementUi(
+            id = idSafe,
+            title = title,
+            location = loc,
+            createdDate = created
+        )
+    }
     NavHost(navController = nav,startDestination = Route.Intro.path) {
 
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
@@ -112,7 +137,20 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable("employer/ad/2") { EmployerAdTwoScreen(nav) }
         composable("employer/ad/3") { EmployerAdThreeScreen(nav) }
 
-        composable(Route.EmployerNotice.path) { ManagementAnnouncementRoute(nav) } // 공고관리
+        composable(Route.EmployerNotice.path) {
+            val client = LocalSupabase.current
+            val repo = remember { AnnouncementRepositorySupabase(client) }
+
+            ManagementAnnouncementRoute(
+                nav = nav,
+                provider = com.example.dodojob.ui.feature.employ.AnnouncementsProvider {
+                    // 레포 결과(List<AnnouncementRow>) -> UI(List<AnnouncementUi>)로 매핑 + 최신순 고정
+                    repo.fetchAnnouncements()
+                        .mapNotNull { it.toUi() }
+                        .sortedByDescending { it.createdDate }
+                }
+            )
+        }
 
         composable(Route.EmployerApplicant.path) { ApplicantManagementRoute(nav) } // 지원자관리
         composable(Route.SuggestInterview.path) { SuggestInterviewScreen(nav) } // 면접지원}
