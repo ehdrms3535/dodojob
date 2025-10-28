@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,9 +29,20 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.dodojob.navigation.Route   // ✅ Route 사용
+import com.example.dodojob.navigation.Route
+import com.example.dodojob.data.announcement.needlicense3.NeedlicenseDto
+import com.example.dodojob.data.announcement.needlicense3.NeedlicenseRepo
+import com.example.dodojob.data.announcement.needlicense3.NeedlisenceRepoSupabase
+import com.example.dodojob.data.announcement.preferential3.PreferentialDto
+import com.example.dodojob.data.announcement.preferential3.PreferentialRepo
+import com.example.dodojob.data.announcement.preferential3.PreferentialRepoSuSupabase
+import com.example.dodojob.data.announcement.salary3.SalaryDto
+import com.example.dodojob.data.announcement.salary3.SalaryRepository
+import com.example.dodojob.data.announcement.salary3.SalaryRepositorySupabase
+import com.example.dodojob.data.supabase.LocalSupabase
+import kotlinx.coroutines.launch
 
-/* -------- Colors (04와 동일 팔레트) -------- */
+/* -------- Colors -------- */
 private val Blue = Color(0xFF005FFF)
 private val TextGray = Color(0xFF828282)
 private val BgGray = Color(0xFFF1F5F7)
@@ -45,24 +57,22 @@ private val BOTTOM_BTN_HEIGHT = 44.dp      // 하단 버튼 통일 높이
 @Composable
 fun Announcement3Route(
     nav: NavController,
-    onNext: () -> Unit = {nav.navigate(Route.Announcement4.path) {    // ✅ 다음 단계 → 05로 이동
-        launchSingleTop = true
-    }},
+    onNext: () -> Unit = {
+        nav.navigate(Route.Announcement4.path) {
+            launchSingleTop = true
+        }
+    },
     onBack: () -> Unit = { nav.popBackStack() },
-    onTabClick: (Int) -> Unit = {idx ->
+    onTabClick: (Int) -> Unit = { idx ->
         val target = when (idx) {
             0 -> Route.Announcement.path
             1 -> Route.Announcement2.path
             2 -> Route.Announcement3.path
             else -> Route.Announcement4.path
         }
-
-        // 같은 화면이면 무시(선택 사항)
         val current = nav.currentBackStackEntry?.destination?.route
         if (current != target) {
-            nav.navigate(target) {
-                launchSingleTop = true
-            }
+            nav.navigate(target) { launchSingleTop = true }
         }
     }
 ) {
@@ -81,11 +91,25 @@ fun Announcement3Screen(
     onTabClick: (Int) -> Unit
 ) {
     val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val client = LocalSupabase.current
 
-    /* ----------- State (데모) ----------- */
+    val repo: SalaryRepository = remember(client) { SalaryRepositorySupabase(client) }
+    val needRepo: NeedlicenseRepo = remember(client) { NeedlisenceRepoSupabase(client) }
+    val prefRepo: PreferentialRepo = remember(client) { PreferentialRepoSuSupabase(client) }
+
+    var loading by rememberSaveable { mutableStateOf(false) }
+
+    /* ----------- State ----------- */
     var payType by remember { mutableStateOf(PayType.Hourly) }
+    var selectedPayType by remember { mutableStateOf("시급") }
+    var hourlyWage by remember { mutableStateOf("") }  // "12,000" 등 문자열
     var companyName by remember { mutableStateOf("") }
-    var benefits by remember { mutableStateOf(defaultBenefits().toMutableStateList()) }
+    var selectedgender by remember { mutableStateOf("")}
+
+    // 복리혜택 (bit 문자열 변환 대상)
+    val benefits = remember { defaultBenefits().toMutableStateList() }
+
     var gender by remember { mutableStateOf(Gender.Any) }
     var exp by remember { mutableStateOf(Experience.None) }
 
@@ -134,7 +158,10 @@ fun Announcement3Screen(
                             title = "시급",
                             sub = "Hourly",
                             selected = payType == PayType.Hourly,
-                            onClick = { payType = PayType.Hourly }
+                            onClick = {
+                                payType = PayType.Hourly
+                                selectedPayType = "시급"
+                            }
                         )
                     },
                     {
@@ -142,7 +169,10 @@ fun Announcement3Screen(
                             title = "일급",
                             sub = "Daily",
                             selected = payType == PayType.Daily,
-                            onClick = { payType = PayType.Daily }
+                            onClick = {
+                                payType = PayType.Daily
+                                selectedPayType = "일급"
+                            }
                         )
                     },
                     {
@@ -150,7 +180,10 @@ fun Announcement3Screen(
                             title = "월급",
                             sub = "Monthly",
                             selected = payType == PayType.Monthly,
-                            onClick = { payType = PayType.Monthly }
+                            onClick = {
+                                payType = PayType.Monthly
+                                selectedPayType = "월급"
+                            }
                         )
                     },
                     {
@@ -158,9 +191,22 @@ fun Announcement3Screen(
                             title = "연봉",
                             sub = "Yearly",
                             selected = payType == PayType.Yearly,
-                            onClick = { payType = PayType.Yearly }
+                            onClick = {
+                                payType = PayType.Yearly
+                                selectedPayType = "연봉"
+                            }
                         )
                     }
+                )
+
+                Spacer(Modifier.height(12.dp))
+                SubLabel("시급")
+                Spacer(Modifier.height(6.dp))
+                MoneyLineField(
+                    value = hourlyWage,
+                    placeholder = "예: 12,000",
+                    suffix = "원",
+                    onChange = { hourlyWage = it }
                 )
             }
 
@@ -184,7 +230,6 @@ fun Announcement3Screen(
             SectionCard {
                 LabelText("복리혜택")
                 Spacer(Modifier.height(6.dp))
-
                 WrapChips(
                     items = benefits,
                     onToggle = { idx ->
@@ -202,18 +247,9 @@ fun Announcement3Screen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    GenderCard(
-                        "남", gender == Gender.Male, { gender = Gender.Male },
-                        modifier = Modifier.weight(1f)
-                    )
-                    GenderCard(
-                        "여", gender == Gender.Female, { gender = Gender.Female },
-                        modifier = Modifier.weight(1f)
-                    )
-                    GenderCard(
-                        "무관", gender == Gender.Any, { gender = Gender.Any },
-                        modifier = Modifier.weight(1f)
-                    )
+                    GenderCard("남", gender == Gender.Male, { gender = Gender.Male }, modifier = Modifier.weight(1f))
+                    GenderCard("여", gender == Gender.Female, { gender = Gender.Female }, modifier = Modifier.weight(1f))
+                    GenderCard("무관", gender == Gender.Any, { gender = Gender.Any }, modifier = Modifier.weight(1f))
                 }
             }
 
@@ -221,29 +257,20 @@ fun Announcement3Screen(
             SectionCard {
                 LabelText("경력 요구사항")
                 Spacer(Modifier.height(6.dp))
-
                 TwoByTwo(
-                    {
-                        ExpCard("신입", exp == Experience.Entry) { exp = Experience.Entry }
-                    },
-                    {
-                        ExpCard("1년↑", exp == Experience.Y1) { exp = Experience.Y1 }
-                    },
-                    {
-                        ExpCard("3년↑", exp == Experience.Y3) { exp = Experience.Y3 }
-                    },
-                    {
-                        ExpCard("경력무관", exp == Experience.None, filled = true) { exp = Experience.None }
-                    }
+                    { ExpCard("신입",   exp == Experience.Entry) { exp = Experience.Entry } },
+                    { ExpCard("1년↑",  exp == Experience.Y1)    { exp = Experience.Y1 } },
+                    { ExpCard("3년↑",  exp == Experience.Y3)    { exp = Experience.Y3 } },
+                    { ExpCard("경력무관", exp == Experience.None) { exp = Experience.None } },
                 )
             }
 
-            /* 하단 버튼: 이전(작게) / 다음(크게) */
+            /* 하단 버튼: 이전 / 다음 */
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(CardBg)
-                    .padding(vertical = 20.dp, horizontal = 16.dp), // 양옆 패딩 줄임
+                    .padding(vertical = 20.dp, horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
@@ -262,7 +289,39 @@ fun Announcement3Screen(
                     ) { Text("이전", fontSize = 15.sp, fontWeight = FontWeight.Medium) }
 
                     Button(
-                        onClick = onNext,
+                        onClick = {
+                            scope.launch {
+                                loading = true
+                                runCatching {
+                                    val benefitBits = benefitsToBitString(benefits)
+
+                                    val salary = SalaryDto(
+                                        salary_type = selectedPayType,                          // 급여유형 ("시급" 등)
+                                        salary_amount = hourlyWage.filter { it.isDigit() }
+                                            .toLongOrNull() ?: 0L,                              // 시급 숫자 저장
+                                        benefit = benefitBits,                                  // 복리혜택 bit 문자열
+                                        career = experienceToCode(exp),                         // 경력 코드(또는 그대로 문자열)
+                                        gender = genderToCode(gender)                           // 성별 코드(또는 그대로 문자열)
+                                    )
+                                    repo.insertSalary(salary)
+
+                                    val preferential = PreferentialDto(
+                                        preferential_treatment = ""   // 스키마에 맞춰 채워줘
+                                    )
+                                    prefRepo.insertPreferential(preferential)
+
+                                    val needlicense = NeedlicenseDto(
+                                        need1 = ""                     // 스키마에 맞춰 채워줘
+                                    )
+                                    needRepo.insertNeedlisence(needlicense)
+                                }.onSuccess {
+                                    onNext()    // 실제 호출
+                                }.onFailure {
+                                    // TODO: 에러 핸들링 (스낵바/토스트 등)
+                                }
+                                loading = false
+                            }
+                        },
                         modifier = Modifier
                             .weight(1.4f)
                             .height(BOTTOM_BTN_HEIGHT),
@@ -345,7 +404,7 @@ private fun TabBar3(
     }
 }
 
-/* ====== 재사용 컴포넌트 (04와 톤 통일) ====== */
+/* ====== 재사용 컴포넌트 ====== */
 @Composable
 private fun SectionCard(
     padding: Dp = 20.dp,
@@ -443,7 +502,7 @@ private fun TwoByTwo(
     }
 }
 
-/* --- 급여 카드 (규격 고정) --- */
+/* --- 급여 카드 --- */
 @Composable
 private fun PayCard(
     title: String,
@@ -477,7 +536,7 @@ private fun PayCard(
     }
 }
 
-/* --- 성별 카드 (규격 고정) --- */
+/* --- 성별 카드 --- */
 @Composable
 private fun GenderCard(
     text: String,
@@ -504,12 +563,11 @@ private fun GenderCard(
     }
 }
 
-/* --- 경력 카드 (규격 고정) --- */
+/* --- 경력 카드 (selected만 반영하도록 단순화) --- */
 @Composable
 private fun ExpCard(
     text: String,
     selected: Boolean,
-    filled: Boolean = false,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(CARD_CORNER)
@@ -519,37 +577,64 @@ private fun ExpCard(
             .height(CARD_HEIGHT)
             .clip(shape)
             .border(1.dp, Blue, shape)
-            .background(
-                when {
-                    filled -> Blue
-                    selected -> Blue
-                    else -> Color.White
-                },
-                shape
-            )
+            .background(if (selected) Blue else Color.White, shape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text,
             fontWeight = FontWeight.Bold,
-            color = if (filled || selected) Color.White else Blue
+            color = if (selected) Color.White else Blue
         )
     }
 }
 
-/* --- 복리혜택 칩(2열 래핑, 규격 고정) --- */
-private data class Benefit(val name: String, val selected: Boolean)
+/* --- 복리혜택 비트 인코딩용 모델/헬퍼 --- */
+private enum class BenefitKey {
+    FOUR_INS,      // 4대보험
+    MEAL,          // 식사 제공
+    TRANSPORT,     // 교통비
+    HOLIDAY_BONUS, // 명절 보너스
+    OVERTIME,      // 야근수당
+    UNIFORM        // 근무복 지급
+}
 
-private fun defaultBenefits() = listOf(
-    Benefit("4대보험", false),
-    Benefit("식사 제공", false),
-    Benefit("교통비", false),
-    Benefit("명절 보너스", false),
-    Benefit("야근수당", false),
-    Benefit("근무복 지급", false)
+private data class Benefit(
+    val key: BenefitKey,
+    val name: String,
+    val selected: Boolean
 )
 
+private fun defaultBenefits() = listOf(
+    Benefit(BenefitKey.FOUR_INS,      "4대보험",    false),
+    Benefit(BenefitKey.MEAL,          "식사 제공",  false),
+    Benefit(BenefitKey.TRANSPORT,     "교통비",    false),
+    Benefit(BenefitKey.HOLIDAY_BONUS, "명절 보너스", false),
+    Benefit(BenefitKey.OVERTIME,      "야근수당",   false),
+    Benefit(BenefitKey.UNIFORM,       "근무복 지급", false)
+)
+
+/** 선택 상태 → bit 문자열 (예: "101001") */
+private fun benefitsToBitString(list: List<Benefit>): String {
+    val byKey = list.associateBy { it.key }
+    return BenefitKey.entries.joinToString("") { key ->
+        if (byKey[key]?.selected == true) "1" else "0"
+    }
+}
+
+/** bit 문자열 → 선택 상태 적용 (수정 화면 복원용, 필요 시 사용) */
+@Suppress("unused")
+private fun applyBitStringToBenefits(bit: String, list: MutableList<Benefit>) {
+    val max = minOf(bit.length, BenefitKey.entries.size)
+    val indexByKey = BenefitKey.entries.withIndex().associate { it.value to it.index }
+    list.replaceAll { b ->
+        val idx = indexByKey[b.key]!!
+        val sel = if (idx < max) bit[idx] == '1' else false
+        b.copy(selected = sel)
+    }
+}
+
+/* --- 복리혜택 칩(2열 래핑) --- */
 @Composable
 private fun WrapChips(
     items: List<Benefit>,
@@ -588,6 +673,7 @@ private fun WrapChips(
     }
 }
 
+/* --- 기타 공용 --- */
 @Composable
 private fun BottomNavPlaceholder() {
     Box(
@@ -598,10 +684,76 @@ private fun BottomNavPlaceholder() {
     )
 }
 
-/* --- enums --- */
+@Composable
+private fun MoneyLineField(
+    value: String,
+    placeholder: String,
+    suffix: String = "원",
+    onChange: (String) -> Unit
+) {
+    val shape = RoundedCornerShape(CARD_CORNER)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .border(1.dp, Blue, shape)
+            .clip(shape)
+            .background(Color.White)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = { raw ->
+                onChange(formatMoney(raw))
+            },
+            textStyle = TextStyle(fontSize = 13.sp, color = Color.Black),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            singleLine = true,
+            decorationBox = { inner ->
+                if (value.isEmpty()) {
+                    Text(placeholder, fontSize = 13.sp, color = TextGray)
+                }
+                inner()
+            }
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(suffix, fontSize = 13.sp, color = TextGray, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+private fun formatMoney(input: String): String {
+    val digits = input.filter { it.isDigit() }
+    if (digits.isEmpty()) return ""
+    val sb = StringBuilder()
+    var cnt = 0
+    for (i in digits.length - 1 downTo 0) {
+        sb.append(digits[i])
+        cnt++
+        if (cnt % 3 == 0 && i != 0) sb.append(',')
+    }
+    return sb.reverse().toString()
+}
+
+/* --- enums & 코드 매핑 --- */
 private enum class PayType { Hourly, Daily, Monthly, Yearly }
 private enum class Gender { Male, Female, Any }
 private enum class Experience { Entry, Y1, Y3, None }
+
+private fun genderToCode(g: Gender): String = when (g) {
+    Gender.Male -> "male"
+    Gender.Female -> "female"
+    Gender.Any -> "all"
+}
+
+private fun experienceToCode(e: Experience): String = when (e) {
+    Experience.Entry -> "ENTRY"
+    Experience.Y1 -> "Y1_PLUS"
+    Experience.Y3 -> "Y3_PLUS"
+    Experience.None -> "NONE"
+}
 
 /* -------- Preview -------- */
 @Preview(showSystemUi = true, device = Devices.PIXEL_7, locale = "ko")
