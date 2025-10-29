@@ -245,7 +245,7 @@ fun PreLoginScreen(nav: NavController, sessionvm: SessionViewModel) {
             OutlinedButton(
                 onClick = {
                     sessionvm.setrole(role = "고용주")
-                    nav.navigate(Route.Verify.path) { launchSingleTop = true }
+                    nav.navigate(Route.PreVerify.path) { launchSingleTop = true }
                 },
                 modifier = Modifier
                     .fillMaxWidth().height(47.dp).padding(horizontal = 16.dp),
