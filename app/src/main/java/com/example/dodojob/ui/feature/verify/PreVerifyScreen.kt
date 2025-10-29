@@ -93,6 +93,7 @@ fun PreVerifyScreen(
                         )
                     }
                 }
+                Spacer(Modifier.height(10.dp))
 
                 // 타이틀 — 24/600
                 Text(
