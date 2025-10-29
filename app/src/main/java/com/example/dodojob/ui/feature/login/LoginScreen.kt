@@ -1,9 +1,10 @@
 package com.example.dodojob.ui.feature.login
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,23 +15,28 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.data.supabase.LocalSupabase
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.*
-import com.example.dodojob.session.CurrentUser
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.session.SessionViewModel
+import androidx.compose.ui.unit.em
+
 @Serializable
 private data class LoginRow(
     val id: String,
@@ -41,107 +47,132 @@ private data class LoginRow(
 )
 
 @Composable
-fun LoginScreen(nav: NavController,sessionVm: SessionViewModel) {
-    var id by remember { mutableStateOf("") }          // username
+fun LoginScreen(nav: NavController, sessionVm: SessionViewModel) {
+    var id by remember { mutableStateOf("") }
     var pw by remember { mutableStateOf("") }
     var autoLogin by remember { mutableStateOf(false) }
-
-    val client = LocalSupabase.current
-    val scope = rememberCoroutineScope()
     var loading by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
 
-    BoxWithConstraints(
+    val client = LocalSupabase.current
+    val scope = rememberCoroutineScope()
+
+    val BrandBlue = Color(0xFF005FFF)
+    val Bg = Color(0xFFF1F5F7)
+    val StatusGrey = Color(0xFFEFEFEF)
+    val LineGrey = Color(0xFFC0C0C0)
+    val SubBtnBorder = Color(0xFFE1E1E1)
+    val SubBtnText = Color(0xFF7E7D7D)
+    val letter = (-0.019f).em
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1F5F7))
+            .background(Bg)
     ) {
-        val W = maxWidth
-        val H = maxHeight
+        // 상태바
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(24.dp)
+                .background(StatusGrey)
+                .align(Alignment.TopCenter)
+        )
 
-        val screenHPad   = (W * 0.045f)
-        val topVPad      = (H * 0.03f)
-        val backSizeSp   = (W.value * 0.065f).sp
-        val titleSp      = (W.value * 0.09f).sp
-        val subtitleSp   = (W.value * 0.065f).sp
-        val subtitleLH   = (W.value * 0.095f).sp
-        val fieldGap     = (H * 0.015f).coerceIn(8.dp, 18.dp)
-        val sectionGap   = (H * 0.02f).coerceIn(12.dp, 24.dp)
-        val circleSize   = (W * 0.065f).coerceIn(20.dp, 28.dp)
-        val checkSize    = (circleSize * 0.65f)
-        val loginBtnH    = (H * 0.07f).coerceIn(48.dp, 60.dp)
-        val signBtnH     = (H * 0.07f).coerceIn(48.dp, 60.dp)
-        val betweenBtns  = (H * 0.02f).coerceIn(12.dp, 20.dp)
-
+        // 본문
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = screenHPad)
+                .padding(bottom = 43.dp), // 하단 네비 영역 고려
+            horizontalAlignment = Alignment.Start
         ) {
-            Spacer(Modifier.height(topVPad))
-            Spacer(Modifier.height(topVPad))
+            Spacer(Modifier.height(24.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "<",
-                    fontSize = backSizeSp,
-                    color = Color.Black,
-                    modifier = Modifier.clickable { nav.popBackStack() }
+            Box(
+                modifier = Modifier
+                    .padding(top = 24.dp, start = 6.dp)  // 위치 여백
+                    .size(48.dp)                          // 🔹 터치 영역 (표준)
+                    .clickable { nav.popBackStack() },
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.back),
+                    contentDescription = "뒤로가기",
+                    modifier = Modifier.size(24.dp)       // 🔹 실제 아이콘 크기 (Figma 기준)
                 )
             }
 
-            Spacer(Modifier.height((H * 0.005f).coerceAtLeast(2.dp)))
+            Spacer(Modifier.height(16.dp))
             Text(
-                "로그인",
-                fontSize = titleSp,
+                text = "로그인",
+                fontSize = 32.sp,
                 fontWeight = FontWeight.SemiBold,
+                letterSpacing = letter,
                 color = Color.Black,
-                modifier = Modifier.padding(start = (W * 0.02f).coerceIn(6.dp, 14.dp))
+                modifier = Modifier.padding(start = 16.dp)
             )
 
-            Spacer(Modifier.height((H * 0.01f).coerceIn(8.dp, 16.dp)))
+            Spacer(Modifier.height(16.dp))
             Text(
-                "당신의 경험이 빛날 곳,\n두두잡에서 만나보세요.",
-                fontSize = subtitleSp,
+                text = "당신의 경험이 빛날 곳,\n두두잡에서 만나보세요.",
+                fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold,
+                letterSpacing = letter,
                 color = Color.Black,
-                lineHeight = subtitleLH,
-                modifier = Modifier.padding(start = (W * 0.02f).coerceIn(6.dp, 14.dp))
+                lineHeight = 36.sp,
+                modifier = Modifier.padding(start = 16.dp)
             )
 
-            Spacer(Modifier.height((H * 0.03f).coerceIn(16.dp, 32.dp)))
+            Spacer(Modifier.height(20.dp))
+            UnderlineTextField(
+                value = id,
+                onValueChange = { id = it },
+                placeholder = "아이디 혹은 전화번호",
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(Modifier.height(12.dp))
+            UnderlineTextField(
+                value = pw,
+                onValueChange = { pw = it },
+                placeholder = "비밀번호",
+                isPassword = true,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
-            UnderlineTextField(value = id, onValueChange = { id = it }, placeholder = "아이디")
-            Spacer(Modifier.height(fieldGap))
-            UnderlineTextField(value = pw, onValueChange = { pw = it }, placeholder = "비밀번호", isPassword = true)
-
-            Spacer(Modifier.height(sectionGap))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(
-                    onClick = { autoLogin = !autoLogin },
-                    modifier = Modifier.size(circleSize),
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(0.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (autoLogin) Color(0xFF555555) else Color(0xFFDDDDDD),
-                        contentColor = Color.White
-                    )
-                ) {
-                    if (autoLogin) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "자동 로그인 체크됨",
-                            tint = Color.White,
-                            modifier = Modifier.size(checkSize)
-                        )
-                    }
+            Spacer(Modifier.height(22.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 16.dp, bottom = 30.dp)
+            ) {
+                // 상태에 따라 이미지 리소스 선택
+                val iconRes = if (autoLogin) {
+                    R.drawable.autologin_checked
+                } else {
+                    R.drawable.autologin_unchecked
                 }
-                Spacer(Modifier.width((W * 0.02f).coerceIn(6.dp, 14.dp)))
-                Text("자동로그인", fontSize = (W.value * 0.045f).sp, color = Color.Black)
+
+                Image(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = "자동로그인",
+                    modifier = Modifier
+                        .size(width = 24.dp, height = 25.dp)   // Figma 기준
+                        .padding(top = 1.dp)
+                        .clickable { autoLogin = !autoLogin }
+                )
+
+                Spacer(Modifier.width(8.dp))
+
+                Text(
+                    "자동로그인",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = letter,
+                    color = Color.Black
+                )
             }
 
-            Spacer(Modifier.height(sectionGap))
+            // 로그인 버튼
             Button(
                 onClick = {
                     status = null
@@ -152,7 +183,6 @@ fun LoginScreen(nav: NavController,sessionVm: SessionViewModel) {
                                 filter { eq("username", id.trim()) }
                                 limit(1)
                             }
-                            // 수동 디코딩 (decodeList 미사용)
                             val json = Json { ignoreUnknownKeys = true }
                             val list = json.decodeFromJsonElement(
                                 ListSerializer(LoginRow.serializer()),
@@ -160,7 +190,6 @@ fun LoginScreen(nav: NavController,sessionVm: SessionViewModel) {
                             )
                             val user = list.firstOrNull() ?: error("존재하지 않는 아이디입니다.")
                             if (user.password != pw) error("비밀번호가 일치하지 않습니다.")
-
                             val currentJob = user.job?.trim().takeUnless { it.isNullOrEmpty() } ?: "미지정"
                             if (currentJob != "시니어") error("시니어 전용 탭입니다. (현재: $currentJob)")
                             user
@@ -169,7 +198,7 @@ fun LoginScreen(nav: NavController,sessionVm: SessionViewModel) {
                             sessionVm.setLogin(
                                 id = user.id,
                                 name = user.username,
-                                role = "시니어" // 혹은 "고용주"
+                                role = "시니어"
                             )
                             nav.navigate(Route.Main.path) {
                                 popUpTo(Route.Login.path) { inclusive = true }
@@ -183,60 +212,122 @@ fun LoginScreen(nav: NavController,sessionVm: SessionViewModel) {
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(loginBtnH),
-                shape = RoundedCornerShape((W * 0.08f).coerceIn(16.dp, 28.dp)),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005FFF)),
-                enabled = !loading && id.isNotBlank() && pw.isNotBlank()
+                    .height(57.dp)
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BrandBlue),
+                enabled = !loading && id.isNotBlank() && pw.isNotBlank(),
+                contentPadding = PaddingValues(vertical = 13.dp)
             ) {
                 Text(
-                    if (loading) "로그인 중..." else "로그인",
-                    fontSize = (W.value * 0.055f).sp,
+                    text = if (loading) "로그인 중..." else "로그인",
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
+                    letterSpacing = letter,
                     color = Color.White
                 )
             }
 
             Spacer(Modifier.height(8.dp))
-            status?.let { Text(it, color = Color.Black) }
+            status?.let { Text(it, color = Color.Black, modifier = Modifier.padding(start = 16.dp)) }
 
-            Spacer(Modifier.height(betweenBtns))
+            Spacer(Modifier.height(6.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = { /* TODO */ }) {
-                    Text("아이디 찾기", fontSize = (W.value * 0.043f).sp, color = Color.Black)
+                // 왼쪽 텍스트
+                TextButton(
+                    onClick = { /* TODO */ },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Black)
+                ) {
+                    Text(
+                        "아이디 찾기",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-0.019f).em,
+                        color = Color.Black
+                    )
                 }
-                Text(" | ", fontSize = (W.value * 0.043f).sp, color = Color.Black)
-                TextButton(onClick = { /* TODO */ }) {
-                    Text("비밀번호 찾기", fontSize = (W.value * 0.043f).sp, color = Color.Black)
+
+                // 세로 구분선 (|) + 양옆 여백
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)   // 🔹 구분선 좌우 간격 추가 (기존 핵심)
+                        .height(18.dp)
+                        .width(1.dp)
+                        .background(Color.Black)
+                )
+
+                // 오른쪽 텍스트
+                TextButton(
+                    onClick = { /* TODO */ },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Black)
+                ) {
+                    Text(
+                        "비밀번호 찾기",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-0.019f).em,
+                        color = Color.Black
+                    )
                 }
             }
 
-            Spacer(Modifier.height(betweenBtns))
+            Spacer(Modifier.height(10.dp))
             OutlinedButton(
                 onClick = {
-                    sessionVm.setrole(
-                        role = "시니어" // 혹은 "고용주"
-                    )
-                    nav.navigate(Route.Verify.path) { launchSingleTop = true } },
+                    sessionVm.setrole(role = "시니어")
+                    nav.navigate(Route.Verify.path) { launchSingleTop = true }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(signBtnH),
-                shape = RoundedCornerShape((W * 0.08f).coerceIn(16.dp, 28.dp)),
-                border = ButtonDefaults.outlinedButtonBorder,
+                    .height(57.dp)
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(10.dp),
+                border = ButtonDefaults.outlinedButtonBorder.copy(
+                    brush = androidx.compose.ui.graphics.SolidColor(SubBtnBorder)
+                ),
                 colors = ButtonDefaults.outlinedButtonColors(
                     containerColor = Color.White,
-                    contentColor = Color(0xFF7E7D7D)
-                )
+                    contentColor = SubBtnText
+                ),
+                contentPadding = PaddingValues(vertical = 13.dp)
             ) {
-                Text("휴대폰 번호로 회원가입", fontSize = (W.value * 0.055f).sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "간편 회원가입",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = letter
+                )
             }
+
+            Spacer(Modifier.height(24.dp))
         }
+
+        // 하단 네비 + 홈 인디케이터
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(43.dp)
+                .align(Alignment.BottomCenter)
+                .background(Color(0xFFF4F5F7))
+        )
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 7.dp)
+                .width(130.78.dp)
+                .height(4.7.dp)
+                .clip(RoundedCornerShape(94.dp))
+                .background(Color.Black)
+        )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UnderlineTextField(
     value: String,
@@ -245,28 +336,37 @@ private fun UnderlineTextField(
     isPassword: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val letter = (-0.019f).em
+    val LineGrey = Color(0xFFC0C0C0)
+
     TextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        placeholder = { Text(placeholder, color = Color(0xFFA6A6A6)) },
+        placeholder = {
+            Text(
+                placeholder,
+                color = Color(0xFFA6A6A6),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = letter
+            )
+        },
+        textStyle = LocalTextStyle.current.copy(
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = letter,
+            color = Color.Black
+        ),
         modifier = modifier.fillMaxWidth(),
         visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
         shape = RoundedCornerShape(0.dp),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
-            disabledContainerColor = Color.Transparent,
-            errorContainerColor = Color.Transparent,
-            focusedIndicatorColor = Color.Black,
-            unfocusedIndicatorColor = Color(0xFFA2A2A2),
-            disabledIndicatorColor = Color(0xFFE0E0E0),
-            cursorColor = Color.Black,
-            focusedTextColor = Color.Black,
-            unfocusedTextColor = Color.Black,
-            errorTextColor = Color.Black,
-            focusedPlaceholderColor = Color(0xFFA6A6A6),
-            unfocusedPlaceholderColor = Color(0xFFA6A6A6)
+            focusedIndicatorColor = LineGrey,
+            unfocusedIndicatorColor = LineGrey,
+            cursorColor = Color.Black
         )
     )
 }
