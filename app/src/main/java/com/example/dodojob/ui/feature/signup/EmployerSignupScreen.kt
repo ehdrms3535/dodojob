@@ -33,6 +33,7 @@ import com.example.dodojob.data.user.UserRepository
 import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.data.user.UserRepositorySupabase
 import com.example.dodojob.ui.feature.verify.SignUpPrefill
+import com.example.dodojob.ui.feature.verify.PreVerifyPrefill
 import com.example.dodojob.data.user.UserDto
 import java.util.UUID
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,7 +51,7 @@ fun EmployerSignupScreen(nav: NavController) {
 
     // Verify → SignUp에서 전달된 값
     val prefill = remember {
-        nav.previousBackStackEntry?.savedStateHandle?.get<SignUpPrefill>("prefill")
+        nav.previousBackStackEntry?.savedStateHandle?.get<PreVerifyPrefill>("prefill")  // ✅ 타입 맞춤
     }
 
     // **** 데이터만 변경: 담당자명/연락처/이메일/사업자번호 ****
@@ -280,10 +281,4 @@ fun EmployerSignupScreen(nav: NavController) {
             }
         }
     }
-}
-
-@Preview(showBackground = true, widthDp = 360, heightDp = 800, name = "Employer Signup UI")
-@Composable
-fun EmployerSignupScreenPreview() {
-    EmployerSignupScreen(nav = rememberNavController())
 }
