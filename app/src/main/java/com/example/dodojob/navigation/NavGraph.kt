@@ -88,7 +88,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             createdDate = created
         )
     }
-    NavHost(navController = nav,startDestination = Route.Announcement4.path) {
+    NavHost(navController = nav,startDestination = Route.Announcement5.path) {
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path) { LoginScreen(nav, sessionVm) }        // 3. 시니어 로그인
@@ -116,7 +116,21 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.Announcement3.path) { Announcement3Route(nav) }   // 공고등록 3
         composable(Route.Announcement4.path) { Announcement4Route(nav) } // 공고등록 4
         composable(Route.Announcement5.path) { Announcement5Route(nav) } // 공고등록 5
-
+        composable(Route.Announcement6.path) {
+            com.example.dodojob.ui.feature.announcement.Announcement6Screen(
+                onManageClick = {
+                    // 예시: 고용주 공고 관리로 이동
+                    nav.navigate(Route.EmployerNotice.path)
+                },
+                onNewPostClick = {
+                    // 예시: 공고 등록 처음 화면으로 이동
+                    nav.navigate(Route.Announcement.path) {
+                        popUpTo(Route.Announcement.path) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
 
         composable(Route.My.path) { ProfileRoute(nav) } // 시니어 프로필
         composable(ApplyRoute.path) { ApplicationRoute(nav) } // 지원서 작성
