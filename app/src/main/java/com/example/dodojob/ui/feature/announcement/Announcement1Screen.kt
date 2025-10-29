@@ -18,9 +18,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
@@ -39,6 +37,7 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.dodojob.R
 import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.data.announcement.AnnoucementRepository
 import com.example.dodojob.data.announcement.AnnouncementRepositorySupabase
@@ -62,6 +62,8 @@ import kotlinx.coroutines.launch
 import com.example.dodojob.dao.getUsernameById
 import com.example.dodojob.data.announcement.AnnouncementDto
 import com.example.dodojob.data.announcement.AnnoucementUrlDto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // ===== 네비게이터 분리 =====
 interface AnnouncementNavigator {
@@ -100,7 +102,6 @@ class AnnouncementNavigatorImpl(
         nav.navigate(target) {
             launchSingleTop = true
             restoreState = true
-            // 시작 지점까지 스택 정리 필요 없으면 이 블록은 지워도 됩니다.
             val start = nav.graph.startDestinationId
             popUpTo(start) { saveState = true }
         }
@@ -167,7 +168,31 @@ fun Announcement1Route(
     Announcement1Screen(navigator = navigator)
 }
 
-// ===== 메인 화면 =====
+/* ----------------------------------------------------------
+   /02 스타일 토큰 & 유틸
+---------------------------------------------------------- */
+private val Blue       = Color(0xFF005FFF) // 프라이머리
+private val TextGray   = Color(0xFF828282) // 문구/보더 그레이
+private val BorderGray = Color(0xFF828282)
+private val BgGray     = Color(0xFFF1F5F7) // 화면 배경
+private val CardBg     = Color.White
+
+private fun Double.em() = (this * 16).sp // -0.019em 같은 값 보정용
+private fun Float.em() = (this * 16).sp
+
+@Composable
+private fun StatusBarBar() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(24.dp)
+            .background(Color(0xFFEFEFEF))
+    )
+}
+
+/* ----------------------------------------------------------
+   메인 화면 (/01 → /02 스타일로 통일)
+---------------------------------------------------------- */
 @Composable
 fun Announcement1Screen(
     navigator: AnnouncementNavigator
@@ -212,9 +237,9 @@ fun Announcement1Screen(
     var companyName by rememberSaveable { mutableStateOf("") }
     var bizNo by rememberSaveable { mutableStateOf("") }
     var isPublicOrg by rememberSaveable { mutableStateOf(false) } // 공공기관 토글/체크
-    var contactName = prName
-    var contactPhone = prPhone
-    var contactEmail = prEmail
+    var contactName by rememberSaveable { mutableStateOf(prName) }
+    var contactPhone by rememberSaveable { mutableStateOf(prPhone) }
+    var contactEmail by rememberSaveable { mutableStateOf(prEmail) }
     var saveContact by rememberSaveable { mutableStateOf(false) }
 
     var placeAddressSearch by rememberSaveable { mutableStateOf("") }
@@ -229,9 +254,6 @@ fun Announcement1Screen(
     val uploadedUrls = remember { mutableStateListOf<String?>(null, null, null, null) }
     val isUploading = remember { mutableStateListOf(false, false, false, false) }
     var pendingSlot by remember { mutableStateOf<Int?>(null) }
-
-
-
 
     // 갤러리 런처
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -268,15 +290,19 @@ fun Announcement1Screen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF1F5F7))
+            .background(BgGray)
     ) {
         Column(Modifier.fillMaxSize()) {
-            // Header
+
+            // ✅ StatusBar (24dp)
+            StatusBarBar()
+
+            // ✅ Header (76dp)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
                     .height(76.dp)
+                    .background(CardBg)
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -285,7 +311,7 @@ fun Announcement1Screen(
                     fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
-                    letterSpacing = (-0.46).sp
+                    letterSpacing = (-0.019).em()
                 )
             }
 
@@ -300,19 +326,9 @@ fun Announcement1Screen(
                     Text("오류: $error", color = Color(0xFFD21B1B))
                 }
             }
-            if (preuser == null && !screenLoading) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFFFFF8E1))
-                        .padding(12.dp)
-                ) {
-                    Text("사용자 정보를 불러오지 못했어요.", color = Color(0xFF8B6C00))
-                }
-            }
 
-            // Tabs 01~04
-            TabBar(
+            // ✅ Tabs 01~04 (02 스타일)
+            TabBar02(
                 selected = 0,
                 labels = listOf("01", "02", "03", "04"),
                 onClick = navigator::onTabClick
@@ -326,63 +342,56 @@ fun Announcement1Screen(
             ) {
                 // 01. 기본정보
                 SectionCard {
-                    TitleRow(text = "01. 기본정보를 입력해주세요!")
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
+                    TitleRow(text = "01. 기본정보를 입력해주세요!")
+
+                    Spacer(Modifier.height(30.dp))
+
+                    // 근무회사명: 밑줄형
                     LabelText(text = "근무회사명")
-                    OutlinedInputM3(
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    UnderlineField(
                         value = companyName,
                         onValueChange = { companyName = it },
                         placeholder = "내용입력"
                     )
 
-                    // === 공공기관 영역 (체크박스 + 토글 버튼) ===
+                    // === 공공기관 영역 (이미지 체크로 교체) ===
                     Spacer(Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = isPublicOrg,
-                                onCheckedChange = {
-                                    isPublicOrg = it
-                                    navigator.onPublicToggle(it)
-                                }
-                            )
-                            Text(
-                                text = "공공기관",
-                                fontSize = 15.sp,
-                                color = Color(0xFF828282),
-                                letterSpacing = (-0.29).sp
-                            )
-                        }
-                        // 👉 공공기관 토글 버튼
-                        PublicToggleButton(
-                            enabled = isPublicOrg,
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ImageCheck(
+                            checked = isPublicOrg,
                             onToggle = {
                                 isPublicOrg = !isPublicOrg
                                 navigator.onPublicToggle(isPublicOrg)
                             }
                         )
+                        Spacer(Modifier.width(6.dp))
+                        Text("공공기관", fontSize = 15.sp, color = TextGray, letterSpacing = (-0.019).em())
                     }
                 }
 
                 // ✅ 구분선
-                GrayDivider()
+                SectionSpacer()
 
                 // 사업자 등록번호 + 인증하기
                 SectionCard(padding = 20.dp) {
                     LabelText(text = "사업자 등록번호")
-                    OutlinedInputM3(
+
+                    Spacer(Modifier.height(8.dp))
+
+                    SinglelineInputBox(
                         value = bizNo,
                         onValueChange = { bizNo = it },
                         placeholder = "000-00-00000"
                     )
                     Spacer(Modifier.height(12.dp))
+                    // 공공기관 체크 시 회색(비활성)
                     PrimaryButton(
                         text = "인증하기",
+                        enabled = !isPublicOrg, // 체크되면 false → 회색/disabled
                         onClick = {
                             Toast.makeText(context, "사업자번호 인증이 완료되었습니다.", Toast.LENGTH_SHORT).show()
                         }
@@ -390,12 +399,13 @@ fun Announcement1Screen(
                 }
 
                 // ✅ 구분선
-                GrayDivider()
+                SectionSpacer()
 
                 // 담당자 정보
                 SectionCard(padding = 20.dp) {
                     LabelText(text = "담당자명")
-                    OutlinedInputM3(
+                    Spacer(Modifier.height(8.dp))
+                    SinglelineInputBox(
                         value = contactName,
                         onValueChange = { contactName = it },
                         placeholder = "담당자 성함"
@@ -403,7 +413,8 @@ fun Announcement1Screen(
                     Spacer(Modifier.height(13.dp))
 
                     LabelText(text = "담당자 연락처")
-                    OutlinedInputM3(
+                    Spacer(Modifier.height(8.dp))
+                    SinglelineInputBox(
                         value = contactPhone,
                         onValueChange = { contactPhone = it },
                         placeholder = "010-0000-0000"
@@ -411,7 +422,8 @@ fun Announcement1Screen(
                     Spacer(Modifier.height(13.dp))
 
                     LabelText(text = "담당자 이메일")
-                    OutlinedInputM3(
+                    Spacer(Modifier.height(8.dp))
+                    SinglelineInputBox(
                         value = contactEmail,
                         onValueChange = { contactEmail = it },
                         placeholder = "이메일을 입력해주세요"
@@ -423,24 +435,26 @@ fun Announcement1Screen(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(
+                        ImageCheck(
                             checked = saveContact,
-                            onCheckedChange = {
-                                saveContact = it
-                                navigator.onSaveContactToggle(it)
+                            onToggle = {
+                                saveContact = !saveContact
+                                navigator.onSaveContactToggle(saveContact)
                             }
                         )
+                        Spacer(Modifier.width(6.dp))
                         Text(
                             text = "입력한 담당자 정보 저장",
                             fontSize = 15.sp,
-                            color = Color(0xFF828282),
-                            letterSpacing = (-0.29).sp
+                            color = TextGray,
+                            letterSpacing = (-0.019).em()
                         )
                     }
+
                 }
 
                 // ✅ 구분선
-                GrayDivider()
+                SectionSpacer()
 
                 // 주소 블록
                 SectionCard(padding = 20.dp) {
@@ -455,7 +469,8 @@ fun Announcement1Screen(
                             horizontalAlignment = Alignment.Start
                         ) {
                             LabelText(text = "회사주소")
-                            OutlinedInputM3(
+                            Spacer(Modifier.height(8.dp))
+                            SinglelineInputBox(
                                 value = placeAddressSearch,
                                 onValueChange = { placeAddressSearch = it },
                                 placeholder = "주소를 검색해주세요"
@@ -538,7 +553,9 @@ fun Announcement1Screen(
                                 .widthIn(max = 328.dp)
                         ) {
                             LabelText(text = "상세주소")
-                            OutlinedInputM3(
+                            Spacer(Modifier.height(8.dp))
+
+                            SinglelineInputBox(
                                 value = placeAddressDetail,
                                 onValueChange = { placeAddressDetail = it },
                                 placeholder = "상세주소를 입력해주세요"
@@ -548,72 +565,29 @@ fun Announcement1Screen(
                 }
 
                 // ✅ 구분선
-                GrayDivider()
+                SectionSpacer()
 
-                // 근무지 사진 업로드
-                SectionCard {
-                    Text(
-                        text = "근무지 사진",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black,
-                        letterSpacing = (-0.34).sp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    )
+                // 근무지 사진 업로드 (라벨 16dp 정렬 유지 + 그리드만 12dp)
+                SectionCardCustomPadding(paddingHorizontal = 0.dp) {
+                    // 라벨은 다른 섹션과 동일하게 16dp
+                    LabelText(text = "근무지 사진", modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(Modifier.height(10.dp))
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        repeat(4) { slot ->
-                            Box(
-                                modifier = Modifier
-                                    .size(74.5.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color.White)
-                                    .border(1.dp, Color(0xFF68A0FE), RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        pendingSlot = slot
-                                        galleryLauncher.launch("image/*")
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                when {
-                                    isUploading[slot] -> {
-                                        CircularProgressIndicator(
-                                            strokeWidth = 2.dp,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                    imageUris[slot] != null -> {
-                                        AsyncImage(
-                                            model = imageUris[slot],
-                                            contentDescription = "근무지 사진 $slot",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                        )
-                                    }
-                                    else -> {
-                                        DashedAddBox(size = 74.5.dp) {
-                                            pendingSlot = slot
-                                            galleryLauncher.launch("image/*")
-                                        }
-                                    }
-                                }
-                            }
+                    // 그리드의 바깥 여백을 12dp로 통일 (아이템 간도 12dp)
+                    PhotoGridRow(
+                        gap = 12.dp,
+                        outerPadding = 12.dp,
+                        isUploading = isUploading,
+                        imageUris = imageUris,
+                        onAddClick = { slot ->
+                            pendingSlot = slot
+                            galleryLauncher.launch("image/*")
                         }
-                    }
-                    Spacer(Modifier.height(10.dp))
+                    )
                 }
 
                 // ✅ 구분선
-                GrayDivider()
+                SectionSpacer()
 
                 // 다음단계 버튼 (업로드 확인 후 이동)
                 SectionCard {
@@ -624,15 +598,21 @@ fun Announcement1Screen(
                             Toast.makeText(context, "근무지 사진을 1장 이상 업로드해 주세요.", Toast.LENGTH_SHORT).show()
                             return@PrimaryButton
                         }
+                        val companyNameSnapshot = companyName
+                        val isPublicOrgSnapshot = isPublicOrg
+                        val bizNoSnapshot = bizNo
+                        val placeAddressSearchSnapshot = placeAddressSearch
+                        val placeAddressDetailSnapshot = placeAddressDetail
+
                         scope.launch {
                             nextLoading = true
                             runCatching {
                                 val Save1 = AnnouncementDto(
-                                    company_name   = companyName,
-                                    public         = isPublicOrg,
-                                    company_id     = bizNo,
-                                    company_locate = placeAddressSearch,
-                                    detail_locate  = placeAddressDetail
+                                    company_name   = companyNameSnapshot,
+                                    public         = isPublicOrgSnapshot,
+                                    company_id     = bizNoSnapshot,
+                                    company_locate = placeAddressSearchSnapshot,
+                                    detail_locate  = placeAddressDetailSnapshot
                                 )
                                 val id = repo.insertAnnouncement(Save1)
 
@@ -645,11 +625,11 @@ fun Announcement1Screen(
                                 )
                                 repo.insertAnnouncementUrl(Save2)
                             }.onSuccess {
-                                // 반드시 메인 스레드에서 네비게이트
-                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                    navigator.onNextStep()}
+                                withContext(Dispatchers.Main) {
+                                    navigator.onNextStep()
+                                }
                             }.onFailure {
-                                android.util.Log.e("HopeWorkFilter", "insert failed", it)
+                                android.util.Log.e("Announcement1", "insert failed", it)
                                 Toast.makeText(context, "저장 실패: ${it.message}", Toast.LENGTH_SHORT).show()
                             }.also {
                                 nextLoading = false
@@ -678,38 +658,13 @@ fun Announcement1Screen(
     }
 }
 
-// ===== 공통 UI =====
+/* ----------------------------------------------------------
+   공통 UI 컴포넌트 (02 스타일)
+---------------------------------------------------------- */
 
+// TabBar (02 스타일)
 @Composable
-private fun PublicToggleButton(
-    enabled: Boolean,
-    onToggle: () -> Unit
-) {
-    val shape = RoundedCornerShape(100)
-    val borderColor = if (enabled) Color(0xFF005FFF) else Color(0xFF828282)
-    val textColor = if (enabled) Color(0xFF005FFF) else Color(0xFF828282)
-    val bg = if (enabled) Color(0x1A005FFF) else Color.Transparent
-
-    Box(
-        modifier = Modifier
-            .height(32.dp)
-            .border(1.dp, borderColor, shape)
-            .background(bg, shape)
-            .padding(horizontal = 12.dp)
-            .clickable { onToggle() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = if (enabled) "공공기관: ON" else "공공기관: OFF",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = textColor
-        )
-    }
-}
-
-@Composable
-private fun TabBar(
+private fun TabBar02(
     selected: Int,
     labels: List<String>,
     onClick: (Int) -> Unit
@@ -725,7 +680,7 @@ private fun TabBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
-            .background(Color.White)
+            .background(CardBg)
     ) {
         Row(
             modifier = Modifier
@@ -737,18 +692,19 @@ private fun TabBar(
             labels.forEachIndexed { idx, text ->
                 Box(
                     modifier = Modifier
-                        .onGloballyPositioned { coords ->
-                            val center = coords.positionInParent().x + coords.size.width / 2f
+                        .onGloballyPositioned { c ->
+                            val center = c.positionInParent().x + c.size.width / 2f
                             if (centersPx[idx] != center) centersPx[idx] = center
                         }
                         .clickable { onClick(idx) }
                 ) {
-                    val color = if (idx == selected) Color(0xFF005FFF) else Color.Black
+                    val isSel = idx == selected
                     Text(
                         text = text,
-                        color = color,
                         fontSize = 16.sp,
-                        fontWeight = if (idx == selected) FontWeight.Bold else FontWeight.Medium,
+                        letterSpacing = (-0.5).sp, // Pretendard -0.5px
+                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSel) Blue else Color.Black,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.width(24.dp)
                     )
@@ -760,7 +716,7 @@ private fun TabBar(
         if (centerPx > 0f) {
             val startInRow = with(density) { (centerPx - indicatorWidth.toPx() / 2f).toDp() }
             val targetX = rowPaddingStart + startInRow
-            val animatedX by animateDpAsState(targetValue = targetX, label = "tab-indicator")
+            val animatedX by animateDpAsState(targetValue = targetX, label = "tab-indicator-01")
 
             Box(
                 modifier = Modifier
@@ -768,12 +724,13 @@ private fun TabBar(
                     .offset(x = animatedX)
                     .width(indicatorWidth)
                     .height(4.dp)
-                    .background(Color(0xFF005FFF))
+                    .background(Blue)
             )
         }
     }
 }
 
+// 섹션 카드
 @Composable
 private fun SectionCard(
     padding: Dp = 20.dp,
@@ -782,7 +739,7 @@ private fun SectionCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(CardBg)
             .padding(vertical = padding),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -791,74 +748,191 @@ private fun SectionCard(
                 .fillMaxWidth()
                 .widthIn(max = 360.dp)
                 .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) { content() }
-    }
-}
-
-@Composable
-private fun TitleRow(text: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(30.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = text,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.Black,
-            letterSpacing = (-0.38).sp
+            content = content
         )
     }
 }
 
+// 타이틀/라벨
 @Composable
-private fun LabelText(text: String) {
+private fun TitleRow(text: String) {
+    Text(
+        text,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.019).em()
+    )
+}
+
+@Composable
+private fun LabelText(
+    text: String,
+    modifier: Modifier = Modifier
+) {
     Text(
         text = text,
         fontSize = 18.sp,
         fontWeight = FontWeight.SemiBold,
         color = Color.Black,
-        letterSpacing = (-0.34).sp,
-        modifier = Modifier
+        letterSpacing = (-0.019).em(),
+        modifier = modifier
             .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 6.dp)
+            .padding(top = 2.dp, bottom = 6.dp)
     )
 }
 
+// === 이미지 체크 박스 (공공기관 전용, 16x16 + 여유 여백) ===
 @Composable
-private fun UnderlineField( // (현재 미사용이지만 남겨둠: 디자인 복원 시 활용)
+private fun ImageCheck(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    boxSize: Dp = 24.dp,  // 터치 영역
+    iconSize: Dp = 16.dp  // 피그마 16x16
+) {
+    val iconRes = if (checked) R.drawable.announce_checked_button
+    else R.drawable.announce_unchecked_button
+
+    Box(
+        modifier = Modifier
+            .size(boxSize)
+            .clickable { onToggle() },
+        contentAlignment = Alignment.Center
+    ) {
+        // 아이콘 주변에 1.dp 여백을 둬 테두리가 더 잘 보임
+        Box(
+            modifier = Modifier
+                .size(iconSize + 2.dp)
+                .background(Color.White, RoundedCornerShape(3.dp)) // 바탕을 흰색으로 고정
+                .padding(2.dp), // 테두리 여유
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = if (checked) "checked" else "unchecked",
+                modifier = Modifier.size(iconSize),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            )
+        }
+    }
+}
+
+
+// === 저장 체크 (담당자 정보 저장용, 공공기관 체크박스와 동일 스타일) ===
+@Composable
+private fun CheckBoxLike(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    boxSize: Dp = 24.dp,   // 전체 클릭 영역
+    innerSize: Dp = 14.dp  // 실제 박스(시각 크기)
+) {
+    val shape = RoundedCornerShape(3.dp)
+    Box(
+        modifier = Modifier
+            .size(boxSize)
+            .clickable { onToggle() },
+        contentAlignment = Alignment.Center
+    ) {
+        // ✅ 외곽 테두리 + 배경 (살짝 여유 있게)
+        Box(
+            modifier = Modifier
+                .size(innerSize)
+                .border(width = 1.dp, color = Blue, shape = shape)
+                .background(if (checked) Blue else Color.Transparent, shape = shape),
+            contentAlignment = Alignment.Center
+        ) {
+            // ✅ 체크 표시
+            if (checked) {
+                Canvas(modifier = Modifier.size(innerSize * 0.65f)) {
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(size.width * 0.15f, size.height * 0.55f),
+                        end = Offset(size.width * 0.45f, size.height * 0.8f),
+                        strokeWidth = 2f
+                    )
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(size.width * 0.45f, size.height * 0.8f),
+                        end = Offset(size.width * 0.85f, size.height * 0.2f),
+                        strokeWidth = 2f
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+// 입력 박스 (싱글라인 라운드 + 회색보더)
+@Composable
+private fun SinglelineInputBox(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String
+) {
+    val shape = RoundedCornerShape(10.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(43.dp)
+            .clip(shape)
+            .border(1.dp, BorderGray, shape)
+            .background(Color.White, shape)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            textStyle = TextStyle(
+                fontSize = 13.sp,
+                color = Color.Black,
+                letterSpacing = (-0.019).em()
+            ),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { inner ->
+                if (value.isEmpty()) {
+                    Text(
+                        placeholder,
+                        fontSize = 13.sp,
+                        color = TextGray,
+                        letterSpacing = (-0.019).em()
+                    )
+                }
+                inner()
+            }
+        )
+    }
+}
+
+// 밑줄형 인풋 (회사명)
+@Composable
+private fun UnderlineField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        val textColor = if (value.isEmpty()) Color(0xFF828282) else Color.Black
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            textStyle = TextStyle(fontSize = 15.sp, color = textColor),
+            textStyle = TextStyle(
+                fontSize = 15.sp,
+                color = if (value.isEmpty()) TextGray else Color.Black,
+                letterSpacing = (-0.019).em()
+            ),
+            modifier = Modifier.fillMaxWidth(),
             decorationBox = { inner ->
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 23.dp),
+                    modifier = Modifier.heightIn(min = 23.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
                     if (value.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            fontSize = 15.sp,
-                            color = Color(0xFF828282),
-                            letterSpacing = (-0.29).sp
-                        )
+                        Text(placeholder, fontSize = 15.sp, color = TextGray, letterSpacing = (-0.019).em())
                     }
                     inner()
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
+            }
         )
         Spacer(Modifier.height(6.dp))
         Box(
@@ -870,24 +944,66 @@ private fun UnderlineField( // (현재 미사용이지만 남겨둠: 디자인 �
     }
 }
 
-/** Material3 OutlinedTextField 버전 (표시/재구성 이슈 최소화) */
 @Composable
-private fun OutlinedInputM3(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String
+private fun SaveCheckBox(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    boxSize: Dp = 24.dp,  // 터치 영역
+    innerSize: Dp = 16.dp // 시각 박스 (정수 px 근처 권장)
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        placeholder = { Text(placeholder) },
-        singleLine = true,
-        shape = RoundedCornerShape(10.dp),
-        textStyle = TextStyle(fontSize = 15.sp),
-        modifier = Modifier.fillMaxWidth() // 고정 높이 제거 → 텍스트 잘림 방지
-    )
+    val shape = RoundedCornerShape(3.dp)
+
+    Box(
+        modifier = Modifier
+            .size(boxSize)
+            .clickable { onToggle() },
+        contentAlignment = Alignment.Center
+    ) {
+        // 테두리를 안쪽으로 inset 해서 그리면 위/아래가 끊기지 않음
+        Box(
+            modifier = Modifier
+                .size(innerSize)
+                .drawBehind {
+                    val strokeW = 1.25.dp.toPx()
+                    val inset   = 0.75.dp.toPx()   // 상하좌우 안쪽으로 밀어 그리기
+                    drawRoundRect(
+                        color = Blue,
+                        topLeft = Offset(inset, inset),
+                        size = androidx.compose.ui.geometry.Size(
+                            width  = size.width  - inset * 2,
+                            height = size.height - inset * 2
+                        ),
+                        style = Stroke(width = strokeW),
+                        cornerRadius = CornerRadius(3.dp.toPx())
+                    )
+                }
+                .background(
+                    if (checked) Blue else Color.White,
+                    shape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (checked) {
+                Canvas(modifier = Modifier.size(innerSize * 0.65f)) {
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(size.width * 0.15f, size.height * 0.55f),
+                        end   = Offset(size.width * 0.45f, size.height * 0.8f),
+                        strokeWidth = 2f
+                    )
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(size.width * 0.45f, size.height * 0.8f),
+                        end   = Offset(size.width * 0.85f, size.height * 0.2f),
+                        strokeWidth = 2f
+                    )
+                }
+            }
+        }
+    }
 }
 
+// 점선 추가 박스 (사진)
 @Composable
 private fun DashedAddBox(
     size: Dp,
@@ -901,7 +1017,7 @@ private fun DashedAddBox(
             .size(size)
             .drawBehind {
                 val stroke = Stroke(
-                    width = 1.dp.toPx(),
+                    width = 0.5.dp.toPx(), // 02 스타일: 얇은 점선
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
                 )
                 drawRoundRect(
@@ -915,7 +1031,7 @@ private fun DashedAddBox(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.size(size * 0.55f)) {
-            val strokeWidth = 5f
+            val strokeWidth = 3f
             val side = this.size.minSide
             val cx = this.size.width * 0.5f
             val cy = this.size.height * 0.5f
@@ -927,24 +1043,32 @@ private fun DashedAddBox(
     }
 }
 
+// 기본 파란 버튼 (enabled 지원/비활성 회색)
 @Composable
-private fun PrimaryButton(text: String, onClick: () -> Unit) {
+private fun PrimaryButton(
+    text: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(47.dp),
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF005FFF),
-            contentColor = Color.White
+            containerColor = Blue,
+            contentColor = Color.White,
+            disabledContainerColor = Color(0xFFE0E6EE),  // 회색톤
+            disabledContentColor = Color(0xFF98A2B3)
         )
     ) {
         Text(
             text = text,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = (-0.34).sp
+            letterSpacing = (-0.019).em()
         )
     }
 }
@@ -959,28 +1083,135 @@ private fun BottomNavPlaceholder() {
     )
 }
 
-// ===== 회색 구분선 =====
+// 회색 구분선
 @Composable
-private fun GrayDivider(
-    thickness: Dp = 10.dp,
-    color: Color = Color(0xFFE6E8EC),
-    horizontalPadding: Dp = 0.dp
-) {
-    Divider(
-        color = color,
-        thickness = thickness,
+private fun SectionSpacer() {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = horizontalPadding)
+            .height(20.dp)
+            .background(BgGray)
     )
 }
 
+@Composable
+private fun AreaAddBox(
+    size: Dp,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Image(
+            painter = painterResource(id = R.drawable.area_picture),
+            contentDescription = "추가",
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Composable
+private fun SectionCardCustomPadding(
+    paddingVertical: Dp = 20.dp,
+    paddingHorizontal: Dp = 16.dp,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CardBg)
+            .padding(vertical = paddingVertical),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 360.dp)
+                .padding(horizontal = paddingHorizontal),
+            content = content
+        )
+    }
+}
+
+@Composable
+private fun PhotoSlot(
+    slot: Int,
+    isUploading: Boolean,
+    imageUri: android.net.Uri?,
+    onClick: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)                     // 정사각형
+                .clip(RoundedCornerShape(10.dp))
+                .border(1.dp, Color(0xFF68A0FE), RoundedCornerShape(10.dp))
+                .background(Color.White)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isUploading -> {
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+                }
+                imageUri != null -> {
+                    AsyncImage(
+                        model = imageUri,
+                        contentDescription = " 근무지 사진 $slot",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                }
+                else -> {
+                    // 비어있을 때 area_picture.png 표시
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(id = R.drawable.area_picture),
+                        contentDescription = "추가",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text("추가", fontSize = 12.sp, color = TextGray)
+    }
+}
+
+@Composable
+private fun PhotoGridRow(
+    gap: Dp = 12.dp,               // 아이템 간 간격
+    outerPadding: Dp = 24.dp,      // 양옆 바깥 여백
+    isUploading: List<Boolean>,
+    imageUris: List<android.net.Uri?>,
+    onAddClick: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = outerPadding),     // ← 여기서만 바깥 여백을 준다
+        horizontalArrangement = Arrangement.spacedBy(gap),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(4) { slot ->
+            Box(modifier = Modifier.weight(1f)) {
+                PhotoSlot(
+                    slot = slot,
+                    isUploading = isUploading[slot],
+                    imageUri = imageUris[slot],
+                    onClick = { onAddClick(slot) }
+                )
+            }
+        }
+    }
+}
 
 /*
 서울 송파구 올림픽로 300 (특별시 생략)
-
 잠실 롯데월드타워 (POI)
-
 서울특별시 송파구 신천동 29 (지번)
- */
-
+*/
