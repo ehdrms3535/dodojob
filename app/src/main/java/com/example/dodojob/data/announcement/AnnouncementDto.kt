@@ -5,6 +5,7 @@ data class AnnouncementDto (
     val public: Boolean,
     val company_id: String?=null,
     val company_locate: String,
-    val detail_locate: String
+    val detail_locate: String,
+    val created_at: String? = null
 )
 
