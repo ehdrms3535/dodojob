@@ -70,7 +70,6 @@ import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-
     // AppNavGraph.kt 어딘가(클래스 바깥, 최상위)
     fun com.example.dodojob.data.announcement.AnnouncementRow.toUi():
             com.example.dodojob.ui.feature.employ.AnnouncementUi? {
@@ -92,7 +91,6 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         )
     }
     NavHost(navController = nav,startDestination = Route.Intro.path) {
-
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path) { LoginScreen(nav, sessionVm) }        // 3. 시니어 로그인
