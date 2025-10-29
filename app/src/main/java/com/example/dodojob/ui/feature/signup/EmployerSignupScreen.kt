@@ -1,71 +1,59 @@
 package com.example.dodojob.ui.feature.signup
 
-import com.example.dodojob.ui.components.CheckState
-import com.example.dodojob.ui.components.UnderlineFieldRow
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.compose.foundation.layout.BoxWithConstraints
-import com.example.dodojob.navigation.Route
-import com.example.dodojob.data.user.UserRepository
-import com.example.dodojob.data.supabase.LocalSupabase
-import com.example.dodojob.data.user.UserRepositorySupabase
-import com.example.dodojob.ui.feature.verify.SignUpPrefill
-import com.example.dodojob.ui.feature.verify.PreVerifyPrefill
-import com.example.dodojob.data.user.UserDto
-import java.util.UUID
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.compose.rememberNavController
+import com.example.dodojob.R
 import com.example.dodojob.data.employ.EmployDto
-import kotlinx.coroutines.launch
 import com.example.dodojob.data.employ.EmployRepository
 import com.example.dodojob.data.employ.EmployRepositorySupabase
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.data.user.UserDto
+import com.example.dodojob.data.user.UserRepository
+import com.example.dodojob.data.user.UserRepositorySupabase
+import com.example.dodojob.navigation.Route
+import com.example.dodojob.ui.feature.verify.PreVerifyPrefill
+import kotlinx.coroutines.launch
+import java.util.*
+
 @Composable
 fun EmployerSignupScreen(nav: NavController) {
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
-    val repo1: EmployRepository = remember(client) { EmployRepositorySupabase(client)}
+    val repo1: EmployRepository = remember(client) { EmployRepositorySupabase(client) }
 
-    // Verify → SignUp에서 전달된 값
-    val prefill = remember {
-        nav.previousBackStackEntry?.savedStateHandle?.get<PreVerifyPrefill>("prefill")  // ✅ 타입 맞춤
-    }
+    val prefillFromPrev = remember { nav.previousBackStackEntry?.savedStateHandle?.get<PreVerifyPrefill>("prefill") }
+    val prefill = prefillFromPrev
 
-    // **** 데이터만 변경: 담당자명/연락처/이메일/사업자번호 ****
-    val generatedId = UUID.randomUUID().toString()
+    val generatedId = remember { UUID.randomUUID().toString() }
+
     var name by rememberSaveable { mutableStateOf(prefill?.name.orEmpty()) }
-    var gender by rememberSaveable { mutableStateOf(prefill?.gender.orEmpty()) }
-    var region by rememberSaveable { mutableStateOf(prefill?.region.orEmpty()) }
     var phone by rememberSaveable { mutableStateOf(prefill?.phone.orEmpty()) }
-    var userId by rememberSaveable { mutableStateOf("") }
-
     var email by rememberSaveable { mutableStateOf("") }
-    var bizNo by rememberSaveable { mutableStateOf("") } // 하이픈 없이 10자리
+    var bizNo by rememberSaveable { mutableStateOf("") }
 
-    // 기존 prefill 민감정보는 그대로 유지(사용 안 함)
     var rrnFront by remember { mutableStateOf(prefill?.rrnFront.orEmpty()) }
     var rrnBackFirst by remember { mutableStateOf(prefill?.rrnBackFirst.orEmpty()) }
 
@@ -73,73 +61,103 @@ fun EmployerSignupScreen(nav: NavController) {
     var loading by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // ===== 유효성 검사 (필드 교체) =====
     val nameOk = name.trim().length >= 2
-    val phoneDigits = phone.filter { it.isDigit() }
-    val phoneOk = phoneDigits.length in 10..11
+    val phoneOk = phone.filter { it.isDigit() }.length in 10..11
     val emailOk = email.contains("@") && email.contains(".")
-    val bizDigits = bizNo.filter { it.isDigit() }
-    val bizOk = bizDigits.length == 10
+    val bizOk = bizNo.filter { it.isDigit() }.length == 10
 
     val Bg = Color(0xFFF1F5F7)
-    val Primary = Color(0xFF005FFF)
-
-    // 제출 가능 조건
     val canSubmit = nameOk && phoneOk && emailOk && bizOk && prefill != null
-
-    // prefill 없이 접근 시 방어
-    LaunchedEffect(prefill) {
-        if (prefill == null) nav.popBackStack()
-    }
 
     Scaffold(
         containerColor = Bg,
+        contentWindowInsets = WindowInsets.safeDrawing,
+        topBar = {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp)
+                        .background(Color(0xFFEFEFEF))
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Bg)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 24.dp, start = 6.dp)
+                            .size(48.dp)
+                            .clickable {
+                                val ok = nav.popBackStack(Route.PreVerify.path, inclusive = false)
+                                if (!ok) {
+                                    nav.navigate(Route.PreVerify.path) { launchSingleTop = true }
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.back),
+                            contentDescription = "뒤로가기",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "회원가입",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.019f).em,
+                    color = Color.Black,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 2.dp)
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "회원가입에 필요한 정보를 정확히\n입력해 주세요",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = (-0.019f).em,
+                    color = Color(0xFF636363),
+                    lineHeight = 30.sp,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp)
+                )
+            }
+        },
         bottomBar = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Bg)
-                    .padding(horizontal = 18.dp, vertical = 50.dp)
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .background(Color(0xFFF1F5F7))
             ) {
                 Button(
                     onClick = {
                         if (!canSubmit || loading) return@Button
                         error = null
                         loading = true
-
                         scope.launch {
                             runCatching {
-                                // NOTE: 레포 스키마가 username/password를 요구해서
-                                // 임시로 bizNo/임시비밀번호를 넣었습니다. 실제 스키마에 맞게 교체하세요.
                                 val user = UserDto(
                                     id = generatedId,
                                     name = name,
-                                    gender = prefill?.gender.orEmpty(),
+                                    gender = prefill!!.gender,
                                     rrnFront = rrnFront,
                                     rrnBackFirst = rrnBackFirst,
-                                    region = prefill?.region.orEmpty(),
+                                    region = prefill.region,
                                     phone = phone,
                                     email = email,
-                                    username = "TempPass#1234",           // FIXME: 스키마에 맞게 변경
-                                    password = "TempPass#1234",     // FIXME: 운영에서는 미사용/삭제
+                                    username = "TempPass#1234",
+                                    password = "TempPass#1234",
                                     job = "고용주",
                                 )
                                 repo.insertUser(user)
-
-                                val employ = EmployDto(
-                                    id = email,
-                                    companyid = bizNo
-                                )
+                                val employ = EmployDto(email, bizNo)
                                 repo1.insertEmploy(employ)
-
                             }.onSuccess {
-                                // 민감정보 즉시 파기
-                                nav.currentBackStackEntry?.savedStateHandle?.set("userRowId", generatedId)
-                                rrnFront = ""; rrnBackFirst = ""
-                                nav.currentBackStackEntry?.savedStateHandle?.set("prefill", prefill)
-                                nav.navigate(Route.EmploySignupsec.path) {
-                                   // launchSingleTop = true
-                                }
+                                nav.navigate(Route.EmploySignupsec.path)
                             }.onFailure { e ->
                                 error = e.message ?: "등록 실패"
                             }
@@ -148,137 +166,156 @@ fun EmployerSignupScreen(nav: NavController) {
                     },
                     enabled = canSubmit && !loading,
                     modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                         .fillMaxWidth()
-                        .height(54.dp),
+                        .height(47.dp),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (canSubmit) Primary else Color(0xFFBFC6D2),
-                        contentColor = Color.White,
-                        disabledContainerColor = Color(0xFFBFC6D2),
-                        disabledContentColor = Color.White
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005FFF))
                 ) {
-                    Text(if (loading) "처리 중…" else "완료", fontSize = 25.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        text = if (loading) "처리 중…" else "다음",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
             }
         }
     ) { inner ->
-        BoxWithConstraints(
+        Column(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(inner)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            val W = maxWidth
-            val H = maxHeight
+            Spacer(Modifier.height(16.dp))
+            FieldRowOverlayCheck(
+                label = "담당자명",
+                value = name,
+                onValueChange = { name = it },
+                placeholder = "담당자 성함",
+                valid = nameOk,
+                keyboardType = KeyboardType.Text,
+                topGap = 0.dp,
+                labelFieldGap = 8.dp
+            )
+            FieldRowOverlayCheck(
+                label = "담당자 연락처",
+                value = phone,
+                onValueChange = { phone = it },
+                placeholder = "010-0000-0000",
+                valid = phoneOk,
+                keyboardType = KeyboardType.Phone,
+                topGap = 24.dp,
+                labelFieldGap = 8.dp
+            )
+            FieldRowOverlayCheck(
+                label = "담당자 이메일",
+                value = email,
+                onValueChange = { email = it },
+                placeholder = "이메일을 입력해주세요",
+                valid = emailOk,
+                keyboardType = KeyboardType.Email,
+                topGap = 28.dp,
+                labelFieldGap = 8.dp
+            )
+            FieldRowOverlayCheck(
+                label = "사업자 등록번호",
+                value = bizNo,
+                onValueChange = { bizNo = it.filter { c -> c.isDigit() }.take(10) },
+                placeholder = "사업자 등록번호(-제외 입력)",
+                valid = bizOk,
+                keyboardType = KeyboardType.Number,
+                topGap = 28.dp,
+                labelFieldGap = 8.dp
+            )
 
-            // 비율 기반 치수(그대로 유지)
-            val hPad = (W * 0.045f)
-            val titleTop = (H * 0.03f)
-            val titleSp = (W.value * 0.09f).sp
-            val backSp = (W.value * 0.065f).sp
-            val subTop = (H * 0.008f)
-            val subSp = (W.value * 0.055f).sp
-            val labelTop = (H * 0.019f)
-            val labelSp = (W.value * 0.055f).sp
-            val fieldTop = 2.dp
-            val placeSp = (W.value * 0.042f).sp
-            val lineGap = 8.dp
-            val gapAfterSubtitle = (H * 0.035f)
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = hPad)
-            ) {
-                Spacer(Modifier.height(titleTop))
-
-                // 뒤로가기
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "<",
-                        fontSize = backSp,
-                        color = Color.Black,
-                        modifier = Modifier.clickable { nav.popBackStack() }
-                    )
-                }
-
-                Spacer(Modifier.height(8.dp))
-                Text("회원가입", fontSize = titleSp, fontWeight = FontWeight.SemiBold, color = Color.Black)
-
-                Spacer(Modifier.height(subTop))
-                Text(
-                    "회원가입에 필요한 정보를 정확히\n입력해 주세요",
-                    fontSize = subSp, color = Color(0xFF636363)
-                )
-
-                // ====== 담당자명 ======
-                Spacer(Modifier.height(gapAfterSubtitle))
-                Text("담당자명", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = "담당자 성함",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                    isPassword = false,
-                    checkState = if (nameOk) CheckState.ValidBlue else CheckState.NeutralGrey
-                )
-                Spacer(Modifier.height(lineGap))
-
-                // ====== 담당자 연락처 ======
-                Spacer(Modifier.height(labelTop))
-                Text("담당자 연락처", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    placeholder = "010-0000-0000",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    isPassword = false,
-                    checkState = if (phoneOk) CheckState.ValidBlue else CheckState.NeutralGrey
-                )
-                Spacer(Modifier.height(lineGap))
-
-                // ====== 담당자 이메일 ======
-                Spacer(Modifier.height(labelTop))
-                Text("이메일", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
-                    value = email,
-                    onValueChange = { email = it },
-                    placeholder = "수신 가능한 본인 이메일을 입력해주세요",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    isPassword = false,
-                    checkState = if (emailOk) CheckState.ValidBlue else CheckState.NeutralGrey
-                )
-                Spacer(Modifier.height(lineGap))
-
-                // ====== 사업자 등록번호 ======
-                Spacer(Modifier.height(labelTop))
-                Text("사업자 등록번호", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
-                    value = bizNo,
-                    onValueChange = { input ->
-                        // 하이픈 제거 + 숫자만 허용
-                        bizNo = input.filter { it.isDigit() }.take(10)
-                    },
-                    placeholder = "사업자 등록번호(-제외 입력)",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    isPassword = false,
-                    checkState = if (bizOk) CheckState.ValidBlue else CheckState.NeutralGrey
-                )
-
-                Spacer(Modifier.height(8.dp))
-                error?.let { Text(it, color = Color(0xFFD32F2F), fontSize = 14.sp) }
-
-                Spacer(Modifier.height(lineGap))
+            error?.let {
+                Spacer(Modifier.height(13.dp))
+                Text(it, color = Color(0xFFD32F2F), fontSize = 14.sp, letterSpacing = (-0.019f).em)
             }
+            Spacer(Modifier.height(12.dp))
         }
+    }
+}
+
+// ===== 스타일 상수 & 컴포넌트 =====
+private val FieldHeight = 56.dp
+private val UnderlineGap = 6.dp
+private val IconSize = 24.dp
+
+@Composable
+private fun FieldRowOverlayCheck(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    valid: Boolean,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    topGap: Dp,
+    labelFieldGap: Dp = 0.dp
+) {
+    if (topGap.value > 0f) Spacer(Modifier.height(topGap))
+    Text(
+        label,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = (-0.019f).em,
+        color = Color.Black
+    )
+    Spacer(Modifier.height(labelFieldGap))
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(FieldHeight)
+    ) {
+        Divider(
+            color = Color(0xFFC0C0C0),
+            thickness = 1.dp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+        )
+
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = TextStyle(fontSize = 18.sp, color = Color.Black),
+            cursorBrush = SolidColor(Color.Black),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .fillMaxWidth()
+                .padding(end = IconSize + 8.dp)
+                .padding(bottom = UnderlineGap),
+            decorationBox = { inner ->
+                Box(Modifier.fillMaxWidth()) {
+                    if (value.isEmpty()) {
+                        Text(
+                            placeholder,
+                            color = Color(0xFFA6A6A6),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = (-0.019f).em
+                        )
+                    }
+                    inner()
+                }
+            }
+        )
+
+        Image(
+            painter = painterResource(
+                if (valid) R.drawable.autologin_checked else R.drawable.autologin_unchecked
+            ),
+            contentDescription = "체크 상태",
+            modifier = Modifier
+                .size(IconSize)
+                .align(Alignment.CenterEnd)
+                .offset(y = (-2).dp)
+        )
     }
 }
