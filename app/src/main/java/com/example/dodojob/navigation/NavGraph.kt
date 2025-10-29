@@ -70,11 +70,9 @@ import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-    // AppNavGraph.kt 어딘가(클래스 바깥, 최상위)
     fun com.example.dodojob.data.announcement.AnnouncementRow.toUi():
             com.example.dodojob.ui.feature.employ.AnnouncementUi? {
         val idSafe = id ?: return null
-        // created_at이 "2025-10-28T12:34:56Z" 처럼 와도 앞의 yyyy-MM-dd만 사용
         val created = runCatching { java.time.LocalDate.parse(created_at?.take(10)) }
             .getOrNull() ?: java.time.LocalDate.now()
 
@@ -90,7 +88,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             createdDate = created
         )
     }
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
+    NavHost(navController = nav,startDestination = Route.Announcement3.path) {
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path) { LoginScreen(nav, sessionVm) }        // 3. 시니어 로그인
