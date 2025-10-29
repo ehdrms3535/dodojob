@@ -145,6 +145,7 @@ fun Announcement2Screen(
         ) {
             // --- 설명 블록 ---
             SectionCard {
+                Spacer(modifier = Modifier.height(18.dp))
                 TitleRow("02. 직종과 근무 조건을 설정해주세요!")
             }
 

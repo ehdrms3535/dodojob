@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,25 +42,25 @@ import com.example.dodojob.data.announcement.salary3.SalaryRepositorySupabase
 import com.example.dodojob.data.supabase.LocalSupabase
 import kotlinx.coroutines.launch
 
-/* -------- Design tokens (01/02와 동일) -------- */
+/* -------- Colors -------- */
 private val Blue = Color(0xFF005FFF)
 private val TextGray = Color(0xFF828282)
-private val BorderGray = Color(0xFF828282)
 private val BgGray = Color(0xFFF1F5F7)
 private val CardBg = Color.White
 
 /* -------- Unified Sizes -------- */
-private val CARD_HEIGHT = 70.dp     // 카드/칩 높이
-private val CARD_CORNER = 10.dp
-private val GRID_GAP = 10.dp
-private val BOTTOM_BTN_HEIGHT = 47.dp
+private val CARD_HEIGHT = 70.dp            // 선택 카드/칩 통일 높이
+private val CARD_CORNER = 10.dp            // 선택 카드/칩 라운드 통일
+private val BOTTOM_BTN_HEIGHT = 44.dp      // 하단 버튼 통일 높이
 
 /* ================== Route ================== */
 @Composable
 fun Announcement3Route(
     nav: NavController,
     onNext: () -> Unit = {
-        nav.navigate(Route.Announcement4.path) { launchSingleTop = true }
+        nav.navigate(Route.Announcement4.path) {
+            launchSingleTop = true
+        }
     },
     onBack: () -> Unit = { nav.popBackStack() },
     onTabClick: (Int) -> Unit = { idx ->
@@ -69,7 +71,9 @@ fun Announcement3Route(
             else -> Route.Announcement4.path
         }
         val current = nav.currentBackStackEntry?.destination?.route
-        if (current != target) nav.navigate(target) { launchSingleTop = true }
+        if (current != target) {
+            nav.navigate(target) { launchSingleTop = true }
+        }
     }
 ) {
     Announcement3Screen(
@@ -79,7 +83,7 @@ fun Announcement3Route(
     )
 }
 
-/* ====== Screen: 공고등록 / 03 (급여·복리·성별·경력·자격/우대) ====== */
+/* ====== Screen: 공고등록 / 03 (급여·복리·성별·경력) ====== */
 @Composable
 fun Announcement3Screen(
     onNext: () -> Unit,
@@ -90,7 +94,7 @@ fun Announcement3Screen(
     val scope = rememberCoroutineScope()
     val client = LocalSupabase.current
 
-    val salaryRepo: SalaryRepository = remember(client) { SalaryRepositorySupabase(client) }
+    val repo: SalaryRepository = remember(client) { SalaryRepositorySupabase(client) }
     val needRepo: NeedlicenseRepo = remember(client) { NeedlisenceRepoSupabase(client) }
     val prefRepo: PreferentialRepo = remember(client) { PreferentialRepoSuSupabase(client) }
 
@@ -99,29 +103,22 @@ fun Announcement3Screen(
     /* ----------- State ----------- */
     var payType by remember { mutableStateOf(PayType.Hourly) }
     var selectedPayType by remember { mutableStateOf("시급") }
-    var payAmount by remember { mutableStateOf("") } // 공통 입력(피그마: “급여 금액” 아래 라인 인풋)
+    var hourlyWage by remember { mutableStateOf("") }  // "12,000" 등 문자열
+    var companyName by remember { mutableStateOf("") }
+    var selectedgender by remember { mutableStateOf("")}
 
-    // 복리혜택
+    // 복리혜택 (bit 문자열 변환 대상)
     val benefits = remember { defaultBenefits().toMutableStateList() }
 
-    // 성별
     var gender by remember { mutableStateOf(Gender.Any) }
-
-    // 경력
     var exp by remember { mutableStateOf(Experience.None) }
-
-    // 자격/우대 입력
-    var licenseText by remember { mutableStateOf("") }
-    var preferText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(BgGray)
     ) {
-        /* StatusBar (24dp) 는 /01에서 공통 처리했다고 가정 */
-
-        /* Header 76dp */
+        /* Header */
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -130,21 +127,11 @@ fun Announcement3Screen(
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            Text(
-                "공고등록",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.Black,
-                letterSpacing = (-0.3).sp
-            )
+            Text("공고등록", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
         }
 
         /* Tabs (03 선택) */
-        TabBar3(
-            selected = 2,
-            labels = listOf("01", "02", "03", "04"),
-            onClick = onTabClick
-        )
+        TabBar3(selected = 2, labels = listOf("01", "02", "03", "04"), onClick = onTabClick)
 
         /* Body */
         Column(
@@ -152,49 +139,35 @@ fun Announcement3Screen(
                 .weight(1f)
                 .verticalScroll(scroll)
         ) {
-
             /* 안내 */
             SectionCard {
-                Spacer(modifier = Modifier.height(18.dp))
-                TitleRow("03. 급여와 조건을 알려주세요!")
+                TitleRow("03. 급여·복리·요건을 선택해주세요.")
             }
 
             /* 급여정보 */
             SectionCard {
                 LabelText("급여정보")
-                Spacer(Modifier.height(6.dp))
 
                 SubLabel("급여 금액")
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
 
-                // 급여 유형 2x2 (피그마 문구 그대로)
+                // 급여 타입 2x2
                 TwoByTwo(
                     {
                         PayCard(
-                            title = "연봉",
-                            sub = "세전 기준",
-                            selected = payType == PayType.Yearly,
+                            title = "시급",
+                            sub = "Hourly",
+                            selected = payType == PayType.Hourly,
                             onClick = {
-                                payType = PayType.Yearly
-                                selectedPayType = "연봉"
-                            }
-                        )
-                    },
-                    {
-                        PayCard(
-                            title = "월급",
-                            sub = "세전 기준",
-                            selected = payType == PayType.Monthly,
-                            onClick = {
-                                payType = PayType.Monthly
-                                selectedPayType = "월급"
+                                payType = PayType.Hourly
+                                selectedPayType = "시급"
                             }
                         )
                     },
                     {
                         PayCard(
                             title = "일급",
-                            sub = "하루 기준",
+                            sub = "Daily",
                             selected = payType == PayType.Daily,
                             onClick = {
                                 payType = PayType.Daily
@@ -204,34 +177,60 @@ fun Announcement3Screen(
                     },
                     {
                         PayCard(
-                            title = "시급",
-                            sub = "시간 기준",
-                            selected = payType == PayType.Hourly,
+                            title = "월급",
+                            sub = "Monthly",
+                            selected = payType == PayType.Monthly,
                             onClick = {
-                                payType = PayType.Hourly
-                                selectedPayType = "시급"
+                                payType = PayType.Monthly
+                                selectedPayType = "월급"
+                            }
+                        )
+                    },
+                    {
+                        PayCard(
+                            title = "연봉",
+                            sub = "Yearly",
+                            selected = payType == PayType.Yearly,
+                            onClick = {
+                                payType = PayType.Yearly
+                                selectedPayType = "연봉"
                             }
                         )
                     }
                 )
 
-                Spacer(Modifier.height(14.dp))
-                TitleSubLabel("급여 금액")
-                Spacer(Modifier.height(8.dp))
-                UnderlineField(
-                    value = payAmount,
-                    onValueChange = { payAmount = it },
-                    placeholder = "내용입력"
+                Spacer(Modifier.height(12.dp))
+                SubLabel("시급")
+                Spacer(Modifier.height(6.dp))
+                MoneyLineField(
+                    value = hourlyWage,
+                    placeholder = "예: 12,000",
+                    suffix = "원",
+                    onChange = { hourlyWage = it }
                 )
             }
 
-            SectionSpacer()
+            /* 근무회사명 (라인 인풋) */
+            SectionCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("근무회사명", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.height(8.dp))
+                LineTextField(
+                    value = companyName,
+                    placeholder = "내용입력",
+                    onChange = { companyName = it }
+                )
+            }
 
-            /* 복리혜택 */
+            /* 복리혜택 (버튼 래핑) */
             SectionCard {
                 LabelText("복리혜택")
                 Spacer(Modifier.height(6.dp))
-                BenefitGrid(
+                WrapChips(
                     items = benefits,
                     onToggle = { idx ->
                         val cur = benefits[idx]
@@ -239,7 +238,6 @@ fun Announcement3Screen(
                     }
                 )
             }
-            SectionSpacer()
 
             /* 성별 */
             SectionCard {
@@ -247,59 +245,25 @@ fun Announcement3Screen(
                 Spacer(Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(GRID_GAP)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    GenderCard("성별무관", gender == Gender.Any, { gender = Gender.Any }, modifier = Modifier.weight(1f))
-                    GenderCard("남자", gender == Gender.Male, { gender = Gender.Male }, modifier = Modifier.weight(1f))
-                    GenderCard("여자", gender == Gender.Female, { gender = Gender.Female }, modifier = Modifier.weight(1f))
+                    GenderCard("남", gender == Gender.Male, { gender = Gender.Male }, modifier = Modifier.weight(1f))
+                    GenderCard("여", gender == Gender.Female, { gender = Gender.Female }, modifier = Modifier.weight(1f))
+                    GenderCard("무관", gender == Gender.Any, { gender = Gender.Any }, modifier = Modifier.weight(1f))
                 }
             }
-            SectionSpacer()
 
-            /* 경력 요구사항 (피그마 문구) */
+            /* 경력 요구사항 */
             SectionCard {
                 LabelText("경력 요구사항")
                 Spacer(Modifier.height(6.dp))
                 TwoByTwo(
-                    { ExpCard("경력 무관", exp == Experience.None) { exp = Experience.None } },
-                    { ExpCard("1년 이상", exp == Experience.Y1) { exp = Experience.Y1 } },
-                    { ExpCard("5년 이상", exp == Experience.Y5) { exp = Experience.Y5 } },
-                    { ExpCard("10년 이상", exp == Experience.Y10) { exp = Experience.Y10 } },
+                    { ExpCard("신입",   exp == Experience.Entry) { exp = Experience.Entry } },
+                    { ExpCard("1년↑",  exp == Experience.Y1)    { exp = Experience.Y1 } },
+                    { ExpCard("3년↑",  exp == Experience.Y3)    { exp = Experience.Y3 } },
+                    { ExpCard("경력무관", exp == Experience.None) { exp = Experience.None } },
                 )
             }
-            SectionSpacer()
-
-            /* 관련 자격증 */
-            SectionCard {
-                LabelText("관련 자격증")
-                Spacer(Modifier.height(6.dp))
-                BlueOutlinedField(
-                    value = licenseText,
-                    placeholder = "예 : 컴퓨터 활용, 영어회화, 운전가능",
-                    onChange = { licenseText = it }
-                )
-                Spacer(Modifier.height(10.dp))
-                PrimaryButton(text = "추가") {
-                    // 필요시 리스트에 accumulate / 저장 처리
-                }
-            }
-            SectionSpacer()
-
-            /* 기타 우대사항 */
-            SectionCard {
-                LabelText("기타 우대사항")
-                Spacer(Modifier.height(6.dp))
-                BlueOutlinedField(
-                    value = preferText,
-                    placeholder = "",
-                    onChange = { preferText = it }
-                )
-                Spacer(Modifier.height(10.dp))
-                PrimaryButton(text = "추가") {
-                    // 필요시 accumulate / 저장 처리
-                }
-            }
-            SectionSpacer()
 
             /* 하단 버튼: 이전 / 다음 */
             Column(
@@ -311,18 +275,18 @@ fun Announcement3Screen(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
                         onClick = onBack,
                         modifier = Modifier
-                            .width(88.dp)
+                            .weight(0.6f)
                             .height(BOTTOM_BTN_HEIGHT),
                         shape = RoundedCornerShape(10.dp),
                         border = BorderStroke(1.dp, Blue),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Blue),
-                        contentPadding = PaddingValues(horizontal = 10.dp)
-                    ) { Text("이전", fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp, color = Blue) }
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) { Text("이전", fontSize = 15.sp, fontWeight = FontWeight.Medium) }
 
                     Button(
                         onClick = {
@@ -330,31 +294,41 @@ fun Announcement3Screen(
                                 loading = true
                                 runCatching {
                                     val benefitBits = benefitsToBitString(benefits)
-                                    val amountNum = payAmount.filter { it.isDigit() }.toLongOrNull() ?: 0L
 
                                     val salary = SalaryDto(
-                                        salary_type = selectedPayType,
-                                        salary_amount = amountNum,
-                                        benefit = benefitBits,
-                                        career = experienceToCode(exp),
-                                        gender = genderToCode(gender)
+                                        salary_type = selectedPayType,                          // 급여유형 ("시급" 등)
+                                        salary_amount = hourlyWage.filter { it.isDigit() }
+                                            .toLongOrNull() ?: 0L,                              // 시급 숫자 저장
+                                        benefit = benefitBits,                                  // 복리혜택 bit 문자열
+                                        career = experienceToCode(exp),                         // 경력 코드(또는 그대로 문자열)
+                                        gender = genderToCode(gender)                           // 성별 코드(또는 그대로 문자열)
                                     )
-                                    salaryRepo.insertSalary(salary)
+                                    repo.insertSalary(salary)
 
-                                    // 아래 두 개는 스키마에 맞게 필요 시 값 세팅
-                                    prefRepo.insertPreferential(PreferentialDto(preferential_treatment = preferText))
-                                    needRepo.insertNeedlisence(NeedlicenseDto(need1 = licenseText))
-                                }.onSuccess { onNext() }
+                                    val preferential = PreferentialDto(
+                                        preferential_treatment = ""   // 스키마에 맞춰 채워줘
+                                    )
+                                    prefRepo.insertPreferential(preferential)
+
+                                    val needlicense = NeedlicenseDto(
+                                        need1 = ""                     // 스키마에 맞춰 채워줘
+                                    )
+                                    needRepo.insertNeedlisence(needlicense)
+                                }.onSuccess {
+                                    onNext()    // 실제 호출
+                                }.onFailure {
+                                    // TODO: 에러 핸들링 (스낵바/토스트 등)
+                                }
                                 loading = false
                             }
                         },
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1.4f)
                             .height(BOTTOM_BTN_HEIGHT),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Blue, contentColor = Color.White),
                         contentPadding = PaddingValues(horizontal = 12.dp)
-                    ) { Text("다음 단계", fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp) }
+                    ) { Text("다음 단계", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 }
             }
 
@@ -363,7 +337,7 @@ fun Announcement3Screen(
     }
 }
 
-/* ====== TabBar (03 선택) – /01, /02 스타일 ====== */
+/* ====== TabBar (03 선택) ====== */
 @Composable
 private fun TabBar3(
     selected: Int,
@@ -403,7 +377,6 @@ private fun TabBar3(
                     Text(
                         text = text,
                         fontSize = 16.sp,
-                        letterSpacing = (-0.5).sp,
                         fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
                         color = if (isSel) Blue else Color.Black,
                         textAlign = TextAlign.Center,
@@ -460,7 +433,7 @@ private fun TitleRow(text: String) {
         text,
         fontSize = 20.sp,
         fontWeight = FontWeight.SemiBold,
-        letterSpacing = (-0.3).sp
+        letterSpacing = (-0.38).sp
     )
 }
 
@@ -471,7 +444,7 @@ private fun LabelText(text: String) {
         fontSize = 18.sp,
         fontWeight = FontWeight.SemiBold,
         color = Color.Black,
-        letterSpacing = (-0.3).sp,
+        letterSpacing = (-0.34).sp,
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 2.dp, bottom = 6.dp)
@@ -483,131 +456,33 @@ private fun SubLabel(text: String) {
     Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
 }
 
-/* 라인 인풋 (회색 보더/밑줄 느낌) */
 @Composable
 private fun LineTextField(
     value: String,
     placeholder: String,
     onChange: (String) -> Unit
 ) {
-    val shape = RoundedCornerShape(10.dp)
+    val border = RoundedCornerShape(CARD_CORNER)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
-            .border(1.dp, Blue, shape)
-            .clip(shape)
+            .border(1.dp, Blue, border)
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.Center
     ) {
+        if (value.isEmpty()) {
+            Text(placeholder, fontSize = 13.sp, color = TextGray)
+        }
         BasicTextField(
             value = value,
             onValueChange = onChange,
             textStyle = TextStyle(fontSize = 13.sp, color = Color.Black),
-            singleLine = true,
-            decorationBox = { inner ->
-                if (value.isEmpty()) {
-                    Text("내용입력", fontSize = 13.sp, color = TextGray)
-                }
-                inner()
-            },
             modifier = Modifier.fillMaxWidth()
         )
     }
 }
 
-private fun Double.em() = (this * 16).sp
-
-@Composable
-private fun UnderlineField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            textStyle = TextStyle(
-                fontSize = 15.sp,
-                color = if (value.isEmpty()) TextGray else Color.Black,
-                letterSpacing = (-0.019).em()
-            ),
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            decorationBox = { inner ->
-                Box(
-                    modifier = Modifier.heightIn(min = 23.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    if (value.isEmpty()) {
-                        Text(
-                            placeholder,
-                            fontSize = 15.sp,
-                            color = TextGray,
-                            letterSpacing = (-0.019).em()
-                        )
-                    }
-                    inner()
-                }
-            }
-        )
-        Spacer(Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(Color(0xFFC0C0C0))
-        )
-    }
-}
-
-@Composable
-private fun TitleSubLabel(text: String) {
-    Text(
-        text = text,
-        fontSize = 18.sp,                    // ✅ 18sp
-        fontWeight = FontWeight.SemiBold,
-        color = Color.Black,
-        letterSpacing = (-0.019).em()
-    )
-}
-
-/* 파란 보더 인풋 (자격/우대) */
-@Composable
-private fun BlueOutlinedField(
-    value: String,
-    placeholder: String,
-    onChange: (String) -> Unit
-) {
-    val shape = RoundedCornerShape(10.dp)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .border(1.dp, Blue, shape)
-            .clip(shape)
-            .background(Color.White)
-            .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        BasicTextField(
-            value = value,
-            onValueChange = onChange,
-            textStyle = TextStyle(fontSize = 13.sp, color = Color.Black),
-            singleLine = true,
-            decorationBox = { inner ->
-                if (value.isEmpty() && placeholder.isNotEmpty()) {
-                    Text(placeholder, fontSize = 13.sp, color = TextGray)
-                }
-                inner()
-            },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-/* 2x2 그리드 */
 @Composable
 private fun TwoByTwo(
     a: @Composable () -> Unit,
@@ -615,19 +490,19 @@ private fun TwoByTwo(
     c: @Composable () -> Unit,
     d: @Composable () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(GRID_GAP)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GRID_GAP)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.weight(1f)) { a() }
             Box(Modifier.weight(1f)) { b() }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GRID_GAP)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.weight(1f)) { c() }
             Box(Modifier.weight(1f)) { d() }
         }
     }
 }
 
-/* 급여 카드 – 피그마 타이틀/서브텍스트 */
+/* --- 급여 카드 --- */
 @Composable
 private fun PayCard(
     title: String,
@@ -641,28 +516,27 @@ private fun PayCard(
             .fillMaxWidth()
             .height(CARD_HEIGHT)
             .clip(shape)
-            .border(1.dp, if (selected) Blue else BorderGray, shape)
-            .background(Color.White, shape)
+            .border(1.dp, Blue, shape)
+            .background(if (selected) Blue else Color.White, shape)
             .clickable { onClick() }
-            .padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp), // ← 왼쪽 패딩 20dp
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             title,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (selected) Blue else Color(0xFF616161)
+            fontWeight = FontWeight.Bold,
+            color = if (selected) Color.White else Blue
         )
-        Spacer(Modifier.height(2.dp))
         Text(
             sub,
             fontSize = 12.sp,
-            color = TextGray
+            color = if (selected) Color(0xFFD9D9D9) else TextGray
         )
     }
 }
 
-/* 성별 카드 */
+/* --- 성별 카드 --- */
 @Composable
 private fun GenderCard(
     text: String,
@@ -676,21 +550,20 @@ private fun GenderCard(
             .fillMaxWidth()
             .height(CARD_HEIGHT)
             .clip(shape)
-            .border(1.dp, if (selected) Blue else BorderGray, shape)
-            .background(Color.White, shape)
+            .border(1.dp, Blue, shape)
+            .background(if (selected) Blue else Color.White, shape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (selected) Blue else Color(0xFF616161)
+            fontWeight = FontWeight.Bold,
+            color = if (selected) Color.White else Blue
         )
     }
 }
 
-/* 경력 카드 */
+/* --- 경력 카드 (selected만 반영하도록 단순화) --- */
 @Composable
 private fun ExpCard(
     text: String,
@@ -703,50 +576,96 @@ private fun ExpCard(
             .fillMaxWidth()
             .height(CARD_HEIGHT)
             .clip(shape)
-            .border(1.dp, if (selected) Blue else BorderGray, shape)
-            .background(Color.White, shape)
-            .clickable { onClick() }
-            .padding(start = 20.dp, end = 12.dp), // ← 동일하게 적용
-        contentAlignment = Alignment.CenterStart // 가운데가 아니라 왼쪽 정렬!
+            .border(1.dp, Blue, shape)
+            .background(if (selected) Blue else Color.White, shape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (selected) Blue else Color(0xFF616161)
+            fontWeight = FontWeight.Bold,
+            color = if (selected) Color.White else Blue
         )
     }
 }
 
+/* --- 복리혜택 비트 인코딩용 모델/헬퍼 --- */
+private enum class BenefitKey {
+    FOUR_INS,      // 4대보험
+    MEAL,          // 식사 제공
+    TRANSPORT,     // 교통비
+    HOLIDAY_BONUS, // 명절 보너스
+    OVERTIME,      // 야근수당
+    UNIFORM        // 근무복 지급
+}
 
-/* 복리혜택 데이터/그리드 (피그마 문구) */
-private data class BenefitItem(
-    val title: String,
-    val sub: String,
-    val selected: Boolean = false
+private data class Benefit(
+    val key: BenefitKey,
+    val name: String,
+    val selected: Boolean
 )
 
 private fun defaultBenefits() = listOf(
-    BenefitItem("식대 지원", "점심 식사 제공"),
-    BenefitItem("교통비 지원", "대중교통비 지급"),
-    BenefitItem("4대 보험", "국민연금, 건강보험"),
-    BenefitItem("교육지원", "업무 관련 교육")
+    Benefit(BenefitKey.FOUR_INS,      "4대보험",    false),
+    Benefit(BenefitKey.MEAL,          "식사 제공",  false),
+    Benefit(BenefitKey.TRANSPORT,     "교통비",    false),
+    Benefit(BenefitKey.HOLIDAY_BONUS, "명절 보너스", false),
+    Benefit(BenefitKey.OVERTIME,      "야근수당",   false),
+    Benefit(BenefitKey.UNIFORM,       "근무복 지급", false)
 )
 
+/** 선택 상태 → bit 문자열 (예: "101001") */
+private fun benefitsToBitString(list: List<Benefit>): String {
+    val byKey = list.associateBy { it.key }
+    return BenefitKey.entries.joinToString("") { key ->
+        if (byKey[key]?.selected == true) "1" else "0"
+    }
+}
+
+/** bit 문자열 → 선택 상태 적용 (수정 화면 복원용, 필요 시 사용) */
+@Suppress("unused")
+private fun applyBitStringToBenefits(bit: String, list: MutableList<Benefit>) {
+    val max = minOf(bit.length, BenefitKey.entries.size)
+    val indexByKey = BenefitKey.entries.withIndex().associate { it.value to it.index }
+    list.replaceAll { b ->
+        val idx = indexByKey[b.key]!!
+        val sel = if (idx < max) bit[idx] == '1' else false
+        b.copy(selected = sel)
+    }
+}
+
+/* --- 복리혜택 칩(2열 래핑) --- */
 @Composable
-private fun BenefitGrid(
-    items: List<BenefitItem>,
+private fun WrapChips(
+    items: List<Benefit>,
     onToggle: (Int) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(GRID_GAP)) {
+    val shape = RoundedCornerShape(CARD_CORNER)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items.chunked(2).forEachIndexed { rowIdx, row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(GRID_GAP)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 row.forEachIndexed { colIdx, item ->
                     val idx = rowIdx * 2 + colIdx
-                    BenefitCard(item = item, onClick = { onToggle(idx) }, modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .height(CARD_HEIGHT)
+                            .clip(shape)
+                            .border(1.dp, Blue, shape)
+                            .background(if (item.selected) Blue else Color.White, shape)
+                            .clickable { onToggle(idx) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            item.name,
+                            fontWeight = FontWeight.Bold,
+                            color = if (item.selected) Color.White else Blue
+                        )
+                    }
                 }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
@@ -754,47 +673,7 @@ private fun BenefitGrid(
     }
 }
 
-@Composable
-private fun SectionSpacer() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(20.dp)
-            .background(BgGray)
-    )
-}
-
-
-@Composable
-private fun BenefitCard(
-    item: BenefitItem,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val shape = RoundedCornerShape(CARD_CORNER)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(CARD_HEIGHT)
-            .clip(shape)
-            .border(1.dp, if (item.selected) Blue else BorderGray, shape)
-            .background(Color.White, shape)
-            .clickable { onClick() }
-            .padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp), // ← 동일하게 적용
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            item.title,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (item.selected) Blue else Color(0xFF616161)
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(item.sub, fontSize = 12.sp, color = TextGray)
-    }
-}
-
-/* 하단 플레이스홀더 */
+/* --- 기타 공용 --- */
 @Composable
 private fun BottomNavPlaceholder() {
     Box(
@@ -805,15 +684,64 @@ private fun BottomNavPlaceholder() {
     )
 }
 
-/* 포맷/코드 매핑 */
+@Composable
+private fun MoneyLineField(
+    value: String,
+    placeholder: String,
+    suffix: String = "원",
+    onChange: (String) -> Unit
+) {
+    val shape = RoundedCornerShape(CARD_CORNER)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .border(1.dp, Blue, shape)
+            .clip(shape)
+            .background(Color.White)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = { raw ->
+                onChange(formatMoney(raw))
+            },
+            textStyle = TextStyle(fontSize = 13.sp, color = Color.Black),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            singleLine = true,
+            decorationBox = { inner ->
+                if (value.isEmpty()) {
+                    Text(placeholder, fontSize = 13.sp, color = TextGray)
+                }
+                inner()
+            }
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(suffix, fontSize = 13.sp, color = TextGray, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+private fun formatMoney(input: String): String {
+    val digits = input.filter { it.isDigit() }
+    if (digits.isEmpty()) return ""
+    val sb = StringBuilder()
+    var cnt = 0
+    for (i in digits.length - 1 downTo 0) {
+        sb.append(digits[i])
+        cnt++
+        if (cnt % 3 == 0 && i != 0) sb.append(',')
+    }
+    return sb.reverse().toString()
+}
+
+/* --- enums & 코드 매핑 --- */
 private enum class PayType { Hourly, Daily, Monthly, Yearly }
 private enum class Gender { Male, Female, Any }
-private enum class Experience { None, Y1, Y5, Y10 }
+private enum class Experience { Entry, Y1, Y3, None }
 
-private fun benefitsToBitString(list: List<BenefitItem>): String {
-    // 선택 여부만 필요하면 간단히 1/0 로 변환(순서 고정)
-    return list.joinToString("") { if (it.selected) "1" else "0" }
-}
 
 private fun genderToCode(g: Gender): String = when (g) {
     Gender.Male -> "male"
@@ -822,33 +750,9 @@ private fun genderToCode(g: Gender): String = when (g) {
 }
 
 private fun experienceToCode(e: Experience): String = when (e) {
-    Experience.None -> "NONE"
+    Experience.Entry -> "ENTRY"
     Experience.Y1 -> "Y1_PLUS"
-    Experience.Y5 -> "Y5_PLUS"
-    Experience.Y10 -> "Y10_PLUS"
+    Experience.Y3 -> "Y3_PLUS"
+    Experience.None -> "NONE"
 }
 
-/* 기본 파란 버튼 – /01/02 동일 */
-@Composable
-private fun PrimaryButton(
-    text: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(BOTTOM_BTN_HEIGHT),
-        shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Blue,
-            contentColor = Color.White,
-            disabledContainerColor = Color(0xFFE0E6EE),
-            disabledContentColor = Color(0xFF98A2B3)
-        )
-    ) {
-        Text(text, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp)
-    }
-}
