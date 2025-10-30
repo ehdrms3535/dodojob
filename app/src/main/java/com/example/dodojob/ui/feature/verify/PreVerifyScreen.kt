@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.verify
 
+import android.os.Parcelable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,11 +32,10 @@ import androidx.navigation.NavController
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import kotlinx.parcelize.Parcelize
-import android.os.Parcelable
 import com.example.dodojob.session.SessionViewModel
 
 @Parcelize
-data class SignUpPrefill(
+data class PreVerifyPrefill(
     val name : String,
     val gender : String,
     val rrnFront : String,
@@ -46,7 +46,7 @@ data class SignUpPrefill(
 ) : Parcelable
 
 @Composable
-fun VerifyScreen(
+fun PreVerifyScreen(
     nav: NavController,
     sessionVm: SessionViewModel
 ) {
@@ -65,7 +65,7 @@ fun VerifyScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             Column {
-                // 상태바
+                // 상태바 영역
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -73,7 +73,7 @@ fun VerifyScreen(
                         .background(Color(0xFFEFEFEF))
                 )
 
-                // 뒤로가기
+                // 뒤로가기 (LoginScreen과 동일한 위치/터치영역)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -93,11 +93,12 @@ fun VerifyScreen(
                         )
                     }
                 }
+                Spacer(Modifier.height(10.dp))
 
-                // 타이틀
+                // 타이틀 — 24/600
                 Text(
                     text = "본인인증",
-                    fontSize = 32.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
                     modifier = Modifier.padding(start = 16.dp, bottom = 2.dp)
@@ -122,7 +123,7 @@ fun VerifyScreen(
 
                         if (!ok) return@Button
 
-                        val prefill = SignUpPrefill(
+                        val prefill = PreVerifyPrefill(
                             name = name.text.trim(),
                             gender = gender,
                             rrnFront = rrnFront,
@@ -142,11 +143,17 @@ fun VerifyScreen(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(47.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005FFF))
                 ) {
-                    Text("인증완료", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                    // 버튼 라벨 — 18/700
+                    Text(
+                        "인증완료",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
             }
         }
@@ -158,19 +165,19 @@ fun VerifyScreen(
                 .verticalScroll(scroll)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
+            // 서브텍스트 — 20/400
             Text(
                 "본인인증을 위해 필요한 정보를\n입력해 주세요",
                 fontSize = 20.sp,
+                fontWeight = FontWeight.Normal,
                 color = Color(0xFF636363),
                 lineHeight = 30.sp,
                 modifier = Modifier.padding(top = 0.dp, bottom = 20.dp)
             )
 
-            Spacer(Modifier.height(6.dp))
             // 이름
-            FieldLabel("이름")
-            Spacer(Modifier.height(6.dp))
-            KoreanUnderlineField(
+            FieldLabel18("이름")
+            KoreanUnderlineField15(
                 value = name,
                 onValueChange = { name = it },
                 placeholder = "이름 입력"
@@ -179,18 +186,21 @@ fun VerifyScreen(
             Spacer(Modifier.height(24.dp))
 
             // 성별
-            FieldLabel("성별")
+            FieldLabel18("성별")
             Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-                GenderBullet("남", gender == "남") { gender = "남" }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 6.dp)
+            ) {
+                GenderBullet18("남", gender == "남") { gender = "남" }
                 Spacer(Modifier.width(120.dp))
-                GenderBullet("여", gender == "여") { gender = "여" }
+                GenderBullet18("여", gender == "여") { gender = "여" }
             }
 
             Spacer(Modifier.height(28.dp))
 
             // 주민등록번호
-            FieldLabel("주민등록번호")
+            FieldLabel18("주민등록번호")
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start
@@ -201,13 +211,14 @@ fun VerifyScreen(
                         .fillMaxWidth(0.50f)
                         .height(underlineHeight)
                 ) {
+                    // 플레이스홀더 15
                     BasicTextField(
                         value = TextFieldValue(rrnFront),
                         onValueChange = { s ->
                             val filtered = s.text.filter { it.isDigit() }.take(6)
                             rrnFront = filtered
                         },
-                        textStyle = TextStyle(color = Color.Black, fontSize = 16.sp),
+                        textStyle = TextStyle(color = Color.Black, fontSize = 18.sp),
                         singleLine = true,
                         cursorBrush = SolidColor(Color.Black),
                         modifier = Modifier
@@ -216,7 +227,12 @@ fun VerifyScreen(
                         decorationBox = { inner ->
                             Box(Modifier.fillMaxWidth()) {
                                 if (rrnFront.isEmpty()) {
-                                    Text("주민등록번호 앞 6자리", color = Color(0xFFA6A6A6), fontSize = 18.sp)
+                                    Text(
+                                        "주민등록번호 앞 6자리",
+                                        color = Color(0xFFA6A6A6),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                                 inner()
                             }
@@ -243,18 +259,17 @@ fun VerifyScreen(
 
                 Box(
                     modifier = Modifier
-                        .height(underlineHeight)
-                        .padding(bottom = 6.dp),
+                        .height(underlineHeight),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    MaskDots(count = 6, diameter = 10.dp, color = Color(0xFF757575), gap = 8.dp)
+                    MaskDotsRow(count = 6, diameter = 10.dp, color = Color(0xFF757575), gap = 8.dp)
                 }
             }
 
             Spacer(Modifier.height(28.dp))
 
             // 거주지역
-            FieldLabel("거주지역")
+            FieldLabel18("거주지역")
             Spacer(Modifier.height(6.dp))
             RegionFieldKorean(
                 value = region,
@@ -266,9 +281,9 @@ fun VerifyScreen(
             Spacer(Modifier.height(28.dp))
 
             // 휴대전화
-            FieldLabel("휴대전화")
+            FieldLabel18("휴대전화")
             Spacer(Modifier.height(6.dp))
-            KoreanUnderlineField(
+            KoreanUnderlineField15(
                 value = TextFieldValue(phone),
                 onValueChange = { s ->
                     val filtered = s.text.filter { it.isDigit() }.take(11)
@@ -282,16 +297,23 @@ fun VerifyScreen(
     }
 }
 
-/* ----------------- 재사용 컴포넌트 ----------------- */
+/* ----------------- 재사용 컴포넌트 (폰트사이즈만 조정) ----------------- */
 
+// 라벨 18/500
 @Composable
-private fun FieldLabel(text: String) {
-    Text(text, fontSize = 20.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+private fun FieldLabel18(text: String) {
+    Text(
+        text,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Medium,
+        color = Color.Black
+    )
     Spacer(Modifier.height(8.dp))
 }
 
+// 밑줄 입력 (한글 조합 보존) — 플레이스홀더 15
 @Composable
-private fun KoreanUnderlineField(
+private fun KoreanUnderlineField15(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     placeholder: String
@@ -310,7 +332,12 @@ private fun KoreanUnderlineField(
             decorationBox = { inner ->
                 Box(Modifier.fillMaxWidth()) {
                     if (value.text.isEmpty()) {
-                        Text(text = placeholder, color = Color(0xFFA6A6A6), fontSize = 18.sp)
+                        Text(
+                            text = placeholder,
+                            color = Color(0xFFA6A6A6),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                     inner()
                 }
@@ -320,6 +347,7 @@ private fun KoreanUnderlineField(
     }
 }
 
+// 거주지역 박스 내부 입력 — 텍스트 18, (placeholder 없음)
 @Composable
 private fun RegionFieldKorean(
     value: TextFieldValue,
@@ -339,7 +367,7 @@ private fun RegionFieldKorean(
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                textStyle = TextStyle(color = Color.Black, fontSize = 16.sp),
+                textStyle = TextStyle(color = Color.Black, fontSize = 18.sp),
                 singleLine = true,
                 cursorBrush = SolidColor(Color.Black),
                 modifier = Modifier
@@ -352,12 +380,13 @@ private fun RegionFieldKorean(
                 contentDescription = "지역 검색",
                 modifier = Modifier
                     .requiredSize(24.dp)
-                    .clickable { /* TODO: 검색 */ }
+                    .clickable { /* TODO */ }
             )
         }
     }
 }
 
+// 주민등록번호 뒷 첫 자리 네모 (배경 통일)
 @Composable
 private fun OneDigitNumberBox(
     value: String,
@@ -369,7 +398,7 @@ private fun OneDigitNumberBox(
             .width(40.dp)
             .height(height)
             .border(1.dp, Color(0xFFD9D9D9))
-            .background(Color(0xFFF1F5F7)), // ✅ 배경 통일 (#F1F5F7)
+            .background(Color(0xFFF1F5F7)),
         contentAlignment = Alignment.Center
     ) {
         BasicTextField(
@@ -390,8 +419,9 @@ private fun OneDigitNumberBox(
     }
 }
 
+// 마스킹점
 @Composable
-fun MaskDots(
+private fun MaskDotsRow(
     count: Int,
     diameter: Dp,
     color: Color,
@@ -409,8 +439,9 @@ fun MaskDots(
     }
 }
 
+// 성별 라디오 — 라벨 18/500
 @Composable
-private fun GenderBullet(
+private fun GenderBullet18(
     text: String,
     selected: Boolean,
     onClick: () -> Unit
@@ -442,6 +473,11 @@ private fun GenderBullet(
             )
         }
         Spacer(Modifier.width(8.dp))
-        Text(text, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+        Text(
+            text,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black
+        )
     }
 }

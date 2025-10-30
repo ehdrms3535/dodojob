@@ -20,7 +20,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.example.dodojob.R
+import com.example.dodojob.navigation.Route
 
 /* ---------- Colors (최종 스펙) ---------- */
 private val BrandBlue = Color(0xFF005FFF)
@@ -35,17 +37,23 @@ enum class PostPlan { Free, Premium }
 /* ===== Route Entrypoint ===== */
 @Composable
 fun Announcement5Route(
-    nav: NavController,
+    nav: NavHostController,
     defaultPlan: PostPlan = PostPlan.Free,
-    onPost: (PostPlan) -> Unit = {},
-    onBack: () -> Unit = { nav.popBackStack() }
 ) {
     Announcement5Screen(
         initial = defaultPlan,
-        onPost = onPost,
-        onBack = onBack
+        onPost = { selectedPlan ->
+            // ✅ 완료 화면으로 이동
+            nav.navigate(Route.Announcement6.path) {
+                // 필요 시 스택 정리 옵션
+                // popUpTo(Route.Announcement5.path) { inclusive = false }
+                launchSingleTop = true
+            }
+        },
+        onBack = { nav.popBackStack() }
     )
 }
+
 
 /* ===== Screen ===== */
 @Composable

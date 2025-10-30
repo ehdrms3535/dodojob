@@ -90,6 +90,7 @@ dependencies {
     implementation(libs.androidx.animation.core)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui.geometry)
+    implementation(libs.androidx.compose.foundation.foundation3)
 
 
     testImplementation(libs.junit)

@@ -1,6 +1,10 @@
 package com.example.dodojob.ui.feature.onboarding
 
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.layout.BoxWithConstraints
+import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 
 @Composable
@@ -91,9 +96,21 @@ fun OnboardingScreen(nav: NavController) {
                 )
                 Spacer(Modifier.height(groupTop))
 
-                OptionCardRatio("🤝", "일하고 싶은 시니어입니다", selected == "senior") { selected = "senior" }
+                OptionCard(
+                    iconRes = R.drawable.intro_senior,
+                    title = "일하고 싶은 시니어입니다",
+                    selected = selected == "senior",
+                    onClick = { selected = "senior" }
+                )
+
                 Spacer(Modifier.height(cardGap))
-                OptionCardRatio("👔", "사람을 구하는 사장님입니다", selected == "boss") { selected = "boss" }
+
+                OptionCard(
+                    iconRes = R.drawable.intro_employer,
+                    title = "사람을 구하는 사장님입니다",
+                    selected = selected == "boss",
+                    onClick = { selected = "boss" }
+                )
 
                 Spacer(Modifier.height(contentBottomSpacer))
             }
@@ -102,33 +119,45 @@ fun OnboardingScreen(nav: NavController) {
 }
 
 @Composable
-private fun OptionCardRatio(
-    icon: String, title: String, selected: Boolean, onClick: () -> Unit
+private fun OptionCard(
+    iconRes: Int,
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit
 ) {
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(3.77f)
-            .clip(RoundedCornerShape(10.dp))      // 살짝 둥근 사각형
-            .background(if (selected) Color(0xFFE9F2FF) else Color.White)
-            .clickable { onClick() },
-        contentAlignment = Alignment.CenterStart
-    ) {
-        val W = maxWidth
-        val H = maxHeight
-        val hPad = W * 0.085f     // ≈ 28/328
-        val vPad = H * 0.18f      // ≈ 16/87
-        val gap  = W * 0.045f     // ≈ 15/328
-        val emojiSp = (H.value * 0.4f).sp
-        val textSp  = (H.value * 0.20f).sp
+    val strokeColor = if (selected) Color(0xFF005FFF) else Color.Transparent
+    val textColor = if (selected) Color(0xFF005FFF) else Color(0xFF000000)
 
-        Row(
-            Modifier.fillMaxSize().padding(horizontal = hPad, vertical = vPad),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(icon, fontSize = emojiSp)
-            Spacer(Modifier.width(gap))
-            Text(title, fontSize = textSp, fontWeight = FontWeight.Medium, color = Color(0xFF111315))
-        }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()               // 화면 패딩 내에서 꽉 차게
+            .height(87.dp)                // Figma 높이 87
+            .clip(RoundedCornerShape(10.dp))
+            .then(if (!selected) Modifier.shadow(3.dp, RoundedCornerShape(10.dp), clip = false) else Modifier)
+            .background(Color.White)
+            .border(
+                width = if (selected) 1.dp else 0.dp,
+                color = strokeColor,
+                shape = RoundedCornerShape(10.dp)
+            )
+            .clickable { onClick() }
+            .padding(horizontal = 28.dp, vertical = 15.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            modifier = Modifier
+                .width(36.dp)
+                .height(54.dp)
+        )
+        Spacer(Modifier.width(15.dp))
+        Text(
+            text = title,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium,
+            color = textColor,
+            lineHeight = 30.sp
+        )
     }
 }
