@@ -33,11 +33,22 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
+// ✅ 레포/클라이언트 (NavGraph 수정 없이 Route 내부에서 사용)
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.data.announcement.AnnouncementRepositorySupabase
 
 /* =========================
  *  Fonts
@@ -53,70 +64,134 @@ private val ScreenBg   = Color(0xFFF1F5F7)
 private val White      = Color(0xFFFFFFFF)
 private val BrandBlue  = Color(0xFF005FFF)
 private val TextGray   = Color(0xFF828282)
-private val SoftGray   = Color(0xFFF5F6F7)
 private val LineGray   = Color(0xFFBDBDBD)
 private val TileBlueBg = Color(0xFFF5F9FF)
 private val IconBoxBg  = Color(0xFFDEEAFF)
 
 
+fun interface ApplicantsProvider {
+    suspend fun fetchApplicants(): List<ApplicantUi>
+}
 
 /* =======================================================================
- *  Route) 지원자 관리
+ *  State / ViewModel
  * ======================================================================= */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ApplicantManagementRoute(nav: NavController) {
-    val sortOptions = listOf("지원일순", "이름 A-Z", "최근열람순")
-    var selectedSort by remember { mutableStateOf(sortOptions.first()) }
+data class ApplicantsState(
+    val items: List<ApplicantUi> = emptyList(),
+    val selectedSort: String = "지원일순",
+    val loading: Boolean = false,
+    val error: String? = null,
+    val totalCount: Int = 0,
+    val unreadCount: Int = 0,
+    val suggestingCount: Int = 0,
+    val hiredCount: Int = 0
+)
 
-    // 더미 데이터 (시안 구조와 값 예시)
-    val applicants = remember {
-        listOf(
-            ApplicantUi(
-                id = 1,
-                name = "김말바",
-                gender = "여",
-                age = 62,
-                headline = "열정 넘치는 인재입니다!",
-                address = "대구광역시 서구",
-                careerYears = 5,
-                method = "온라인지원",
-                postingTitle = "[현대백화점 대구점] 주간 미화원 모집",
-                status = ApplicantStatus.SUGGESTING,  // 상단 칩 2개 예시
-                activityLevel = 3
-            ),
-            ApplicantUi(
-                id = 2,
-                name = "김지원",
-                gender = "여",
-                age = 27,
-                headline = "고객과 동료에게 힘이 되는 지원자",
-                address = "대구 중구",
-                careerYears = 5,
-                method = "온라인지원",
-                postingTitle = "[현대백화점 대구점] 주간 미화원 모집",
-                status = ApplicantStatus.UNREAD,
-                activityLevel = 1
-            )
-        )
-    }
+class ApplicantsViewModel(
+    private val provider: ApplicantsProvider
+) : ViewModel() {
 
-    val displayed = remember(applicants, selectedSort) {
-        when (selectedSort) {
-            "이름 A-Z"   -> applicants.sortedBy { it.name }
-            "최근열람순" -> applicants.sortedByDescending { it.status == ApplicantStatus.READ }
-            else         -> applicants
+    private val _state = MutableStateFlow(ApplicantsState())
+    val state: StateFlow<ApplicantsState> = _state
+
+    fun load() {
+        viewModelScope.launch {
+            _state.update { it.copy(loading = true, error = null) }
+            runCatching { provider.fetchApplicants() }
+                .onSuccess { list ->
+                    val base = when (_state.value.selectedSort) {
+                        "이름 A-Z"   -> list.sortedBy { it.name }
+                        "최근열람순" -> list.sortedByDescending { it.status == ApplicantStatus.READ }
+                        else         -> list // 지원일순(서버에서 최신순 주는 것으로 가정)
+                    }
+
+                    _state.update {
+                        it.copy(
+                            items = base,
+                            loading = false,
+                            totalCount = base.size,
+                            unreadCount = base.count { x -> x.status == ApplicantStatus.UNREAD },
+                            suggestingCount = base.count { x -> x.status == ApplicantStatus.SUGGESTING },
+                            hiredCount = 0
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(loading = false, error = e.message ?: "알 수 없는 오류") }
+                }
         }
     }
 
-    val stats = remember(applicants) {
-        listOf(
-            StatItem("전체 지원자", applicants.size, R.drawable.total_applicants),
-            StatItem("미열람", applicants.count { it.status == ApplicantStatus.UNREAD }, R.drawable.unread_applicants),
-            StatItem("면접예정", applicants.count { it.status == ApplicantStatus.SUGGESTING }, R.drawable.going_to_interview),
-            StatItem("채용완료", 1, R.drawable.check_mark), // 시안 맞춤
+    fun onSortChange(label: String) {
+        _state.update { it.copy(selectedSort = label) }
+        val list = _state.value.items
+        val resorted = when (label) {
+            "이름 A-Z"   -> list.sortedBy { it.name }
+            "최근열람순" -> list.sortedByDescending { it.status == ApplicantStatus.READ }
+            else         -> list
+        }
+        _state.update { it.copy(items = resorted) }
+    }
+}
+
+/* =======================================================================
+ *  Route) 지원자 관리
+ *  - NavGraph 수정 없이 Route 내부에서 repo/provider 준비
+ * ======================================================================= */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ApplicantManagementRoute(
+    nav: NavController,
+    vm: ApplicantsViewModel = run {
+        // ✅ 1) Supabase 클라이언트/레포 준비
+        val client = LocalSupabase.current
+        val repo = remember { AnnouncementRepositorySupabase(client) }
+
+        // ✅ 2) Provider 구성 (회사ID 필터 필요시 여기에 주입)
+        val provider = remember {
+            ApplicantsProvider {
+                val rows = repo.getannounceRows(companyId = null) // 필요 시 회사ID 전달
+                // DB rows → UI 매핑
+                rows.map { r ->
+                    ApplicantUi(
+                        id = r.id,
+                        name = r.name ?: "(이름없음)",
+                        gender = r.gender ?: "-",
+                        age = r.age ?: 0,
+                        headline = r.headline ?: "열정 넘치는 인재입니다!",
+                        address = r.address ?: "-",
+                        careerYears = r.careerYears ?: 0,
+                        method = r.method ?: "온라인지원",
+                        postingTitle = r.postingTitle ?: "-",
+                        status = when (r.status?.lowercase()) {
+                            "unread"      -> ApplicantStatus.UNREAD
+                            "read"        -> ApplicantStatus.READ
+                            "suggesting",
+                            "interview"   -> ApplicantStatus.SUGGESTING
+                            else          -> ApplicantStatus.UNREAD
+                        },
+                        activityLevel = r.activityLevel ?: 1
+                    )
+                }
+            }
+        }
+
+        // ✅ 3) ViewModel 팩토리 생성 (Hilt 미사용)
+        viewModel(
+            factory = object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return ApplicantsViewModel(provider) as T
+                }
+            }
         )
     }
+) {
+    val state by vm.state.collectAsState()
+
+    LaunchedEffect(Unit) { vm.load() }
+
+    val sortOptions = listOf("지원일순", "이름 A-Z", "최근열람순")
 
     Scaffold(
         containerColor = ScreenBg,
@@ -141,7 +216,7 @@ fun ApplicantManagementRoute(nav: NavController) {
             contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 타이틀 + 통계 2x2
+            // 타이틀 + 통계
             item {
                 Column(
                     modifier = Modifier
@@ -150,6 +225,12 @@ fun ApplicantManagementRoute(nav: NavController) {
                 ) {
                     TopNavigationBar(title = "지원자 관리", useOwnBackground = false)
                     Spacer(Modifier.height(8.dp))
+                    val stats = listOf(
+                        StatItem("전체 지원자", state.totalCount, R.drawable.total_applicants),
+                        StatItem("미열람", state.unreadCount, R.drawable.unread_applicants),
+                        StatItem("면접예정", state.suggestingCount, R.drawable.going_to_interview),
+                        StatItem("채용완료", state.hiredCount, R.drawable.check_mark),
+                    )
                     StatGrid(
                         items = stats,
                         modifier = Modifier
@@ -163,31 +244,54 @@ fun ApplicantManagementRoute(nav: NavController) {
             // 상단 컨트롤 (총 N개 / 정렬)
             item {
                 ListControls(
-                    totalLabel = "총 ${displayed.size}개",
+                    totalLabel = "총 ${state.items.size}개",
                     sortOptions = sortOptions,
-                    selectedSort = selectedSort,
-                    onSortChange = { selectedSort = it },
+                    selectedSort = state.selectedSort,
+                    onSortChange = vm::onSortChange,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                 )
             }
 
-            // 카드 리스트
-            items(displayed, key = { it.id }) { ap ->
-                ApplicantCard(
-                    data = ap,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    onMenuClick = { /* TODO */ },
-                    onViewPostingClick = {  },
-                    onAction = { key ->
-                        when (key){
-                            "suggest_interview" -> nav.navigate(Route.SuggestInterview.path)
-                        }
+            // 상태별 UI
+            when {
+                state.loading -> {
+                    item {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 40.dp),
+                            contentAlignment = Alignment.Center
+                        ) { CircularProgressIndicator() }
                     }
-                )
+                }
+                state.error != null -> {
+                    item {
+                        Text(
+                            text = "로드 실패: ${state.error}",
+                            color = Color.Red,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        )
+                    }
+                }
+                else -> {
+                    items(state.items, key = { it.id }) { ap ->
+                        ApplicantCard(
+                            data = ap,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            onMenuClick = { /* TODO */ },
+                            onViewPostingClick = { /* TODO: 공고 상세 이동 */ },
+                            onAction = { key ->
+                                when (key) {
+                                    "suggest_interview" -> nav.navigate(Route.SuggestInterview.path)
+                                }
+                            }
+                        )
+                    }
+                }
             }
 
             item { Spacer(Modifier.height(80.dp)) }
@@ -198,16 +302,6 @@ fun ApplicantManagementRoute(nav: NavController) {
 /* =========================
  *  공통 컴포넌트
  * ========================= */
-@Composable
-private fun TopStatusBar() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(24.dp)
-            .background(Color(0xFFEFEFEF))
-    )
-}
-
 @Composable
 private fun TopNavigationBar(
     title: String,
@@ -286,7 +380,7 @@ private fun StatTile(item: StatItem, modifier: Modifier = Modifier) {
                 "${item.number}",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                fontFamily = PretendardBold,  // 숫자만 Bold
+                fontFamily = PretendardBold,
                 color = BrandBlue
             )
         }
@@ -345,9 +439,7 @@ private fun ListControls(
             ExposedDropdownMenu(expanded, { expanded = false }) {
                 sortOptions.forEach { option ->
                     DropdownMenuItem(
-                        text = {
-                            Text(option, fontFamily = PretendardMedium)
-                        },
+                        text = { Text(option, fontFamily = PretendardMedium) },
                         onClick = {
                             onSortChange(option)
                             expanded = false
@@ -362,7 +454,6 @@ private fun ListControls(
 /* =========================
  *  칩: 리소스 이미지
  * ========================= */
-
 private val CHIP_HEIGHT = 20.dp
 
 @Composable
@@ -373,16 +464,14 @@ private fun StatusChip(status: ApplicantStatus) {
         ApplicantStatus.SUGGESTING -> R.drawable.suggest_interview_korean
     }
 
-    // 1) painter 가져오고, 2) 원본 비율로 width 계산
     val painter = painterResource(id = resId)
     val density = LocalDensity.current
 
-    // painter.intrinsicSize: 원본 크기(px). PNG/Vector 모두 제공됨
     val intrinsic: Size = painter.intrinsicSize
     val aspect = if (intrinsic.width.isFinite() && intrinsic.height.isFinite() && intrinsic.height != 0f) {
         intrinsic.width / intrinsic.height
     } else {
-        3f // 안전한 기본 비율 (가로로 긴 칩 가정)
+        3f
     }
 
     val chipWidth: Dp = with(density) { (CHIP_HEIGHT.toPx() * aspect).toDp() }
@@ -390,9 +479,9 @@ private fun StatusChip(status: ApplicantStatus) {
     Image(
         painter = painter,
         contentDescription = null,
-        contentScale = ContentScale.FillBounds,          // 지정한 박스를 꽉 채움
+        contentScale = ContentScale.FillBounds,
         modifier = Modifier
-            .heightIn(min = CHIP_HEIGHT)                 // 부모가 눌러도 최소 높이 보장
+            .heightIn(min = CHIP_HEIGHT)
             .size(width = chipWidth, height = CHIP_HEIGHT)
     )
 }
@@ -420,8 +509,7 @@ private fun ApplicantCard(
         ) {
             // 상단: 칩(필요 시 2개) + 메뉴
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -465,7 +553,7 @@ private fun ApplicantCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // 이름(검정) + (성별, 나이)(회색) + 메달(파랑)
+                    // 이름(검정) + (성별, 나이)(회색) + 메달
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -613,7 +701,7 @@ private fun ApplicantCard(
                     VerticalDivider()
                     ActionCell(text = "문자") {}
                     VerticalDivider()
-                    ActionCell(text = "전화") {  }
+                    ActionCell(text = "전화") { }
                 }
             }
         }
@@ -663,3 +751,5 @@ private fun ApplicantCard(
             .background(LineGray)
     )
 }
+
+
