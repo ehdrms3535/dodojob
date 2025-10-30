@@ -119,7 +119,7 @@ fun Announcement6Screen(
                 // 섹션 1: 완료 메시지
                 // ▶ 헤더와 아이콘 사이 간격 ↑ (topPadding = 36.dp)
                 // ▶ 다음 카드와 간격 ↓ (bottomPadding = 8.dp)
-                AnnSectionCard(topPadding = 32.dp, bottomPadding = 6.dp) {
+                AnnSectionCard(topPadding = 8.dp, bottomPadding = 6.dp) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth(),
@@ -200,6 +200,7 @@ fun Announcement6Screen(
                         Spacer(Modifier.height(12.dp))
                     }
                 }
+                Spacer(Modifier.height(24.dp))
             }
         }
     }

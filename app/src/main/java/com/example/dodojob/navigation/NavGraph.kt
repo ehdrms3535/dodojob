@@ -1,5 +1,6 @@
 package com.example.dodojob.navigation
 
+import com.example.dodojob.ui.feature.verify.PreVerifyScreen
 import com.example.dodojob.ui.feature.main.AdOneScreen
 import com.example.dodojob.ui.feature.main.AdTwoScreen
 import com.example.dodojob.ui.feature.main.AdThreeScreen
@@ -70,12 +71,9 @@ import com.example.dodojob.ui.feature.signup.PostingRegisterCompleteScreen
 
 @Composable
 fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
-
-    // AppNavGraph.kt 어딘가(클래스 바깥, 최상위)
     fun com.example.dodojob.data.announcement.AnnouncementRow.toUi():
             com.example.dodojob.ui.feature.employ.AnnouncementUi? {
         val idSafe = id ?: return null
-        // created_at이 "2025-10-28T12:34:56Z" 처럼 와도 앞의 yyyy-MM-dd만 사용
         val created = runCatching { java.time.LocalDate.parse(created_at?.take(10)) }
             .getOrNull() ?: java.time.LocalDate.now()
 
@@ -91,14 +89,14 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             createdDate = created
         )
     }
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
-
+    NavHost(navController = nav,startDestination = Route.SignUp.path) {
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path) { LoginScreen(nav, sessionVm) }        // 3. 시니어 로그인
         composable(Route.PreLogin.path) { PreLoginScreen(nav, sessionVm) }       // 3-1. 고용주 로그인
 
-        composable(Route.Verify.path) { VerifyScreen(nav, sessionVm) }       // 4. 인증(회원가입)
+        composable(Route.Verify.path) { VerifyScreen(nav, sessionVm) }
+        composable(Route.PreVerify.path) { PreVerifyScreen(nav, sessionVm) }// 4. 인증(회원가입)
         composable(Route.SignUp.path) { SignUpIdPwScreen(nav) }   // 4-1. 회원가입
         composable(Route.SignUpComplete.path) { SignUpCompleteScreen(nav) } // 4-2. 회원가입 성공
         composable(Route.EmploySignupsec.path) { EmploySignUpIdPwScreen(nav) }
@@ -120,7 +118,21 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.Announcement3.path) { Announcement3Route(nav) }   // 공고등록 3
         composable(Route.Announcement4.path) { Announcement4Route(nav) } // 공고등록 4
         composable(Route.Announcement5.path) { Announcement5Route(nav) } // 공고등록 5
-
+        composable(Route.Announcement6.path) {
+            com.example.dodojob.ui.feature.announcement.Announcement6Screen(
+                onManageClick = {
+                    // 예시: 고용주 공고 관리로 이동
+                    nav.navigate(Route.EmployerNotice.path)
+                },
+                onNewPostClick = {
+                    // 예시: 공고 등록 처음 화면으로 이동
+                    nav.navigate(Route.Announcement.path) {
+                        popUpTo(Route.Announcement.path) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
 
         composable(Route.My.path) { ProfileRoute(nav) } // 시니어 프로필
         composable(ApplyRoute.path) { ApplicationRoute(nav) } // 지원서 작성

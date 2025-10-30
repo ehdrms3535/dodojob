@@ -148,13 +148,14 @@ fun Announcement4Screen(
         ) {
             /* 상단 설명 */
             SectionCard {
+                Spacer(modifier = Modifier.height(18.dp))
                 TitleRow("04. 최종 검토 후 공고를 게시해주세요!")
             }
 
             /* 기본정보 */
             SectionCard {
                 SectionHeader(title = "기본정보", onEdit = onEditBasic)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ConfirmItem(label = "근무회사명", value = companyName)
                     ConfirmItem(label = "담당자명", value = contactName)
@@ -162,22 +163,24 @@ fun Announcement4Screen(
                     ConfirmItem(label = "회사 위치", value = companyLocation)
                 }
             }
+            SectionSpacer()
 
             /* 모집 직종 */
             SectionCard {
                 SectionHeader(title = "모집 직종", onEdit = onEditJob)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ConfirmItem(label = "직종 카테고리", value = majorJob)
                     ConfirmItem(label = "모집 인원", value = headCount)
                     ConfirmItem(label = "업무 내용", value = jobDesc)
                 }
             }
+            SectionSpacer()
 
             /* 근무 조건 */
             SectionCard {
                 SectionHeader(title = "근무 조건", onEdit = onEditWorkCond)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ConfirmItem(label = "근무 형태", value = workType)
                     ConfirmItem(label = "근무 시간", value = workTime)
@@ -185,38 +188,42 @@ fun Announcement4Screen(
                     ConfirmItem(label = "체력 강도", value = intensity)
                 }
             }
+            SectionSpacer()
 
             /* 급여 및 혜택 */
             SectionCard {
                 SectionHeader(title = "급여 및 혜택", onEdit = onEditPayBenefit)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ConfirmItem(label = "시급", value = hourlyWage)
                     ConfirmItem(label = "월 예상 급여", value = monthlyEstimate)
                     ConfirmItem(label = "복리 혜택", value = benefits)
                 }
             }
+            SectionSpacer()
 
             /* 지원자 요건 */
             SectionCard {
                 SectionHeader(title = "지원자 요건", onEdit = onEditRequirements)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ConfirmItem(label = "성별", value = reqGender)
                     ConfirmItem(label = "필수 조건", value = reqMust)
                     ConfirmItem(label = "우대사항", value = reqPrefer)
                 }
             }
+            SectionSpacer()
 
             /* 지원 방식 - 카드형 2개 (체크박스 제거) */
             SectionCard {
                 LabelText("지원 방식")
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 ApplyMethodSection(
                     selected = applyMethod,
                     onSelect = { applyMethod = it }
                 )
             }
+            SectionSpacer()
 
             /* 하단 버튼 2개 */
             Column(
@@ -228,31 +235,45 @@ fun Announcement4Screen(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp) // ← 5.dp로
                 ) {
                     OutlinedButton(
                         onClick = { onBack() },
                         modifier = Modifier
-                            .weight(0.6f)
-                            .height(44.dp),
+                            .width(88.dp)                    // ← 고정 88.dp
+                            .height(47.dp),                  // ← 47.dp
                         shape = RoundedCornerShape(10.dp),
                         border = BorderStroke(1.dp, Blue),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Blue),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
+                        contentPadding = PaddingValues(horizontal = 10.dp) // ← 10.dp
                     ) {
-                        Text("이전", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            "이전",
+                            fontSize = 18.sp,                 // ← 18.sp
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.3).sp,        // ← 동일 letterSpacing
+                            color = Blue
+                        )
                     }
 
                     Button(
-                        onClick = { onSubmit() },     // ✅ Route 기본값에서 05로 navigate
+                        onClick = { onSubmit() },
                         modifier = Modifier
-                            .weight(1.4f)
-                            .height(44.dp),
+                            .weight(1f)                       // ← 나머지 전부
+                            .height(47.dp),                   // ← 47.dp
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Blue, contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Blue,
+                            contentColor = Color.White
+                        ),
                         contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
-                        Text("다음 단계", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "다음 단계",
+                            fontSize = 18.sp,                 // ← 18.sp
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.3).sp         // ← 동일 letterSpacing
+                        )
                     }
                 }
             }
@@ -350,6 +371,16 @@ private fun SectionCard(
             content = content
         )
     }
+}
+
+@Composable
+private fun SectionSpacer() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(20.dp)
+            .background(BgGray)
+    )
 }
 
 @Composable
@@ -458,10 +489,11 @@ private fun ApplyChoiceCard(
 ) {
     val shape = RoundedCornerShape(12.dp)
     val stroke = BorderStroke(1.dp, if (selected) Blue else Color(0xFFCFDBFF))
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(61.dp)
+            .height(64.dp)
             .border(stroke, shape)
             .background(Color.White, shape)
             .clickable { onClick() }
@@ -470,14 +502,15 @@ private fun ApplyChoiceCard(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            title,
+            text = title,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             color = if (selected) Blue else Color(0xFF1A1A1A),
             textAlign = TextAlign.Center
         )
+        Spacer(Modifier.height(0.dp)) // ✅ 간격을 줄임 (기존 6~8dp → 2dp)
         Text(
-            subtitle,
+            text = subtitle,
             fontSize = 12.sp,
             color = TextGray,
             textAlign = TextAlign.Center
