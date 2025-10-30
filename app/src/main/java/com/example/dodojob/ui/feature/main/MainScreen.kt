@@ -53,8 +53,30 @@ import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.viewModelScope
+import com.example.dodojob.data.recommend.RecoJob
+import com.example.dodojob.data.recommend.fetchRecommendedJobs
+import kotlinx.coroutines.launch
 
 /* ===================== 데이터 모델 ===================== */
+
+data class JobCardUi(
+    val id: Long,
+    val org: String,
+    val condition: String,
+    val desc: String,
+    val dday: String
+)
+
+fun RecoJob.toJobCardUi(): JobCardUi = JobCardUi(
+    id = this.id,
+    org = this.company_name ?: "회사명 없음", //회사명
+    condition =  "없음", // 필수 경력
+    desc = this.major ?: "-", // 주요일
+    dday = "없음" // 남은일
+)
+
+
 
 data class JobSummary(
     val id: String,
@@ -62,7 +84,7 @@ data class JobSummary(
     val tag: String,
     val title: String,
     val desc: String, // 상단 카드에서는 미표시(보관용)
-    val dday: String,
+    val dday: String,// 남으닝ㄹ
 )
 
 data class JobDetail(
@@ -123,6 +145,18 @@ object MainFakeRepository {
     )
 }
 
+fun List<RecoJob>.toJobDetailList(): List<JobDetail> =
+    this.map { job ->
+        JobDetail(
+            id = job.id.toString(),
+            org = job.company_name ?: "회사명 없음",
+            condition = if (!job.talent.isNullOrBlank()) "| ${job.talent}" else "| 없음",
+            desc = job.major ?: "-",
+            dday = ""
+        )
+    }
+
+
 /* ===================== ViewModel ===================== */
 
 class MainViewModel : ViewModel() {
@@ -130,11 +164,24 @@ class MainViewModel : ViewModel() {
         MainUiState(
             aiJobs = MainFakeRepository.loadAiJobs(),
             banners = MainFakeRepository.loadBanners(),
-            tailoredJobs = MainFakeRepository.loadTailored()
+            tailoredJobs =  emptyList()
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState
+    fun fetchRpcRecommendations() {
+        viewModelScope.launch {
+            val recoList = fetchRecommendedJobs(
+                category = null,
+                days = null,
+                startMin = null, endMin = null,
+                region = null, years = 0, gender = null
+            )
 
+            // ✅ 변환 후 UI 적용
+            val tailored = recoList.toJobDetailList()
+            _uiState.update { it.copy(tailoredJobs = tailored) }
+        }
+    }
     fun onSearchChange(text: String) { _uiState.update { it.copy(searchText = text) } }
     fun refreshRecommendations() {
         _uiState.update { it.copy(aiJobs = it.aiJobs.shuffled(), tailoredJobs = it.tailoredJobs.shuffled()) }
@@ -146,6 +193,10 @@ class MainViewModel : ViewModel() {
 @Composable
 fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
     val state by vm.uiState.collectAsState()
+    LaunchedEffect(Unit) {
+        vm.fetchRpcRecommendations()
+    }
+
     MainScreen(
         state = state,
         onSearch = vm::onSearchChange,
@@ -184,6 +235,7 @@ fun MainScreen(
     onRefreshTailored: () -> Unit,
     onBannerClick: (Int) -> Unit,
 ) {
+
     val brandBlue = Color(0xFF005FFF)
     val screenBg = Color(0xFFF1F5F7)
     var user by remember { mutableStateOf<String?>(null) }
@@ -192,6 +244,8 @@ fun MainScreen(
     LaunchedEffect(currentuser) {
         user = getUsernameById(currentuser) // ✅ suspend 안전 호출
     }
+
+
 
     var bannerIndex by remember { mutableStateOf(0) }
     LaunchedEffect(state.banners.size) {
