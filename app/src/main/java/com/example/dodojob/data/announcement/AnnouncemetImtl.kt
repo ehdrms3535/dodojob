@@ -1,8 +1,11 @@
 package com.example.dodojob.data.announcement
 
+import ApplicantRow
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
 
 @Serializable
 data class AnnouncementRow(
@@ -70,5 +73,13 @@ class AnnouncementRepositorySupabase(
             .decodeList<AnnouncementRow>()
     }
 
+    suspend fun getannounceRows(companyId: String? = null): List<ApplicantRow> {
+        val params = buildMap {
+            if (companyId != null) put("p_company_id", companyId)
+        }
+        return client.postgrest
+            .rpc("getannounce_rows", params)
+            .decodeList<ApplicantRow>()
+    }
 }
 
