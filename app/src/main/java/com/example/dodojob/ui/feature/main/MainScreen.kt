@@ -57,7 +57,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.dodojob.data.recommend.RecoJob
 import com.example.dodojob.data.recommend.fetchRecommendedJobs
 import kotlinx.coroutines.launch
-
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
 /* ===================== 데이터 모델 ===================== */
 
 data class JobCardUi(
@@ -65,7 +68,8 @@ data class JobCardUi(
     val org: String,
     val condition: String,
     val desc: String,
-    val dday: String
+    val dday: String,
+    val imageUrl: String? = null
 )
 
 fun RecoJob.toJobCardUi(): JobCardUi = JobCardUi(
@@ -73,7 +77,8 @@ fun RecoJob.toJobCardUi(): JobCardUi = JobCardUi(
     org = this.company_name ?: "회사명 없음", //회사명
     condition =  "없음", // 필수 경력
     desc = this.major ?: "-", // 주요일
-    dday = "없음" // 남은일
+    dday = "없음", // 남은일
+    imageUrl = "https://bswcjushfcwsxswufejm.supabase.co/storage/v1/object/public/company_images/workplace/2345/1759684464991_1daad090-6d3c-4ab7-a3d3-89eb01898561.jpg"
 )
 
 
@@ -108,7 +113,7 @@ data class MainUiState(
     val searchText: String = "",
     val aiJobs: List<JobSummary> = emptyList(),
     val banners: List<AdBanner> = emptyList(),
-    val tailoredJobs: List<JobDetail> = emptyList()
+    val tailoredJobs: List<JobCardUi> = emptyList()
 )
 
 /* ===================== Fake Repository ===================== */
@@ -145,14 +150,15 @@ object MainFakeRepository {
     )
 }
 
-fun List<RecoJob>.toJobDetailList(): List<JobDetail> =
+fun List<RecoJob>.toJobDetailList(): List<JobCardUi> =
     this.map { job ->
-        JobDetail(
-            id = job.id.toString(),
+        JobCardUi(
+            id = job.id,
             org = job.company_name ?: "회사명 없음",
             condition = if (!job.talent.isNullOrBlank()) "| ${job.talent}" else "| 없음",
             desc = job.major ?: "-",
-            dday = ""
+            dday = "4",
+            imageUrl = "https://bswcjushfcwsxswufejm.supabase.co/storage/v1/object/public/company_images/workplace/2345/1759684464991_1daad090-6d3c-4ab7-a3d3-89eb01898561.jpg"
         )
     }
 
@@ -167,6 +173,7 @@ class MainViewModel : ViewModel() {
             tailoredJobs =  emptyList()
         )
     )
+
     val uiState: StateFlow<MainUiState> = _uiState
     fun fetchRpcRecommendations() {
         viewModelScope.launch {
@@ -229,7 +236,7 @@ fun MainScreen(
     state: MainUiState,
     onSearch: (String) -> Unit,
     onJobClick: (String) -> Unit,
-    onTailoredClick: (String) -> Unit,
+    onTailoredClick: (Long) -> Unit,
     onOpenCalendar: () -> Unit,
     onShortcut: (String) -> Unit,
     onRefreshTailored: () -> Unit,
@@ -778,7 +785,7 @@ private fun JobSummaryCard(
 
 /* ---------- (아래) 맞춤형 카드 ---------- */
 @Composable
-private fun JobDetailCard(job: JobDetail, onClick: () -> Unit) {
+private fun JobDetailCard(job: JobCardUi, onClick: () -> Unit) {
     val daysLeft = remember(job.dday) { parseDaysLeft(job.dday) }
     val ddayColor = if (daysLeft != null && daysLeft <= 10) Color.Red else Color(0xFF005FFF)
     val (dPart, _) = remember(job.dday) { splitDdayParts(job.dday) } // "D-x"만 추출
@@ -800,6 +807,18 @@ private fun JobDetailCard(job: JobDetail, onClick: () -> Unit) {
                     .height(132.dp)
                     .background(Color(0xFFE9EEF8), RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
             ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(job.imageUrl)     // ✅ 예: https://bswc...jpg
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    // placeholder / error는 선택
+                    // placeholder = painterResource(R.drawable.placeholder),
+                    // error = painterResource(R.drawable.placeholder)
+                )
                 // ⬇️ 왼쪽 하단 고정
                 DdayBadge(
                     dday = job.dday,
