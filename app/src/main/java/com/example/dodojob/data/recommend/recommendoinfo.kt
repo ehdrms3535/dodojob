@@ -12,27 +12,33 @@ import kotlinx.serialization.json.Json      // Json 설정
 
 import com.example.dodojob.BuildConfig      // BuildConfig.SUPABASE_ANON_KEY 등
 import io.ktor.client.call.body
+import com.example.dodojob.data.supabase.LocalSupabase
+import io.github.jan.supabase.postgrest.rpc
 
 @Serializable
 data class RecoJob(
     val id: Long,
-    val company_name: String?,
-    val company_locate: String?,
-    val job_category: String?,
-    val talent: String?,
-    val major: String?,
-    val form: String?,
-    val week_text: String?,
-    val starttime: String?,
-    val endtime: String?,
-    val intensity: String?,
-    val salary_type: String?,
-    val salary_amount: Long?,
-    val benefit: String?,
-    val career: String?,
-    val job_gender: String?,
-    val is_public: Boolean?,
-    val created_at: String?
+    val company_name: String? = null,
+    val company_locate: String? = null,
+    val job_category: String? = null,
+    val talent: String? = null,
+    val major: String? = null,
+    val form: String? = null,
+    val week_text: String? = null,
+    val starttime: String? = null,
+    val endtime: String? = null,
+    val intensity: String? = null,
+    val salary_type: String? = null,
+    val salary_amount: Long? = null,
+    val benefit: String? = null, // ← 응답에 없으면 지우는 걸 권장. 남길거면 = null 꼭!
+    val career: String? = null,
+    val job_gender: String? = null,
+    val is_public: Boolean? = null,
+    val created_at: String? = null,
+    val is_paid: Boolean? = null,
+    val paid_days: Int? = null,
+    val career_required: Boolean? = null,
+    val similarity: Double? = null
 )
 
 suspend fun fetchRecommendedJobs(
@@ -63,6 +69,29 @@ suspend fun fetchRecommendedJobs(
                     "p_end_min" to endMin,
                     "p_years" to years,
                     "p_gender" to gender
+                )
+            )
+        }.body()
+        return res
+    } finally {
+        http.close() // 임시 생성이면 닫아주기(앱 전체에서 재사용한다면 싱글톤 추천)
+    }
+}
+
+suspend fun fetchAiRecommendedJobs(username: String): List<RecoJob> {
+    val http = HttpClient(OkHttp) {
+        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+    }
+    try {
+        val res: List<RecoJob> = http.post(
+            "https://bswcjushfcwsxswufejm.supabase.co/rest/v1/rpc/reco_candidates_ai_v2"
+        ) {
+            header("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            header("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+            contentType(ContentType.Application.Json)
+            setBody(
+                mapOf(
+                    "p_username" to username
                 )
             )
         }.body()
