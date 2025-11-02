@@ -59,8 +59,13 @@ import com.example.dodojob.data.recommend.fetchRecommendedJobs
 import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.dodojob.dao.fetchCompanyImagesMap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
+import com.example.dodojob.data.recommend.fetchAiRecommendedJobs
 /* ===================== 데이터 모델 ===================== */
 
 data class JobCardUi(
@@ -150,17 +155,69 @@ object MainFakeRepository {
     )
 }
 
-fun List<RecoJob>.toJobDetailList(): List<JobCardUi> =
-    this.map { job ->
+fun computeDday(
+    createdAtIso: String?,   // e.g. "2025-10-05T17:14:26.692965+00"
+    isPaid: Boolean?,
+    paidDays: Int?
+): String {
+    return try {
+        if (createdAtIso == null) return "D-?"
+        val createdAt = OffsetDateTime.parse(createdAtIso).toLocalDate()
+        val today = LocalDate.now()
+
+        val endDate = if (isPaid == true && paidDays != null)
+            paidDays + 7
+        else
+            7 // 무료 공고는 그대로
+
+        var left = ChronoUnit.DAYS.between(today, createdAt).toInt()
+        left = endDate-left
+        when {
+            left < 0 -> "마감"
+            else -> "D-$left"
+        }
+    } catch (e: Exception) {
+        "D-?"
+    }
+}
+
+// com.example.dodojob.ui.feature.main (혹은 적절한 파일)
+fun List<RecoJob>.toJobDetailList(imageMap: Map<Long, String>): List<JobCardUi> =
+    map { job ->
+        //val fallbackUrl = imageMap[12L] ?: "https://bswcjushfcwsxswufejm.supabase.co/storage/v1/object/public/company_images/workplace/2345/Rectangle293.png"
+        val url = imageMap[job.id]
+        val talents = listOf(
+            "영어 회화", "악기 지도", "요리 강사", "역사 강의",
+            "공예 강의", "예술 지도", "독서 지도", "관광 가이드",
+            "상담·멘토링", "홍보 컨설팅"
+        )
+
+        val dday = computeDday(
+            createdAtIso = job.created_at,      // 서버 ISO8601 문자열
+            isPaid = job.is_paid,               // announcement_pricing.price
+            paidDays = job.paid_days            // announcement_pricing.date
+        )
+
+        // 2️⃣ job.talent가 "0000011111" 형태일 때
+        val selected = job.talent
+            ?.toList()
+            ?.mapIndexedNotNull { index, c ->
+                if (c == '1') talents.getOrNull(index) else null
+            }
+            ?.take(2) // 앞에서 2개만
+            ?.joinToString(" | ") ?: "없음"
+
         JobCardUi(
             id = job.id,
             org = job.company_name ?: "회사명 없음",
-            condition = if (!job.talent.isNullOrBlank()) "| ${job.talent}" else "| 없음",
+            condition = "| $selected",
             desc = job.major ?: "-",
-            dday = "4",
-            imageUrl = "https://bswcjushfcwsxswufejm.supabase.co/storage/v1/object/public/company_images/workplace/2345/1759684464991_1daad090-6d3c-4ab7-a3d3-89eb01898561.jpg"
+            dday = dday,
+            imageUrl = url ?: "" // 없으면 빈 문자열 -> AsyncImage가 에러/placeholder 처리
         )
     }
+
+
 
 
 /* ===================== ViewModel ===================== */
@@ -168,13 +225,44 @@ fun List<RecoJob>.toJobDetailList(): List<JobCardUi> =
 class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(
         MainUiState(
-            aiJobs = MainFakeRepository.loadAiJobs(),
+            aiJobs = emptyList(),
             banners = MainFakeRepository.loadBanners(),
             tailoredJobs =  emptyList()
         )
     )
 
     val uiState: StateFlow<MainUiState> = _uiState
+    fun fetchRpcAiRecommendations() {
+        viewModelScope.launch {
+            val username = CurrentUser.username ?: return@launch
+            try {
+                val recoList = fetchAiRecommendedJobs(username)
+                // RecoJob → JobSummary 변환
+                val aiList = recoList.map { job ->
+                    val tag = if (job.career_required == true) "[경력]" else "[무관]"
+                    val Dday = computeDday(
+                        createdAtIso = job.created_at,
+                        isPaid = job.is_paid,
+                        paidDays = job.paid_days
+                    )
+                    JobSummary(
+                        id = job.id.toString(),
+                        org = job.company_name ?: "회사명 없음",
+                        tag = "[${job.job_category ?: "일반"}]",
+                        title = job.major ?: "-",
+                        desc = job.form ?: "-",
+                        dday = "$Dday | $tag"
+                    )
+                }
+
+                _uiState.update { it.copy(aiJobs = aiList) }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun fetchRpcRecommendations() {
         viewModelScope.launch {
             val recoList = fetchRecommendedJobs(
@@ -184,8 +272,12 @@ class MainViewModel : ViewModel() {
                 region = null, years = 0, gender = null
             )
 
-            // ✅ 변환 후 UI 적용
-            val tailored = recoList.toJobDetailList()
+            // 2) 공고 id로 이미지들 일괄 조회
+            val ids = recoList.map { it.id }.distinct()
+            val imageMap = fetchCompanyImagesMap(ids) // ← 여기!
+
+            // 3) UI 모델 변환 (이미지 매핑 사용)
+            val tailored = recoList.toJobDetailList(imageMap)
             _uiState.update { it.copy(tailoredJobs = tailored) }
         }
     }
@@ -201,6 +293,7 @@ class MainViewModel : ViewModel() {
 fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
     val state by vm.uiState.collectAsState()
     LaunchedEffect(Unit) {
+        vm.fetchRpcAiRecommendations()
         vm.fetchRpcRecommendations()
     }
 
