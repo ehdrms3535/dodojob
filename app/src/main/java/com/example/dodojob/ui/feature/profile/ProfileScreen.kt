@@ -1,6 +1,5 @@
 package com.example.dodojob.ui.feature.profile
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,13 +24,13 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
-import com.example.dodojob.ui.feature.common.LeaveDialog
-import com.example.dodojob.ui.feature.common.LogoutDialog
 import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
-import io.github.jan.supabase.storage.storage
 import com.example.dodojob.ui.feature.main.BottomNavBar
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -132,19 +130,21 @@ fun ProfileRoute(nav: NavController) {
             }
         }
     )
+    if (showLeave) {
+        LeaveDialog(
+            currentUsername = CurrentUser.username,
+            nav = nav,
+            onClosed = { showLeave = false }
+        )
+    }
 
     if (showLogout) {
         LogoutDialog(
-            onConfirm = { showLogout = false /* TODO: signOut & nav */ },
-            onCancel = { showLogout = false }
+            nav = nav,
+            onClosed = { showLogout = false }
         )
     }
-    if (showLeave) {
-        LeaveDialog(
-            onConfirm = { showLeave = false /* TODO: delete & nav */ },
-            onCancel = { showLeave = false }
-        )
-    }
+
 }
 
 @Composable
