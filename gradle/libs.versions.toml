@@ -30,7 +30,8 @@ androidxFoundation = "1.9.2"
 animationCore = "1.9.2"
 material3 = "1.4.0"
 uiGeometry = "1.9.2"
-androidxFoundationVersion = "1.9.4" # ← 위에서 확인한 resolved 버전으로
+androidxFoundationVersion = "1.9.4"
+ui = "1.9.4" # ← 위에서 확인한 resolved 버전으로
 
 
 [libraries]
@@ -94,6 +95,7 @@ androidx-animation-core = { group = "androidx.compose.animation", name = "animat
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-ui-geometry = { group = "androidx.compose.ui", name = "ui-geometry", version.ref = "uiGeometry" }
 androidx-compose-foundation-foundation3 = { group = "androidx.compose.foundation", name = "foundation", version.ref = "androidxFoundationVersion" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

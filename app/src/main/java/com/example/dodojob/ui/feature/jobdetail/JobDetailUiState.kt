@@ -3,6 +3,7 @@ package com.example.dodojob.ui.feature.jobdetail
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.rememberAsyncImagePainter
 
 /* ======== 모델 ======== */
 data class JobDetailUiState(
@@ -33,14 +36,15 @@ data class JobDetailUiState(
     val workplaceMapHint: String,
     val working: List<LabelValue>,
     val duties: List<String>,
-    val isLiked: Boolean = false
+    val isLiked: Boolean = false,
+    val imageUrl: String? = null,
 )
 
 data class InfoChip(
     val small: String,
     val value: String,
     val style: ChipStyle = ChipStyle.Primary,
-    val emoji: String? = null      // ← 아이콘(이모지) 옵션
+    val emoji: String? = null
 )
 
 enum class ChipStyle { Primary, Neutral, Danger }
@@ -130,17 +134,8 @@ fun JobDetailScreen(
                             .padding(horizontal = 20.dp)
                     )
 
-                    // 대표 이미지 자리(플레이스홀더)
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 10.dp)
-                            .padding(horizontal = 16.dp)
-                            .fillMaxWidth()
-                            .height(193.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFE9EDF2)),
-                        contentAlignment = Alignment.Center
-                    ) { Text("이미지 영역 (DB 연동 예정)", color = TextDim, fontSize = 13.sp) }
+                    // ✅ 대표 이미지 (Coil) — url 없으면 플레이스홀더
+                    HeaderImage(ui.imageUrl)
 
                     // 공고 제목
                     Text(
@@ -177,7 +172,7 @@ fun JobDetailScreen(
                         )
                     }
 
-                    // ✅ 칩: 2열 그리드 + 아이콘배지 + 라벨/값 (두번째 이미지 스타일)
+                    // ✅ 칩: 2열 그리드 + 아이콘배지 + 라벨/값
                     ChipsGrid(
                         chips = ui.chips,
                         modifier = Modifier
@@ -282,6 +277,32 @@ fun JobDetailScreen(
 
             Spacer(Modifier.height(50.dp))
         }
+    }
+}
+
+/* ======== 대표 이미지 ======== */
+@Composable
+private fun HeaderImage(url: String?) {
+    val modifier = Modifier
+        .padding(top = 10.dp, start = 16.dp, end = 16.dp)
+        .fillMaxWidth()
+        .height(193.dp)
+        .clip(RoundedCornerShape(10.dp))
+
+    if (url.isNullOrBlank()) {
+        Box(
+            modifier = modifier.background(Color(0xFFE9EDF2)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("이미지 영역", color = TextDim, fontSize = 13.sp)
+        }
+    } else {
+        Image(
+            painter = rememberAsyncImagePainter(url),
+            contentDescription = "대표 이미지",
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
     }
 }
 
@@ -483,7 +504,8 @@ private fun PreviewJobDetail() {
             "고객 전화 연결 처리",
             "매장 환경 점검 및 진열 관리"
         ),
-        isLiked = false
+        isLiked = false,
+        imageUrl = null // 미리보기에서는 null로 플레이스홀더
     )
     JobDetailRoute(sample, onBack = {}, onToggleLike = {}, onCall = {}, onApply = {})
 }

@@ -14,6 +14,10 @@ sealed class Route(val path: String) {
 
     data object  EmploySignup : Route("employsignup")
 
+    data object JobDetail : Route("job_detail/{id}") {
+        fun of(id: Long) = "job_detail/$id"
+    }
+
     data object JobType : Route("job_type")
     data object Prefer : Route("prefer")
     data object PreferMap : Route("prefer_map")
