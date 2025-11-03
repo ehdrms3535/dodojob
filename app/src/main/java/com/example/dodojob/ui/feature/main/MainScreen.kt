@@ -301,7 +301,7 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
         state = state,
         onSearch = vm::onSearchChange,
         onJobClick = { /* nav.navigate("job_detail/$it") */ },
-        onTailoredClick = { /* nav.navigate("job_detail/$it") */ },
+        onTailoredClick = { id-> nav.navigate(Route.JobDetail.of(id)) },
         onOpenCalendar = { nav.navigate(Route.Map.path)  },
         onShortcut = { key ->
             when (key) {
