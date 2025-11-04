@@ -38,6 +38,8 @@ data class JobDetailUiState(
     val duties: List<String>,
     val isLiked: Boolean = false,
     val imageUrl: String? = null,
+    val careerYears: Int? = null,
+    val benefits: List<String> = emptyList()
 )
 
 data class InfoChip(
@@ -505,7 +507,7 @@ private fun PreviewJobDetail() {
             "매장 환경 점검 및 진열 관리"
         ),
         isLiked = false,
-        imageUrl = null // 미리보기에서는 null로 플레이스홀더
+        imageUrl = null
     )
     JobDetailRoute(sample, onBack = {}, onToggleLike = {}, onCall = {}, onApply = {})
 }
