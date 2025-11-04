@@ -91,6 +91,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui.geometry)
     implementation(libs.androidx.compose.foundation.foundation3)
+    implementation(libs.androidx.ui)
 
 
     testImplementation(libs.junit)
