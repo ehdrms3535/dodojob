@@ -32,6 +32,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
@@ -179,10 +180,11 @@ fun ManagementAnnouncementRoute(
                 current = "notice",
                 onClick = { key ->
                     when (key) {
-                        "home"      -> nav.navigate(Route.EmployerHome.path)
-                        "notice"    -> Unit
-                        "applicant" -> nav.navigate(Route.EmployerApplicant.path)
-                        "my"        -> nav.navigate(Route.EmployerMy.path)
+                        "home"           -> nav.safeNavigate(Route.EmployerHome.path)
+                        "notice"         -> nav.safeNavigate(Route.EmployerNotice.path)
+                        "applicant"      -> nav.safeNavigate(Route.EmployerApplicant.path)
+                        "human_resource" -> nav.safeNavigate(Route.EmployerHumanResource.path)
+                        "my"             -> nav.safeNavigate(Route.EmployerMy.path)
                     }
                 }
             )
@@ -604,3 +606,8 @@ private fun ActionItem(iconRes: Int, text: String) {
         Text(text, fontSize = 12.sp, color = TextGray)
     }
 }
+
+private fun NavController.safeNavigate(
+    route: String,
+    builder: (NavOptionsBuilder.() -> Unit)? = { launchSingleTop = true; restoreState = true }
+) { navigate(route) { builder?.invoke(this) } }
