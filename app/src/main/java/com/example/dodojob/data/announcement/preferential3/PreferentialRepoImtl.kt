@@ -20,7 +20,7 @@ class PreferentialRepoSuSupabase(
     override suspend fun insertPreferential(announcement: PreferentialDto){
         client.from("preferential_treatment").insert(
             PreferntialRow(
-                announcement_id = 12,
+                announcement_id = announcement.id,
                 preferential_treatment = announcement.preferential_treatment
             )
         )
