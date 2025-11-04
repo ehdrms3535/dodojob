@@ -1,6 +1,7 @@
 package com.example.dodojob.data.announcement.skillsorexprience2;
 
 data class SkillDto (
+    val id : Long,
     val skill : String
 )
 

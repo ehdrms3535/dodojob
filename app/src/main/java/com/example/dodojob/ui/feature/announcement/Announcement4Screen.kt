@@ -28,13 +28,61 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.dao.getCompanyIdByUsername
+import com.example.dodojob.dao.getannouncebycom
 import com.example.dodojob.navigation.Route   // ✅ Route 사용
+import com.example.dodojob.data.announcement.fullannouncement.*
+import com.example.dodojob.session.CurrentUser
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import io.ktor.client.HttpClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 
 /* -------- Colors -------- */
 private val Blue = Color(0xFF005FFF)
 private val TextGray = Color(0xFF828282)
 private val BgGray = Color(0xFFF1F5F7)
 private val CardBg = Color.White
+
+// package com.example.dodojob.ui.feature.announcement
+
+private val BENEFIT_LABELS = listOf("식대 지원", "교통비 지원", "4대 보험", "교육비 지원")
+
+private fun benefitBitsToText(bits: String?): String {
+    if (bits.isNullOrBlank()) return "없음"
+    val first4 = bits.padEnd(4, '0').substring(0, 4)
+    val onLabels = buildList {
+        first4.forEachIndexed { idx, c ->
+            if (c == '1' && idx < BENEFIT_LABELS.size) add(BENEFIT_LABELS[idx])
+        }
+    }
+    return if (onLabels.isEmpty()) "없음" else onLabels.joinToString(" / ")
+}
+
+private fun weekBitsToText(bits: String?): String {
+    // "1111111" → "주 7일 (월/화/수/목/금/토/일)"
+    if (bits.isNullOrBlank()) return "협의"
+    val days = listOf("월","화","수","목","금","토","일")
+    val on = days.indices.filter { i -> i < bits.length && bits[i] == '1' }.map { days[it] }
+    val count = on.size
+    return if (count == 0) "협의" else "주 ${count}일 (${on.joinToString("/")})"
+}
+
+private fun timeRangeText(start: String?, end: String?): String {
+    val s = start ?: "-"
+    val e = end ?: "-"
+    return if (s == "-" && e == "-") "협의" else "$s ~ $e"
+}
+
+private fun salaryText(type: String?, amount: Int?): String {
+    if (type.isNullOrBlank() || amount == null) return "협의"
+    val pretty = "%,d".format(amount)
+    return "$type $pretty 원"
+}
 
 /* ====== Route Entrypoint ====== */
 @Composable
@@ -92,8 +140,62 @@ fun Announcement4Screen(
     onEditRequirements: () -> Unit,
     onTabClick: (Int) -> Unit
 ) {
-    val scroll = rememberScrollState()
 
+    var row by remember { mutableStateOf<AnnouncementFullRow?>(null) }
+    var applyMethod by remember { mutableStateOf(ApplyMethod.PhoneSms) }
+
+    LaunchedEffect(Unit) {
+        val username = CurrentUser.username
+        if (username.isNullOrBlank()) return@LaunchedEffect
+
+        runCatching {
+            withContext(Dispatchers.IO) {
+                val companyId = CurrentUser.companyid           // suspend 가정
+                val announceId = getannouncebycom(companyId)
+                    ?: error("해당 회사의 공고가 없습니다.")
+                val announce = announceId.id
+
+                fetchAnnouncementFull( id = announce)
+            }
+        }.onSuccess { fetched ->
+            row = fetched                                                  // state 업데이트
+        }.onFailure { e ->
+            // TODO: 스낵바/로그 처리
+            e.printStackTrace()
+        }
+    }
+
+    // -------- 화면에 꽂기 위한 문자열 준비 --------
+    val companyName = row?.company_name ?: "-"
+    val companyLocation = listOfNotNull(row?.company_locate, row?.detail_locate?.takeIf { it.isNotBlank() })
+        .joinToString(" ")
+    val contactName = "-"        // 이전 단계 상태 연결 전까지 placeholder
+    val contactPhone = "-"       // 이전 단계 상태 연결 전까지 placeholder
+
+    val majorJob = row?.work_category ?: "-"
+    val headCount = "-"                                 // (뷰에 없음) 추후 02~03 단계 상태와 연결
+    val jobDesc = row?.major ?: "-"
+
+    val workType = row?.form ?: "-"
+    val workTime = timeRangeText(row?.starttime, row?.endtime)
+    val workDaysCount = weekBitsToText(row?.week)
+    val intensity = row?.intensity ?: "-"
+
+    val hourlyWage = salaryText(row?.salary_type, row?.salary_amount)
+    val monthlyEstimate = "-"                            // (필요시 계산로직 추가)
+    val benefits = benefitBitsToText(row?.benefit)
+
+    val reqGender = row?.gender ?: "무관"
+    val reqMust = row?.license_requirement ?: "-"        // 필수조건으로 매핑
+    val reqPrefer = buildList {
+        if (!row?.preferential_treatment.isNullOrBlank()) add(row!!.preferential_treatment!!)
+        if (!row?.skill.isNullOrBlank()) add("스킬: ${row!!.skill}")
+    }.joinToString(" / ").ifBlank { "-" }
+
+
+
+    val scroll = rememberScrollState()
+/*
     // 데모 데이터 (1~3단계에서 넘어오는 상태 바인딩 예정)
     val companyName by remember { mutableStateOf("모던하우스") }
     val contactName by remember { mutableStateOf("홍길동") }
@@ -116,10 +218,7 @@ fun Announcement4Screen(
     val reqGender by remember { mutableStateOf("무관") }
     val reqMust by remember { mutableStateOf("주말 1회 이상 근무 가능") }
     val reqPrefer by remember { mutableStateOf("바리스타 자격증 보유, 인근 거주자") }
-
-    // 지원 방식: 카드 2개 중 택1
-    var applyMethod by remember { mutableStateOf(ApplyMethod.PhoneSms) }
-
+*/
     Column(
         modifier = Modifier
             .fillMaxSize()

@@ -21,7 +21,7 @@ class NeedlisenceRepoSupabase(
     override suspend fun insertNeedlisence(announcement: NeedlicenseDto) {
         client.from("license_announcement").insert(
             needlicenseRow(
-                id = 12,
+                id = announcement.id,
                 need1   = announcement.need1
             )
         )
