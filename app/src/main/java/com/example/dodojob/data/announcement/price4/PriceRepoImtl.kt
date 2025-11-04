@@ -6,10 +6,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PriceRow(
-    val id_pricing : Long? =null,
     val id : Long? = null,
     val price : Boolean,
-    val data : Long
+    val date : Long
 )
 
 class PriceRepoSupabase(
@@ -18,8 +17,9 @@ class PriceRepoSupabase(
     override suspend fun insertPrice(announcement : PriceDto){
         client.from("announcement_pricing").insert(
             PriceRow(
+                id =  announcement.id,
                 price = announcement.price,
-                data = announcement.date
+                date = announcement.date
             )
         )
     }

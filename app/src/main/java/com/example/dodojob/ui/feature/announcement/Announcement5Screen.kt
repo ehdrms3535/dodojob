@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,7 +23,20 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.dodojob.R
+import com.example.dodojob.dao.getCompanyIdByUsername
+import com.example.dodojob.dao.getannouncebycom
+import com.example.dodojob.data.announcement.needlicense3.NeedlicenseDto
+import com.example.dodojob.data.announcement.preferential3.PreferentialDto
+import com.example.dodojob.data.announcement.price4.PriceDto
+import com.example.dodojob.data.announcement.price4.PriceRepo
+import com.example.dodojob.data.announcement.price4.PriceRepoSupabase
+import com.example.dodojob.data.announcement.salary3.SalaryDto
+import com.example.dodojob.data.announcement.workcondition2.WorkconditionRepo
+import com.example.dodojob.data.announcement.workcondition2.WorkconditionSupabase
+import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.session.CurrentUser
+import kotlinx.coroutines.launch
 
 /* ---------- Colors (최종 스펙) ---------- */
 private val BrandBlue = Color(0xFF005FFF)
@@ -67,7 +81,13 @@ fun Announcement5Screen(
     val configuration = LocalConfiguration.current
     val screenWidthDp = configuration.screenWidthDp.dp
     val dynamicWidth = screenWidthDp * (328f / 360f) // ✅ 328/360 비율로 자동 조정
+    val client = LocalSupabase.current
+    val repo: PriceRepo = PriceRepoSupabase(client)
 
+    var loading by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() } // 필요 시 Scaffold로 감싸서 표시
+    val scope = rememberCoroutineScope()
+    var desc by rememberSaveable { mutableStateOf("") }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -134,7 +154,7 @@ fun Announcement5Screen(
                     R.drawable.selected_basic_register
                 else
                     R.drawable.unselected_basic_register
-
+                desc = "무료"
                 ResourceCard(
                     drawableRes = freeRes,
                     dynamicWidth = dynamicWidth,
@@ -154,7 +174,7 @@ fun Announcement5Screen(
                     R.drawable.selected_premium_register
                 else
                     R.drawable.unselected_premium_register
-
+                desc = "유료"
                 ResourceCard(
                     drawableRes = premiumRes,
                     dynamicWidth = dynamicWidth,
@@ -179,7 +199,26 @@ fun Announcement5Screen(
                 contentAlignment = Alignment.Center
             ) {
                 Button(
-                    onClick = { onPost(selected) },
+                    onClick = {
+                        scope.launch {
+                            loading = true
+                            runCatching {
+                                val companyid = getCompanyIdByUsername(CurrentUser.username)
+                                val announceid = getannouncebycom(companyid) ?: error("해당 회사의 공고가 없습니다.")
+                                val announce =announceid.id
+                                var pricing = false
+                                if(desc == "유료") pricing = true
+                                val price = PriceDto(
+                                    id = announce,
+                                    price = pricing,
+                                    date = 3
+                                )
+                                repo.insertPrice(price)
+                            }.onSuccess { onPost(selected)
+                            }
+                            loading = false
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(47.dp),
