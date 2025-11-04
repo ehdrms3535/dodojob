@@ -1,4 +1,3 @@
-// com.example.dodojob.dao.job_detail_rpc.kt
 package com.example.dodojob.dao
 
 import com.example.dodojob.BuildConfig
