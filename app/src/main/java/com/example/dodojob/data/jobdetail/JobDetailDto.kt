@@ -30,7 +30,10 @@ data class JobDetailDto(
 
     // 기타
     @SerialName("career_text")       val careerText: String? = null,
+    @SerialName("career_years")      val careerYears: Int? = null,
+    @SerialName("career")
     val benefit: String? = null,
+    @SerialName("benefits") val benefits: List<String> = emptyList(),
     @SerialName("recruitment_period") val recruitmentPeriod: String? = null,
     val duties: String? = null,
 
