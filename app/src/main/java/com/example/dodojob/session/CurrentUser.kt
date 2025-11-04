@@ -10,7 +10,7 @@ object CurrentUser {
     private val _locate = MutableStateFlow<String?>(null)       // 사용자 위치
     private val _radius = MutableStateFlow<Double>(0.0)
     private val _jobtype = MutableStateFlow<String>("")         //직업
-
+    private val _comanyid = MutableStateFlow<String?>(null)
 
 
     val idFlow: StateFlow<String?> get() = _id
@@ -22,6 +22,8 @@ object CurrentUser {
     val locate: String? get() = _locate.value
     val radius: Double get() = _radius.value
     val jobtype: String get() = _jobtype.value
+    val companyid: String? get() = _comanyid.value
+
 
     /** 로그인 시 (username/password) */
     fun setLogin(username: String, password: String) {
@@ -39,6 +41,8 @@ object CurrentUser {
 
     fun setUsername(username: String?) { _username.value = username }
     fun setJob(job: String) { _jobtype.value = job }
+
+    fun setCompanyid(companyId: String?) { _comanyid.value = companyId}
 
     fun clear() {
         _id.value = null

@@ -1,6 +1,8 @@
 package com.example.dodojob.dao
 
+import android.util.Log
 import com.example.dodojob.BuildConfig
+import com.example.dodojob.session.CurrentUser
 import io.ktor.client.*
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.*
@@ -54,7 +56,7 @@ suspend fun getCompanyIdByUsername(
     }.body()
 
     val email = userRows.firstOrNull()?.email ?: return null
-
+    Log.d("Announcement2", "useremail=${email}")
     // 3️⃣ employ_tmp에서 company_id 가져오기
     val employUrl = "$supabaseUrl/rest/v1/employ_tmp"
     val employRows: List<CompanyIdRow> = http.get(employUrl) {
@@ -66,6 +68,8 @@ suspend fun getCompanyIdByUsername(
         header("apikey", BuildConfig.SUPABASE_ANON_KEY)
         header("Authorization", "Bearer $token")
     }.body()
+    val aa = employRows.firstOrNull()?.companyid
+    Log.d("Announcement2", "useremail=${aa}")
 
     // 4️⃣ 결과 반환
     return employRows.firstOrNull()?.companyid

@@ -30,7 +30,19 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.dao.getCompanyIdByUsername
+import com.example.dodojob.dao.getannouncebycom
+import com.example.dodojob.data.announcement.AnnoucementRepository
+import com.example.dodojob.data.announcement.AnnouncementRepositorySupabase
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.data.announcement.workcondition2.*
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.session.CurrentUser
+import kotlinx.coroutines.launch
+import android.util.Log
+import com.example.dodojob.data.announcement.skillsorexprience2.SkillDto
+import com.example.dodojob.data.announcement.skillsorexprience2.SkillRepo
+import com.example.dodojob.data.announcement.skillsorexprience2.SkillRepoImtlSupabase
 
 /* -------- Palette -------- */
 private val Blue       = Color(0xFF005FFF) // 프라이머리
@@ -50,6 +62,39 @@ private val DAY_W             = 38.dp        // 요일 칩 38×48
 private val DAY_H             = 48.dp
 
 /* ================== Route ================== */
+
+private val WEEK_ORDER = listOf("월","화","수","목","금","토","일")
+private fun weekToBits(weekdays: List<Weekday>): String =
+    WEEK_ORDER.joinToString("") { label ->
+        if (weekdays.first { it.label == label }.selected) "1" else "0"
+    }
+
+private val TALENT_OPTIONS = listOf(
+    "영어 회화","악기 지도","요리 강사","역사 강의",
+    "공예 강의","예술 지도","독서 지도","관광 가이드",
+    "상담 멘토링","홍보 컨설팅"
+)
+private fun talentsToBits(selected: Set<String>): String =
+    TALENT_OPTIONS.joinToString("") { if (it in selected) "1" else "0" }
+private fun mapCategory(major: JobCategory): String = when (major) {
+    JobCategory.Service -> "서비스업"
+    JobCategory.Retail  -> "교육/강의"
+    JobCategory.Office  -> "관리/운영"
+    JobCategory.Etc     -> "돌봄서비스"
+}
+
+private fun mapForm(workType: WorkType): String = when (workType) {
+    WorkType.ShortTerm -> "파트타임"
+    WorkType.LongTerm  -> "풀타임"
+    WorkType.FullTime  -> "프로젝트"
+}
+
+private fun mapIntensity(i: Intensity): String = when (i) {
+    Intensity.Light  -> "가벼움"
+    Intensity.Medium -> "보통"
+    Intensity.Hard   -> "활동적"
+}
+
 @Composable
 fun Announcement2Route(
     nav: NavController,
@@ -109,6 +154,12 @@ fun Announcement2Screen(
     var desc by remember { mutableStateOf("") }
     var contactOrLink by remember { mutableStateOf("") }
 
+    val client = LocalSupabase.current
+    val repo: WorkconditionRepo = WorkconditionSupabase(client)
+    val repo1: SkillRepo = SkillRepoImtlSupabase(client)
+    var saving by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() } // 필요 시 Scaffold로 감싸서 표시
+    val scope = rememberCoroutineScope()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -225,7 +276,29 @@ fun Announcement2Screen(
             }
             SectionCard(padding = 0.dp) {
                 Button(
-                    onClick = { /* TODO: 중간 액션 (예: 링크 검증/추가) */ },
+                    onClick = {
+                        scope.launch {
+                            try {
+                                val announce = getannouncebycom(CurrentUser.companyid)
+                                    ?: error("해당 회사의 공고가 없습니다.")
+                                val announceId = announce.id // Long? 리턴이면 위 설명처럼 변경
+                                Log.d("Announcement2", "announcementid=${announceId}")
+                                val weekBits = weekToBits(weekdays)         // 길이 7
+                                val talentBits = talentsToBits(selectedTalents) // 길이 10
+
+                                Log.d("Announcement2", "week=$weekBits, talent=$talentBits")
+                                val skills = contactOrLink
+                                val skilldto = SkillDto(
+                                    id = announceId,
+                                    skill = skills
+                                )
+                                repo1.insertSkill(skilldto)
+                            }catch (e: Exception) {
+                                Log.e("Announcement2", "save error", e)
+                                snackbarHostState.showSnackbar("저장 실패: ${e.message ?: "알 수 없는 오류"}")
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(BOTTOM_BTN_HEIGHT),
@@ -387,15 +460,57 @@ fun Announcement2Screen(
                     }
 
                     Button(
-                        onClick = onNext,
+                        onClick = {
+                            if (saving) return@Button
+                            saving = true
+                            scope.launch {
+                                try {
+                                    val username = CurrentUser.username
+                                    require(!username.isNullOrBlank()) { "로그인이 필요합니다." }
+                                    Log.d("Announcement2", "username=${CurrentUser.username}")
+                                    val companyId = getCompanyIdByUsername(username)
+                                        ?: error("회사 ID를 찾을 수 없습니다.")
+
+                                    val announce = getannouncebycom(CurrentUser.companyid)
+                                        ?: error("해당 회사의 공고가 없습니다.")
+                                    val announceId = announce.id // Long? 리턴이면 위 설명처럼 변경
+                                    Log.d("Announcement2", "announcementid=${announceId}")
+                                    val weekBits = weekToBits(weekdays)         // 길이 7
+                                    val talentBits = talentsToBits(selectedTalents) // 길이 10
+
+                                    Log.d("Announcement2", "week=$weekBits, talent=$talentBits")
+                                    val skills = contactOrLink
+                                    val dto = WorkConditionDto(
+                                        id = announceId,
+                                        category = mapCategory(majorCategory),
+                                        talent = talentBits,
+                                        major = desc,
+                                        form = mapForm(workType),
+                                        week = weekBits,
+                                        starttime = startTime,
+                                        endtime = endTime,
+                                        intensity = mapIntensity(intensity),
+                                    )
+
+                                    // 업서트
+                                    repo.insertWorkcondition(dto) // or upsertWorkcondition(dto)
+                                    onNext() // 저장 성공 시 이동
+                                } catch (e: Exception) {
+                                    Log.e("Announcement2", "save error", e)
+                                    snackbarHostState.showSnackbar("저장 실패: ${e.message ?: "알 수 없는 오류"}")
+                                } finally {
+                                    saving = false
+                                }
+                            }
+                        },
                         modifier = Modifier
-                            .weight(1.4f)                               // ✅ 0.6 : 1.4 비율
-                            .height(BOTTOM_BTN_HEIGHT),                 // ✅ 44.dp
+                            .weight(1.4f)
+                            .height(BOTTOM_BTN_HEIGHT),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Blue, contentColor = Color.White),
                         contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
-                        Text("다음 단계", fontSize = 16.sp, fontWeight = FontWeight.Bold) // 텍스트도 3·4와 동일
+                        Text("다음 단계", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.dao.getCompanyIdByUsername
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.data.announcement.needlicense3.NeedlicenseDto
 import com.example.dodojob.data.announcement.needlicense3.NeedlicenseRepo
@@ -38,8 +39,9 @@ import com.example.dodojob.data.announcement.salary3.SalaryDto
 import com.example.dodojob.data.announcement.salary3.SalaryRepository
 import com.example.dodojob.data.announcement.salary3.SalaryRepositorySupabase
 import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.session.CurrentUser
 import kotlinx.coroutines.launch
-
+import com.example.dodojob.dao.getannouncebycom
 /* -------- Design tokens (01/02와 동일) -------- */
 private val Blue = Color(0xFF005FFF)
 private val TextGray = Color(0xFF828282)
@@ -331,8 +333,11 @@ fun Announcement3Screen(
                                 runCatching {
                                     val benefitBits = benefitsToBitString(benefits)
                                     val amountNum = payAmount.filter { it.isDigit() }.toLongOrNull() ?: 0L
-
+                                    val companyid = CurrentUser.companyid
+                                    val announceid = getannouncebycom(companyid)?: error("해당 회사의 공고가 없습니다.")
+                                    val announce =announceid.id
                                     val salary = SalaryDto(
+                                        id = announce,
                                         salary_type = selectedPayType,
                                         salary_amount = amountNum,
                                         benefit = benefitBits,
@@ -342,8 +347,8 @@ fun Announcement3Screen(
                                     salaryRepo.insertSalary(salary)
 
                                     // 아래 두 개는 스키마에 맞게 필요 시 값 세팅
-                                    prefRepo.insertPreferential(PreferentialDto(preferential_treatment = preferText))
-                                    needRepo.insertNeedlisence(NeedlicenseDto(need1 = licenseText))
+                                    prefRepo.insertPreferential(PreferentialDto(announce,preferential_treatment = preferText))
+                                    needRepo.insertNeedlisence(NeedlicenseDto(announce, need1 = licenseText))
                                 }.onSuccess { onNext() }
                                 loading = false
                             }

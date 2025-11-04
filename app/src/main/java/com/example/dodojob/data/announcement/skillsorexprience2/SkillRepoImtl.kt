@@ -18,6 +18,7 @@ private val client: SupabaseClient
     override suspend fun insertSkill(announcement: SkillDto) {
         client.from("skills_or_experience").insert(
             SkillRow(
+                id =  announcement.id,
                 skill = announcement.skill
             )
         )

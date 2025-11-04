@@ -23,7 +23,7 @@ class SalaryRepositorySupabase(
     override suspend fun insertSalary(announcement: SalaryDto) {
         client.from("salary_condition").insert(
             SalaryRow(
-                id=12,
+                id=announcement.id,
                 salary_type = announcement.salary_type,
                 salary_amount = announcement.salary_amount,
                 benefit = announcement.benefit,
