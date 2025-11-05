@@ -312,7 +312,7 @@ fun ExperienceScreen(nav: NavController) {
                     onValueChange = { workplace = it },
                     placeholder = "ex) 카카오 주식회사"
                 )
-                Spacer(Modifier.height(15.dp))
+                Spacer(Modifier.height(28.dp))
 
                 Label("주요 업무 내용을 적어주세요")
                 OutlinedBoxField(
@@ -320,7 +320,7 @@ fun ExperienceScreen(nav: NavController) {
                     onValueChange = { mainTasks = it },
                     placeholder = "ex) 디지털 콘텐츠 기획/운영"
                 )
-                Spacer(Modifier.height(15.dp))
+                Spacer(Modifier.height(28.dp))
 
                 Label("근무기간")
                 OutlinedBoxField(

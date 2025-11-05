@@ -306,24 +306,6 @@ fun LoginScreen(nav: NavController, sessionVm: SessionViewModel) {
 
             Spacer(Modifier.height(24.dp))
         }
-
-        // 하단 네비 + 홈 인디케이터
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(43.dp)
-                .align(Alignment.BottomCenter)
-                .background(Color(0xFFF4F5F7))
-        )
-        Box(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 7.dp)
-                .width(130.78.dp)
-                .height(4.7.dp)
-                .clip(RoundedCornerShape(94.dp))
-                .background(Color.Black)
-        )
     }
 }
 
