@@ -33,8 +33,10 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.core.view.WindowCompat
 import com.example.dodojob.R
-import com.example.dodojob.navigation.Route
 import android.app.Activity
+import com.example.dodojob.dao.fetchDisplayNameByUsername
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val ScreenBg = Color(0xFFF1F5F7)
 private val BrandBlue = Color(0xFF005FFF)
@@ -42,11 +44,12 @@ private val SubGray = Color(0xFF848484)
 
 enum class EduTab { Continue, Favorites }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EducationLibraryScreen(
     nav: NavController,
-    userName: String,
+    userName: String?,
     favorites: Set<String>,
     allCourses: List<Course>
 ) {
@@ -56,6 +59,30 @@ fun EducationLibraryScreen(
         allCourses.filter { it.title in favorites }
     }
     val count = if (tab == EduTab.Continue) allCourses.size else favCourses.size
+
+    var displayName by remember { mutableStateOf("회원") }
+    var loadingName by remember { mutableStateOf(false) }
+    var nameError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(userName) {
+        if (!userName.isNullOrBlank()) {
+            loadingName = true
+            nameError = null
+            try {
+                val fetched = withContext(Dispatchers.IO) {
+                    fetchDisplayNameByUsername(userName)
+                }
+                displayName = fetched ?: userName
+            } catch (e: Exception) {
+                nameError = e.message
+                displayName = userName
+            } finally {
+                loadingName = false
+            }
+        } else {
+            displayName = "회원"
+        }
+    }
 
     Scaffold(
         containerColor = ScreenBg
@@ -92,7 +119,7 @@ fun EducationLibraryScreen(
 
                 // 타이틀
                 Text(
-                    text = "${userName}님 강의",
+                    text = "${displayName}님 강의",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
