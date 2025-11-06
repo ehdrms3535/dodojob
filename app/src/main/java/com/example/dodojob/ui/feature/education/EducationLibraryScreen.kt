@@ -172,7 +172,7 @@ fun EducationLibraryScreen(
                             MyCourseRowCard(
                                 title = c.title,
                                 subtitle = c.sub,
-                                onPlay = { nav.navigate(Route.EduLectureNormal.of(c.id)) }
+                                onPlay = { /*nav.navigate(Route.EduLectureNormal.of(c.id)) */}
                             )
                             Spacer(Modifier.height(28.dp))
                         }
@@ -186,7 +186,7 @@ fun EducationLibraryScreen(
                                 title = c.title,
                                 subtitle = c.sub,
                                 imageUrl = c.imageUrl, // 🔹 URL만 사용
-                                onClick = { nav.navigate(Route.EduLectureNormal.of(c.id)) }
+                                onClick = { /*nav.navigate(Route.EduLectureNormal.of(c.id))*/ }
                             )
                             Spacer(Modifier.height(28.dp))
                         }

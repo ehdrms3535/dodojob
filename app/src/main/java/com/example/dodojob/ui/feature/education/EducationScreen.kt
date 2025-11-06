@@ -55,17 +55,17 @@ private val BrandBlue  = Color(0xFF005FFF)
  * Data
  * ========================= */
 data class Course(
-    val id: String,                       // 강의 클릭시 전달할 ID
+    val id: Long,                       // 강의 클릭시 전달할 ID(Long)
     val title: String,
-    val tag: String,                      // category
-    val sub: String,                      // explain
-    val imageUrl: String? = null,         // 썸네일 URL
-    @DrawableRes val imageRes: Int? = null// 로컬 이미지
+    val tag: String,                    // category
+    val sub: String,                    // explain
+    val imageUrl: String? = null,       // 썸네일 URL
+    @DrawableRes val imageRes: Int? = null // 로컬 이미지
 )
 
 /** Supabase Row → UI 모델 매핑 */
 private fun LectureRow.toCourse(): Course = Course(
-    id = id.toString(),
+    id = id, // Long
     title = title.orEmpty(),
     tag = category.orEmpty(),
     sub = explain.orEmpty(),
@@ -75,30 +75,31 @@ private fun LectureRow.toCourse(): Course = Course(
 /** 필터 탭 라벨 */
 private val filterTabs = listOf("전체", "영어", "컴퓨터", "요리", "교육", "응대", "기타")
 
+/** 추천(로컬 폴백) — DB 비었을 때만 사용. id는 음수로 충돌 방지 */
 fun recommendedCourses() = listOf(
     Course(
-        id = "eng-conv-basic",
+        id = -101L,
         imageRes = R.drawable.edu_recom1,
         title = "영어 회화 입문",
         tag   = "영어",
         sub   = "일상 표현부터 차근차근"
     ),
     Course(
-        id = "pc-basic-master",
+        id = -102L,
         imageRes = R.drawable.edu_recom2,
         title = "컴퓨터 기초 마스터",
         tag   = "컴퓨터",
         sub   = "문서·인터넷·이메일 한 번에"
     ),
     Course(
-        id = "home-cooking",
+        id = -103L,
         imageRes = R.drawable.edu_recom3,
         title = "집에서 즐기는 홈쿠킹",
         tag   = "요리",
         sub   = "기초 재료 손질과 간단 레시피"
     ),
     Course(
-        id = "group-tutoring",
+        id = -104L,
         imageRes = R.drawable.edu_recom4,
         title = "그룹 스터디 튜터링",
         tag   = "교육",
@@ -106,37 +107,57 @@ fun recommendedCourses() = listOf(
     )
 )
 
-/** 더미(로컬) 실시간 인기 강의 */
-fun liveHotCourses() = listOf(
+/** 더미(로컬) 실시간 인기 강의 — DB 매칭 실패/비었을 때 폴백. id 음수 */
+fun liveHotCoursesFallback() = listOf(
     Course(
-        id = "cs-customer",
+        id = -201L,
         imageRes = R.drawable.edu_live1,
         title = "고객 응대 스킬",
         tag   = "응대",
         sub   = "전화·대면 응대 기본"
     ),
     Course(
-        id = "smartphone-pro",
+        id = -202L,
         imageRes = R.drawable.edu_live2,
         title = "스마트폰 200% 활용",
         tag   = "컴퓨터",
         sub   = "결제·사진·앱 활용 전반"
     ),
     Course(
-        id = "watercolor-begin",
+        id = -203L,
         imageRes = R.drawable.edu_live3,
         title = "물감과 친해지는 수채화",
         tag   = "기타",
         sub   = "기초 드로잉과 색감 연습"
     ),
     Course(
-        id = "english-news-listening",
+        id = -204L,
         imageRes = R.drawable.edu_live4,
         title = "영어 뉴스 리스닝",
         tag   = "영어",
         sub   = "쉬운 뉴스로 리스닝 감 만들기"
     )
 )
+
+/* ===== DB 강의에서 1..6 중 3개 랜덤 Long id와 매칭하여 3개 선별 ===== */
+private fun pickLiveHotFromDb(dbCourses: List<Course>): List<Course> {
+    if (dbCourses.isEmpty()) return liveHotCoursesFallback() // 폴백
+
+    // 1~6 중 3개 뽑기 → Long 세트
+    val picks: Set<Long> = (1L..6L).shuffled().take(3).toSet()
+
+    // id(Long)가 picks에 포함된 강의 매칭
+    val matched = dbCourses.filter { it.id in picks }
+
+    // 3개 미만이면 DB에서 나머지 채우기(중복 방지)
+    val need = 3 - matched.size
+    val filled = if (need > 0) {
+        val remains = dbCourses.filter { it !in matched }
+        matched + remains.take(need)
+    } else matched.take(3)
+
+    return filled.ifEmpty { liveHotCoursesFallback() }
+}
 
 /* =========================
  * Entry
@@ -150,7 +171,8 @@ fun EducationHomeRoute(
     EducationHomeScreen(
         userName = userName,      // ID를 그대로 전달하고, 화면 안에서 이름 조회함
         onCourseClick = { course ->
-            nav.navigate(Route.EduLectureInitial.of(course.id))
+            // Long id → String으로 변환해서 네비게이션 전달
+            nav.navigate(Route.EduLectureInitial.of(course.id.toString()))
         },
         onOpenLibrary = { nav.navigate(Route.EduMy.path) }, // 내 강좌/프로필 → 단일 화면
         bottomBar = {
@@ -217,7 +239,6 @@ fun EducationHomeScreen(
 
     // 로컬 fallback
     val recomLocal = remember { recommendedCourses() }
-    val liveLocal  = remember { liveHotCourses() }
 
     // 최초 로드
     LaunchedEffect(Unit) {
@@ -236,6 +257,9 @@ fun EducationHomeScreen(
     fun List<Course>.applyFilter(): List<Course> =
         if (pickedFilter == "전체") this else this.filter { it.tag == pickedFilter }
 
+    // ▼ 배너에 바인딩할 대표 강의 (DB 우선, 없으면 로컬)
+    val heroCourse: Course? = (if (supaCourses.isNotEmpty()) supaCourses else recomLocal).firstOrNull()
+
     Scaffold(
         containerColor = ScreenBg,
         bottomBar = bottomBar,
@@ -247,12 +271,13 @@ fun EducationHomeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // ===== Hero =====
+            // ===== Hero ===== (▼ heroCourse 전달)
             HeroSection(
                 userName = displayName,
                 heroImageRes = R.drawable.edu_recom4,
                 onBellClick = { /* TODO */ },
                 onProfileClick = onOpenLibrary,
+                heroCourse = heroCourse,              // DB 데이터 바인딩
                 topBarHorizontal = 16.dp,
                 topBarTop = 0.dp,
                 logoSize = 29.dp,
@@ -303,6 +328,7 @@ fun EducationHomeScreen(
             val recommendedList = (if (supaCourses.isNotEmpty()) supaCourses else recomLocal)
                 .applyFilter()
 
+
             if (loading && supaCourses.isEmpty()) {
                 Text("불러오는 중...", modifier = Modifier.padding(horizontal = 16.dp))
             } else if (error != null && supaCourses.isEmpty()) {
@@ -324,8 +350,15 @@ fun EducationHomeScreen(
             )
             Spacer(Modifier.height(12.dp))
 
+            // ▼ DB 기반으로 3개 뽑은 리스트 사용 (필터 적용)
+            val liveHotDb = if (supaCourses.isNotEmpty()) {
+                pickLiveHotFromDb(supaCourses)
+            } else {
+                liveHotCoursesFallback()
+            }.applyFilter()
+
             CourseCarousel(
-                courses = (liveLocal).applyFilter(),
+                courses = liveHotDb,
                 favs = favorites,
                 onToggleFav = onToggleFavorite,
                 onClick = onCourseClick,
@@ -344,6 +377,8 @@ private fun HeroSection(
     @DrawableRes heroImageRes: Int,
     onBellClick: () -> Unit,
     onProfileClick: () -> Unit,
+    // ▼ 추가: DB에서 가져온 대표 강의(없으면 null)
+    heroCourse: Course? = null,
     topBarHorizontal: Dp = 16.dp,
     topBarTop: Dp = 12.dp,
     logoSize: Dp = 29.dp,
@@ -359,6 +394,11 @@ private fun HeroSection(
     titleVerticalOffset: Dp = 60.dp,
     headlineVerticalOffset: Dp = 16.dp
 ) {
+    // ▼ DB 값이 있으면 해당 값 사용, 없으면 기존 더미 문구
+    val headline = heroCourse?.title ?: "외국인 친구와 소통하는 즐거움, 온라인 한국어 회화"
+    val meta     = heroCourse?.let { "${it.tag.ifBlank { "기타" }} | ${it.id}" } ?: "언어·문화 | 세종학당재단"
+    val desc     = heroCourse?.sub ?: "실생활 중심 대화 연습으로 자연스러운 회화"
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -426,7 +466,7 @@ private fun HeroSection(
             )
             Spacer(Modifier.height(titleSpacing))
             Text(
-                text = "외국인 친구와 소통하는 즐거움, 온라인 한국어 회화",
+                text = headline,
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -438,7 +478,7 @@ private fun HeroSection(
             )
             Spacer(Modifier.height(linesSpacingSmall))
             Text(
-                text = "언어·문화 | 세종학당재단",
+                text = meta,
                 color = Color.White,
                 fontSize = 15.sp,
                 maxLines = metaMaxLines,
@@ -447,7 +487,7 @@ private fun HeroSection(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "실생활 중심 대화 연습으로 자연스러운 회화",
+                text = desc,
                 color = Color.White,
                 fontSize = 15.sp,
                 maxLines = descMaxLines,
