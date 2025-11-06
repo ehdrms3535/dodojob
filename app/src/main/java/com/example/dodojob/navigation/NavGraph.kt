@@ -275,10 +275,11 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             composable(Route.EduMy.path) { entry ->
                 val parentEntry = remember(entry) { nav.getBackStackEntry(Route.EduGraph.path) }
                 val eduVm: EducationViewModel = viewModel(parentEntry)
-                val all = remember { recommendedCourses() + liveHotCourses() }
+                val username = CurrentUser.username
+                val all = remember { recommendedCourses() + liveHotCoursesFallback() }
                 EducationLibraryScreen(
                     nav = nav,
-                    userName = "홍길동",
+                    userName = username,
                     favorites = eduVm.favorites,
                     allCourses = all
                 )

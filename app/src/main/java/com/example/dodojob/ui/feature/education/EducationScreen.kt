@@ -43,6 +43,10 @@ import kotlinx.coroutines.withContext
 import com.example.dodojob.dao.fetchLectures
 import com.example.dodojob.dao.LectureRow
 import com.example.dodojob.dao.fetchDisplayNameByUsername
+import com.example.dodojob.dao.fetchJobtypeByUsername
+import com.example.dodojob.dao.buildInterestVectors
+import com.example.dodojob.dao.recommendCoursesForUser
+import com.example.dodojob.dao.InterestVectors
 
 /* =========================
  * Colors
@@ -139,17 +143,13 @@ fun liveHotCoursesFallback() = listOf(
     )
 )
 
-/* ===== DB 강의에서 1..6 중 3개 랜덤 Long id와 매칭하여 3개 선별 ===== */
 private fun pickLiveHotFromDb(dbCourses: List<Course>): List<Course> {
-    if (dbCourses.isEmpty()) return liveHotCoursesFallback() // 폴백
+    if (dbCourses.isEmpty()) return liveHotCoursesFallback()
 
-    // 1~6 중 3개 뽑기 → Long 세트
     val picks: Set<Long> = (1L..6L).shuffled().take(3).toSet()
 
-    // id(Long)가 picks에 포함된 강의 매칭
     val matched = dbCourses.filter { it.id in picks }
 
-    // 3개 미만이면 DB에서 나머지 채우기(중복 방지)
     val need = 3 - matched.size
     val filled = if (need > 0) {
         val remains = dbCourses.filter { it !in matched }
@@ -165,16 +165,15 @@ private fun pickLiveHotFromDb(dbCourses: List<Course>): List<Course> {
 @Composable
 fun EducationHomeRoute(
     nav: NavController,
-    userName: String? = null,    // ⚠️ 여기 들어오는 값은 'username(=ID)'
+    userName: String? = null,
     eduVm: EducationViewModel
 ) {
     EducationHomeScreen(
-        userName = userName,      // ID를 그대로 전달하고, 화면 안에서 이름 조회함
+        userName = userName,
         onCourseClick = { course ->
-            // Long id → String으로 변환해서 네비게이션 전달
             nav.navigate(Route.EduLectureInitial.of(course.id.toString()))
         },
-        onOpenLibrary = { nav.navigate(Route.EduMy.path) }, // 내 강좌/프로필 → 단일 화면
+        onOpenLibrary = { nav.navigate(Route.EduMy.path) },
         bottomBar = {
             BottomNavBar(
                 current = "edu",
@@ -205,7 +204,7 @@ fun EducationHomeScreen(
     favorites: Set<String>,
     onToggleFavorite: (String) -> Unit
 ) {
-    // ── 1) username(=ID) → name 조회해서 화면 표시용으로 사용 ─────────────
+    // ───────────────
     var displayName by remember { mutableStateOf("회원") }
     var loadingName by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf<String?>(null) }
@@ -240,7 +239,7 @@ fun EducationHomeScreen(
     // 로컬 fallback
     val recomLocal = remember { recommendedCourses() }
 
-    // 최초 로드
+    // 최초 로드: 강의 목록
     LaunchedEffect(Unit) {
         loading = true
         error = null
@@ -257,8 +256,34 @@ fun EducationHomeScreen(
     fun List<Course>.applyFilter(): List<Course> =
         if (pickedFilter == "전체") this else this.filter { it.tag == pickedFilter }
 
-    // ▼ 배너에 바인딩할 대표 강의 (DB 우선, 없으면 로컬)
     val heroCourse: Course? = (if (supaCourses.isNotEmpty()) supaCourses else recomLocal).firstOrNull()
+
+    var vectors by remember { mutableStateOf<InterestVectors?>(null) }
+    var loadingVectors by remember { mutableStateOf(false) }
+
+    LaunchedEffect(userName) {
+        if (!userName.isNullOrBlank()) {
+            loadingVectors = true
+            try {
+                val job = withContext(Dispatchers.IO) { fetchJobtypeByUsername(userName) }
+                vectors = job?.let {
+                    buildInterestVectors(
+                        talentBits = it.job_talent,
+                        serviceBits = it.job_service,
+                        manageBits  = it.job_manage,
+                        careBits    = it.job_care
+                    )
+                }
+            } catch (_: Exception) {
+                vectors = null
+            } finally {
+                loadingVectors = false
+            }
+        } else {
+            vectors = null
+        }
+    }
+    // ───────────────────────────────────────────────────────────────
 
     Scaffold(
         containerColor = ScreenBg,
@@ -271,13 +296,13 @@ fun EducationHomeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // ===== Hero ===== (▼ heroCourse 전달)
+            // ===== Hero =====
             HeroSection(
                 userName = displayName,
                 heroImageRes = R.drawable.edu_recom4,
                 onBellClick = { /* TODO */ },
                 onProfileClick = onOpenLibrary,
-                heroCourse = heroCourse,              // DB 데이터 바인딩
+                heroCourse = heroCourse,
                 topBarHorizontal = 16.dp,
                 topBarTop = 0.dp,
                 logoSize = 29.dp,
@@ -318,6 +343,7 @@ fun EducationHomeScreen(
                 onMyCourseClick = onOpenLibrary
             )
 
+            // ===== 추천 섹션 =====
             Spacer(Modifier.height(16.dp))
             SectionTitle(
                 text = "${displayName}님을 위한 추천 강의",
@@ -325,11 +351,12 @@ fun EducationHomeScreen(
             )
             Spacer(Modifier.height(12.dp))
 
-            val recommendedList = (if (supaCourses.isNotEmpty()) supaCourses else recomLocal)
-                .applyFilter()
+            // 추천 리스트: (필터 적용된 풀을 대상) 선호벡터 있으면 점수화 → 상위 N
+            val basePool = (if (supaCourses.isNotEmpty()) supaCourses else recomLocal).applyFilter()
+            val recommendedList: List<Course> =
+                vectors?.let { recommendCoursesForUser(basePool, it, topN = 3) } ?: basePool
 
-
-            if (loading && supaCourses.isEmpty()) {
+            if ((loading && supaCourses.isEmpty()) || loadingVectors) {
                 Text("불러오는 중...", modifier = Modifier.padding(horizontal = 16.dp))
             } else if (error != null && supaCourses.isEmpty()) {
                 Text("로드 실패: $error", color = Color.Red, modifier = Modifier.padding(horizontal = 16.dp))
@@ -343,6 +370,7 @@ fun EducationHomeScreen(
                 )
             }
 
+            // ===== 실시간 인기 섹션 =====
             Spacer(Modifier.height(24.dp))
             SectionTitle(
                 text = "실시간 인기 강의",
@@ -350,7 +378,6 @@ fun EducationHomeScreen(
             )
             Spacer(Modifier.height(12.dp))
 
-            // ▼ DB 기반으로 3개 뽑은 리스트 사용 (필터 적용)
             val liveHotDb = if (supaCourses.isNotEmpty()) {
                 pickLiveHotFromDb(supaCourses)
             } else {
@@ -394,7 +421,6 @@ private fun HeroSection(
     titleVerticalOffset: Dp = 60.dp,
     headlineVerticalOffset: Dp = 16.dp
 ) {
-    // ▼ DB 값이 있으면 해당 값 사용, 없으면 기존 더미 문구
     val headline = heroCourse?.title ?: "외국인 친구와 소통하는 즐거움, 온라인 한국어 회화"
     val meta     = heroCourse?.let { "${it.tag.ifBlank { "기타" }} | ${it.id}" } ?: "언어·문화 | 세종학당재단"
     val desc     = heroCourse?.sub ?: "실생활 중심 대화 연습으로 자연스러운 회화"
@@ -856,3 +882,5 @@ fun MyCourseButton(
         )
     }
 }
+
+
