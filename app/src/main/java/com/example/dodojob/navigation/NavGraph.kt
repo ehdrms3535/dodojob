@@ -213,7 +213,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             ManagementAnnouncementRoute(
                 nav = nav,
                 provider = com.example.dodojob.ui.feature.employ.AnnouncementsProvider {
-                    repo.fetchAnnouncements()
+                    repo.fetchAnnouncements(CurrentUser.username)
                         .mapNotNull { it.toUi() }
                         .sortedByDescending { it.createdDate }
                 }
