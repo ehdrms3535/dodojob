@@ -33,7 +33,6 @@ suspend fun getUsernameById(
         parameter("limit", "1")
         header("apikey", BuildConfig.SUPABASE_ANON_KEY)
         header("Authorization", "Bearer $token")
-        header("Accept", "application/json")
     }.body<List<UsernameRow>>()
 
     return rows.firstOrNull()?.name
