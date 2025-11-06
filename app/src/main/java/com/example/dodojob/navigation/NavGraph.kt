@@ -78,7 +78,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 
 
@@ -263,10 +262,11 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             // 교육 홈
             composable(Route.EduHome.path) { entry ->
                 val parentEntry = remember(entry) { nav.getBackStackEntry(Route.EduGraph.path) }
+                val username = CurrentUser.username
                 val eduVm: EducationViewModel = viewModel(parentEntry)
                 EducationHomeRoute(
                     nav = nav,
-                    userName = "홍길동",
+                    userName = username,
                     eduVm = eduVm
                 )
             }

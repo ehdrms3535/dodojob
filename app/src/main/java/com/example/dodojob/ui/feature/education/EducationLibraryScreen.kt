@@ -1,9 +1,7 @@
 package com.example.dodojob.ui.feature.education
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,28 +15,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.example.dodojob.R
-import android.app.Activity
+import coil.compose.AsyncImage
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.core.view.WindowCompat
+import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
+import android.app.Activity
 
 private val ScreenBg = Color(0xFFF1F5F7)
 private val BrandBlue = Color(0xFF005FFF)
@@ -69,14 +65,14 @@ fun EducationLibraryScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // 🔹 상단 바 커스텀 (수정됨: 세로 Column로 쌓기)
+            // 상단 바
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.White)
                     .padding(top = 12.dp, bottom = 12.dp)
             ) {
-                // 1) 뒤로가기 (맨 위)
+                // 뒤로가기
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -94,7 +90,7 @@ fun EducationLibraryScreen(
 
                 Spacer(Modifier.height(8.dp))
 
-                // 2) 타이틀 (뒤로가기 '아래')
+                // 타이틀
                 Text(
                     text = "${userName}님 강의",
                     fontSize = 28.sp,
@@ -176,7 +172,6 @@ fun EducationLibraryScreen(
                             MyCourseRowCard(
                                 title = c.title,
                                 subtitle = c.sub,
-                                desc = c.desc,
                                 onPlay = { nav.navigate(Route.EduLectureNormal.of(c.id)) }
                             )
                             Spacer(Modifier.height(28.dp))
@@ -190,9 +185,8 @@ fun EducationLibraryScreen(
                             FavoriteRowItem(
                                 title = c.title,
                                 subtitle = c.sub,
-                                desc = c.desc,
-                                thumbnailRes = c.imageRes,
-                                onClick = { nav.navigate(com.example.dodojob.navigation.Route.EduLectureNormal.of(c.id)) }
+                                imageUrl = c.imageUrl, // 🔹 URL만 사용
+                                onClick = { nav.navigate(Route.EduLectureNormal.of(c.id)) }
                             )
                             Spacer(Modifier.height(28.dp))
                         }
@@ -210,7 +204,6 @@ private fun UnderlineTab(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    // 선 길이/두께 Figma 스펙
     val lineWidth = 68.dp
     val lineThickness = 4.dp
 
@@ -227,7 +220,7 @@ private fun UnderlineTab(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp) // 터치 여유
+            .padding(horizontal = 4.dp)
     ) {
         Text(
             text = text,
@@ -246,32 +239,6 @@ private fun UnderlineTab(
 }
 
 @Composable
-private fun TabLabel(text: String, selected: Boolean, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
-        Text(
-            text = text,
-            fontSize = 18.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) BrandBlue else Color.Black
-        )
-        Spacer(Modifier.height(5.dp))
-        if (selected) {
-            Box(
-                Modifier
-                    .width(68.dp)
-                    .height(0.dp)
-                    .border(4.dp, BrandBlue)
-            )
-        } else {
-            Spacer(Modifier.height(4.dp))
-        }
-    }
-}
-
-@Composable
 private fun EmptyHint(text: String) {
     Text(text = text, fontSize = 16.sp, color = SubGray)
 }
@@ -280,7 +247,6 @@ private fun EmptyHint(text: String) {
 private fun MyCourseRowCard(
     title: String,
     subtitle: String,
-    desc: String,
     onPlay: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
@@ -319,29 +285,18 @@ private fun MyCourseRowCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = desc,
-                fontSize = 15.sp,
-                letterSpacing = (-0.019).em,
-                color = Color.Black,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
 
+/** 🔹 상태바 색상/아이콘 설정 */
 @Composable
 private fun SetStatusBar(color: Color, darkIcons: Boolean) {
     val view = LocalView.current
-    if (!view.isInEditMode) { // Preview에서 window 접근 피함
+    if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // 컨텐츠를 시스템바 뒤로 배치 (히어로 이미지가 상태바까지 꽉 차도록)
             WindowCompat.setDecorFitsSystemWindows(window, false)
-
-            // 상태바 색상 및 아이콘 밝기
             window.statusBarColor = color.toArgb()
             val controller = WindowCompat.getInsetsController(window, window.decorView)
             controller.isAppearanceLightStatusBars = darkIcons
@@ -349,19 +304,19 @@ private fun SetStatusBar(color: Color, darkIcons: Boolean) {
     }
 }
 
+/** 🔹 썸네일 URL만 사용하는 찜한 강의 아이템 */
 @Composable
 private fun FavoriteRowItem(
     title: String,
     subtitle: String,
-    desc: String,
-    @DrawableRes thumbnailRes: Int,
-    onClick: () -> Unit // ← 추가
+    imageUrl: String?,        // Supabase 썸네일 URL
+    onClick: () -> Unit
 ) {
     Row(
         Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .clickable(onClick = onClick), // ← 클릭 가능
+            .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -369,14 +324,18 @@ private fun FavoriteRowItem(
             Modifier
                 .size(width = 105.dp, height = 80.dp)
                 .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFFEFEFEF))
         ) {
-            Image(
-                painter = painterResource(thumbnailRes),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.matchParentSize()
-            )
+            if (!imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
+
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -405,33 +364,6 @@ private fun FavoriteRowItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = desc,
-                fontSize = 15.sp,
-                letterSpacing = (-0.019).em,
-                color = Color.Black,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
-}
-
-/* =========================
- * Preview
- * ========================= */
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun PreviewEducationLibrary() {
-    val nav = rememberNavController()
-
-    val all = recommendedCourses() + liveHotCourses()
-    val sampleFavorites = setOf("영어 회화 입문", "고객 응대 스킬")
-
-    EducationLibraryScreen(
-        nav = nav,
-        userName = "홍길동",
-        favorites = sampleFavorites,
-        allCourses = all
-    )
 }
