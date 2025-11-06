@@ -55,8 +55,8 @@ fun ViewResourceDetailScreen(navController: NavController) {
     var talent by rememberSaveable { mutableStateOf(passedTalent) }
     val safeTalent = talent ?: TalentUi(
         name = "홍길동", gender = "여", age = 70, seniorLevel = 3,
-        intro = "열심히 일 할 수 있습니다.", expYears = 34,
-        location = "서울 전체", jobCategories = listOf("매장관리", "고객 응대"), updatedMinutesAgo = 0
+        intro = "열심히 일 할 수 있습니다.", expYears = "34년",
+        location = "서울 전체", jobCategories = listOf("매장관리", "고객 응대"), updatedMinutesAgo = "0"
     )
 
     val scroll = rememberScrollState()
@@ -178,7 +178,7 @@ private fun TalentHeaderCard(
     age: Int,
     seniorLevel: Int,
     intro: String,
-    expYears: Int
+    expYears: String
 ) {
     Card(
         modifier = Modifier
