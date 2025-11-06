@@ -51,10 +51,9 @@ fun SignUpCompleteScreen(nav: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
-                .padding(top = 250.dp, bottom = 100.dp),
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
+            verticalArrangement = Arrangement.Center
         ) {
             Image(
                 painter = painterResource(id = R.drawable.complete_image),
@@ -62,7 +61,7 @@ fun SignUpCompleteScreen(nav: NavController) {
                 modifier = Modifier.size(69.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "회원가입 완료!",
@@ -76,10 +75,11 @@ fun SignUpCompleteScreen(nav: NavController) {
 
             Text(
                 text = "환영합니다! 두두잡과 함께해주셔서 감사해요.\n소중한 경험을 살릴 시간이 왔습니다.",
-                fontSize = 17.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color(0xFF828282),
                 textAlign = TextAlign.Center,
+                lineHeight = 30.sp, // ✅ 기본보다 약간 넓게 (기본 18sp → 30sp 추천)
                 modifier = Modifier.fillMaxWidth()
             )
         }

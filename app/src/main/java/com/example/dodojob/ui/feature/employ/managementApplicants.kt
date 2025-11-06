@@ -38,6 +38,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
@@ -45,8 +46,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-// ✅ 레포/클라이언트 (NavGraph 수정 없이 Route 내부에서 사용)
 import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.data.announcement.AnnouncementRepositorySupabase
 
@@ -200,10 +199,11 @@ fun ApplicantManagementRoute(
                 current = "applicant",
                 onClick = { key ->
                     when (key) {
-                        "home"      -> nav.navigate(Route.EmployerHome.path)
-                        "notice"    -> nav.navigate(Route.EmployerApplicant.path)
-                        "applicant" -> Unit
-                        "my"        -> nav.navigate(Route.EmployerMy.path)
+                        "home"           -> nav.safeNavigate(Route.EmployerHome.path)
+                        "notice"         -> nav.safeNavigate(Route.EmployerNotice.path)
+                        "applicant"      -> nav.safeNavigate(Route.EmployerApplicant.path)
+                        "human_resource" -> nav.safeNavigate(Route.EmployerHumanResource.path)
+                        "my"             -> nav.safeNavigate(Route.EmployerMy.path)
                     }
                 }
             )
@@ -751,5 +751,10 @@ private fun ApplicantCard(
             .background(LineGray)
     )
 }
+
+private fun NavController.safeNavigate(
+    route: String,
+    builder: (NavOptionsBuilder.() -> Unit)? = { launchSingleTop = true; restoreState = true }
+) { navigate(route) { builder?.invoke(this) } }
 
 

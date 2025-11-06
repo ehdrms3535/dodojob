@@ -20,8 +20,8 @@ import com.example.dodojob.ui.feature.hope.HopeWorkFilterScreen
 import com.example.dodojob.ui.feature.jobtype.JobTypeScreen
 import com.example.dodojob.ui.feature.login.LoginScreen
 import com.example.dodojob.ui.feature.onboarding.OnboardingScreen
-import com.example.dodojob.ui.feature.prefer.PreferWorkSheetScreen
-import com.example.dodojob.ui.feature.prefer.PreferWorkMapScreen
+//import com.example.dodojob.ui.feature.prefer.PreferWorkSheetScreen
+//import com.example.dodojob.ui.feature.prefer.PreferWorkMapScreen
 import com.example.dodojob.ui.feature.signup.SignUpCompleteScreen
 import com.example.dodojob.ui.feature.verify.VerifyScreen
 import com.example.dodojob.ui.feature.announcement.Announcement1Route
@@ -102,7 +102,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             createdDate = created
         )
     }
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
+    NavHost(navController = nav,startDestination = Route.ExperienceComplete.path) {
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path) { LoginScreen(nav, sessionVm) }        // 3. 시니어 로그인
@@ -118,8 +118,8 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
 
         composable(Route.JobType.path) { JobTypeScreen(nav) }      // 5. 회원가입 이후
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }    //
-        composable(Route.Prefer.path) { PreferWorkSheetScreen(nav) } // 선호 직업
-        composable(Route.PreferMap.path) { PreferWorkMapScreen(nav) } // 선호 직업 지도
+        //composable(Route.Prefer.path) { PreferWorkSheetScreen(nav) } // 선호 직업
+        //composable(Route.PreferMap.path) { PreferWorkMapScreen(nav) } // 선호 직업 지도
 
         composable(Route.Experience.path) { ExperienceScreen(nav) } // 프로필 사진(프로필 완성 직전)
         composable(Route.ExperienceComplete.path) { ExperienceCompleteScreen(nav) } // 프로필 완성

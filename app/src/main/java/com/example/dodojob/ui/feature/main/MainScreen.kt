@@ -181,7 +181,7 @@ fun computeDday(
     }
 }
 
-// com.example.dodojob.ui.feature.main (혹은 적절한 파일)
+
 fun List<RecoJob>.toJobDetailList(imageMap: Map<Long, String>): List<JobCardUi> =
     map { job ->
         //val fallbackUrl = imageMap[12L] ?: "https://bswcjushfcwsxswufejm.supabase.co/storage/v1/object/public/company_images/workplace/2345/Rectangle293.png"
@@ -303,7 +303,10 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
     MainScreen(
         state = state,
         onSearch = vm::onSearchChange,
-        onJobClick = { /* nav.navigate("job_detail/$it") */ },
+        onJobClick = { id->
+            val idL = id.toLong()
+            nav.navigate(Route.JobDetail.of(idL))
+                     },
         onTailoredClick = { id-> nav.navigate(Route.JobDetail.of(id)) },
         onOpenCalendar = { nav.navigate(Route.Map.path)  },
         onShortcut = { key ->
@@ -347,6 +350,7 @@ fun MainScreen(
     LaunchedEffect(currentuser) {
         user = getUsernameById(currentuser) // ✅ suspend 안전 호출
     }
+    val limitedTailored = state.tailoredJobs.take(3)
 
 
 
@@ -504,7 +508,7 @@ fun MainScreen(
                     }
                 }
 
-                items(state.tailoredJobs, key = { it.id }) { jd ->
+                items(limitedTailored, key = { it.id }) { jd ->
                     Box(Modifier.padding(horizontal = 16.dp)) {
                         JobDetailCard(job = jd, onClick = { onTailoredClick(jd.id) })
                     }
