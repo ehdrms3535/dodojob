@@ -646,7 +646,6 @@ fun EmployerMainPopupDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
-                    // .background(Color.White)  ❌ 제거: 이게 상단 흰 꼭짓점 원인
                 ) {
                     // 상단 이미지: 모서리를 "상단만" 잘라서 흰색 안 비치게
                     val painter = painterResource(R.drawable.employer_main_popup)
