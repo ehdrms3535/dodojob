@@ -41,13 +41,13 @@ private val DividerGray= Color(0xFFE6E9ED)
 object FakeTalentRepoforScrapped {
     data class Talent(
         val name: String, val gender: String, val age: Int,
-        val seniorLevel: Int, val intro: String, val expYears: Int,
-        val location: String, val jobCategories: List<String>, val updatedMinutesAgo: Int
+        val seniorLevel: Int, val intro: String, val expYears: String,
+        val location: String, val jobCategories: List<String>, val updatedMinutesAgo: String
     )
     fun getTalents(): List<Talent> = listOf(
-        Talent("안은영","여",70,3,"열심히 일 할 수 있습니다.", 34, "대구광역시 서구", listOf("고객응대","청결 관리","환경미화","사서 보조"), 5),
-        Talent("김영수","남",62,3,"성실합니다", 8, "서울 전체", listOf("서비스 기타","보조출연","사무보조"), 12),
-        Talent("이수정","여",28,2,"고객 응대에 자신", 3, "부산 전체", listOf("매장관리","CS"), 18)
+        Talent("안은영","여",70,3,"열심히 일 할 수 있습니다.", "34년", "대구광역시 서구", listOf("고객응대","청결 관리","환경미화","사서 보조"), "5"),
+        Talent("김영수","남",62,3,"성실합니다", "8년","서울 전체", listOf("서비스 기타","보조출연","사무보조"), "12"),
+        Talent("이수정","여",28,2,"고객 응대에 자신", "3년", "부산 전체", listOf("매장관리","CS"), "18")
     )
 }
 
