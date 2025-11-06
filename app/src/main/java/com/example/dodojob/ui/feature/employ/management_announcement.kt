@@ -35,6 +35,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,8 +72,10 @@ data class AnnouncementUi(
 /* =======================================================================================
  * Data Provider (레포 대신 얇은 인터페이스만)
  * =======================================================================================*/
+val user = CurrentUser.username
+
 fun interface AnnouncementsProvider {
-    suspend fun fetchAnnouncements(): List<AnnouncementUi>
+    suspend fun fetchAnnouncements(user : String?): List<AnnouncementUi>
 }
 
 /* =======================================================================================
@@ -104,7 +107,7 @@ class ManagementAnnouncementViewModel(
             _state.update { it.copy(loading = true, error = null) }
             try {
                 // 항상 provider에서 불러오고, createdDate 기준 최신순으로만 정렬
-                val sorted = provider.fetchAnnouncements()
+                val sorted = provider.fetchAnnouncements(user)
                     .sortedByDescending { it.createdDate }
 
                 // views가 0이면 10~20 랜덤으로 채움

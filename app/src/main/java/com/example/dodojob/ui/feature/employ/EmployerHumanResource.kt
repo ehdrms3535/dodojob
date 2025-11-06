@@ -28,8 +28,24 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
 import kotlinx.parcelize.Parcelize
+import com.example.dodojob.data.greatuser.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.runtime.collectAsState
+import com.example.dodojob.ui.feature.employ.FakeTalentRepo.Talent
+import java.util.Calendar
+import kotlin.random.Random
+import com.example.dodojob.data.session.*
+import com.example.dodojob.session.JobBits
+import com.example.dodojob.data.career.CareerRepositoryImpl
+import com.example.dodojob.data.supabase.LocalSupabase
+
 
 /* =============== Fonts/Colors =============== */
 val Pretendard = FontFamily(
@@ -53,43 +69,157 @@ data class TalentUi(
     val age: Int,
     val seniorLevel: Int,
     val intro: String,
-    val expYears: Int,
+    val expYears: String,
     val location: String,
     val jobCategories: List<String>,
-    val updatedMinutesAgo: Int
+    val updatedMinutesAgo: String
 ) : Parcelable
 
 /* =============== Fake Repo (list) =============== */
 object FakeTalentRepo {
     data class Talent(
-        val name: String, val gender: String, val age: Int,
-        val seniorLevel: Int, val intro: String, val expYears: Int,
-        val location: String, val jobCategories: List<String>, val updatedMinutesAgo: Int
+        val name: String?, val gender: String?, val age: Int?,
+        val seniorLevel: Long?, val intro: String?, val expYears: Int?,
+        val location: String?, val jobCategories: List<String>, val updatedMinutesAgo: String?
     )
-    fun getTalents(): List<Talent> = listOf(
-        Talent("안은영","여",70,3,"열심히 일 할 수 있습니다.", 34, "대구광역시 서구", listOf("고객응대","청결 관리","환경미화","사서 보조"), 5),
-        Talent("김영수","남",62,3,"성실합니다", 8, "서울 전체", listOf("서비스 기타","보조출연","사무보조"), 12),
-        Talent("이수정","여",28,2,"고객 응대에 자신", 3, "부산 전체", listOf("매장관리","CS"), 18),
-        Talent("박민재","남",33,1,"빠른 적응, 꼼꼼함", 6, "대구 전체", listOf("사무보조"), 25),
-        Talent("정다연","여",41,3,"책임감 있게 합니다", 10, "인천 전체", listOf("총무","행정"), 7),
-        Talent("최우석","남",36,2,"팀워크 좋아요", 5, "경기 남부", listOf("물류","창고관리"), 15),
-        Talent("한가을","여",24,1,"배우면서 성장할게요", 1, "서울 강북", listOf("카운터","매장보조"), 9),
-        Talent("고상진","남",48,2,"정확하고 신속하게", 12, "대전 전체", listOf("배송","물류보조"), 3),
-    )
+
+}
+
+data class GreatUserUiState(
+    val isLoading: Boolean = false,
+    val users: List<GreatUser> = emptyList(),
+    val talents: List<TalentUi> = emptyList(),
+    val error: String? = null
+)
+
+
+
+
+class GreatUserViewModel : ViewModel() {
+
+    private val _uiState = MutableStateFlow(GreatUserUiState())
+    val uiState: StateFlow<GreatUserUiState> = _uiState
+
+    fun loadUserData(username: String?,repo: CareerRepositoryImpl) {
+        if (username.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                error = "username이 비어있습니다."
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val users = fetchGreatUser() // 서버 호출
+
+                val talents = users.map { user ->
+                    val year = user.birthdate.toString().take(4).toIntOrNull() ?: 0
+                    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+                    val diff = currentYear - year
+                    val n = (1..100).random()
+
+                    val result = if (n <= 60) {
+                        // 1~1440분 사이 랜덤
+                        val minutes = (1..1440).random()
+
+                        if (minutes < 60)
+                            "${minutes}분 전"
+                        else
+                            "${minutes / 60}시간 전"
+                    } else {
+                        "오래전"
+                    }
+                    val jobtalent = JobBits.parse(JobBits.JobCategory.TALENT,user.job_talent)
+                    val jobmanage = JobBits.parse(JobBits.JobCategory.TALENT,user.job_manage)
+                    val jobservice = JobBits.parse(JobBits.JobCategory.TALENT,user.job_service)
+                    val jobcare = JobBits.parse(JobBits.JobCategory.TALENT,user.job_care)
+
+                    val allJobs = sequenceOf(
+                        jobtalent,
+                        jobmanage,
+                        jobservice,
+                        jobcare
+                        ).flatten()
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .toList()
+
+                    val randomJobs = allJobs.shuffled(Random(System.currentTimeMillis()))
+                        .take(minOf(4, allJobs.size))
+
+                    val m = (0..6).random()
+                    val introlist = listOf(
+                        "열심히 일 할 수 있습니다.",
+                        "성실합니다",
+                        "고객 응대에 자신",
+                        "빠른 적응, 꼼꼼함",
+                        "책임감 있게 합니다",
+                        "배우면서 성장할게요",
+                        "정확하고 신속하게"
+                    )
+                    val t = introlist[m]
+
+                    val (years, months) = repo.totalCareerPeriod(user.username ?: "")
+
+                    TalentUi(
+                        name = user.name.toString(),
+                        gender = user.gender.toString(),
+                        age = diff,
+                        seniorLevel = user.activityLevel!!.toInt(),
+                        intro = t,
+                        expYears = repo.formatCareerPeriod(years, months),
+                        location = user.region.toString(),
+                        jobCategories = randomJobs,
+                        updatedMinutesAgo = result
+                    )
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    users = users,
+                    talents = talents,
+                    error = null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "데이터 로드 실패"
+                )
+            }
+        }
+    }
+}
+
+private fun parseYears(exp: String): Int {
+    return exp.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
 }
 
 /* =============== Screen: List =============== */
 @Composable
-fun EmployerHumanResourceScreen(nav: NavController) {
-    val talents = remember {
-        FakeTalentRepo.getTalents().map {
-            TalentUi(it.name, it.gender, it.age, it.seniorLevel, it.intro, it.expYears, it.location, it.jobCategories, it.updatedMinutesAgo)
-        }
+fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+
+    val client = LocalSupabase.current
+    val repo = remember { CareerRepositoryImpl(client) }
+    LaunchedEffect(Unit) {
+        viewModel.loadUserData(CurrentUser.username,repo)
     }
 
+    val uiState by viewModel.uiState.collectAsState()
     var sort by remember { mutableStateOf("업데이트순") }
     val sortOptions = listOf("업데이트순", "이름순", "경력순")
-    val totalCountForHeader = talents.size
+
+    val talents = uiState.talents
+    val talentsSorted = remember(talents, sort) {
+        when (sort) {
+            "업데이트순" -> talents.sortedBy { it.updatedMinutesAgo }     // 최근 업데이트가 상단이면 오름차순이 자연스럽습니다
+            "이름순"   -> talents.sortedBy { it.name }
+            "경력순"   -> talents.sortedByDescending { parseYears(it.expYears) }
+            else       -> talents
+        }
+    }
+    val totalCountForHeader = talentsSorted.size
 
     Scaffold(
         containerColor = ScreenBg,
@@ -126,8 +256,8 @@ fun EmployerHumanResourceScreen(nav: NavController) {
                 )
             }
 
-            items(talents.size) { idx ->
-                val t = talents[idx]
+            items(talentsSorted.size) { idx ->
+                val t = talentsSorted[idx]
                 TalentCard(
                     data = t,
                     onClick = {
@@ -225,7 +355,7 @@ private fun TalentCard(
                         text = buildAnnotatedString {
                             withStyle(SpanStyle(color = BrandBlue, fontWeight = FontWeight.SemiBold)) { append("경력") }
                             append("\n")
-                            withStyle(SpanStyle(color = BrandBlue, fontWeight = FontWeight.Medium)) { append("${data.expYears}년") }
+                            withStyle(SpanStyle(color = BrandBlue, fontWeight = FontWeight.Medium)) { append("${data.expYears}") }
                         },
                         fontFamily = Pretendard, fontSize = 11.sp, lineHeight = 14.sp
                     )
@@ -252,15 +382,15 @@ private fun TalentCard(
                     }
                 }
             }
-            Text("${data.updatedMinutesAgo}분전", fontFamily = Pretendard, fontSize = 11.sp, color = TextGray, modifier = Modifier.align(Alignment.TopEnd).padding(end = 20.dp))
+            Text("${data.updatedMinutesAgo}", fontFamily = Pretendard, fontSize = 11.sp, color = TextGray, modifier = Modifier.align(Alignment.TopEnd).padding(end = 20.dp))
         }
     }
 }
 
 /* =============== Utils =============== */
-private fun formatWithComma(n: Int): String = "%,d".format(n)
+private fun formatWithComma(n: Int?): String = "%,d".format(n)
 private fun maskName(name: String) = if (name.isNotEmpty()) name.first() + "**" else "**"
-@DrawableRes private fun medalResForLevel(level: Int): Int = when (level) {
+@DrawableRes private fun medalResForLevel(level: Int?): Int = when (level) {
     1 -> R.drawable.red_medal
     2 -> R.drawable.yellow_medal
     else -> R.drawable.blue_medal

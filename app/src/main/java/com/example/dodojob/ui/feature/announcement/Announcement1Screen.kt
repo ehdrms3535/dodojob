@@ -608,6 +608,7 @@ fun Announcement1Screen(
                             nextLoading = true
                             runCatching {
                                 val Save1 = AnnouncementDto(
+                                    username = CurrentUser.username.toString(),
                                     company_name   = companyNameSnapshot,
                                     public         = isPublicOrgSnapshot,
                                     company_id     = bizNoSnapshot,
@@ -1263,4 +1264,5 @@ private fun PhotoGridRow(
 대구광역시 수성구 달구벌대로 2430 (수성롯데캐슬)
 
 광주광역시 서구 상무중앙로 110 (상무지구 금융센터)
+
 */

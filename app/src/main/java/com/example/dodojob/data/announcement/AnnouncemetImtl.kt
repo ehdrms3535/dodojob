@@ -9,7 +9,8 @@ import io.github.jan.supabase.postgrest.rpc
 
 @Serializable
 data class AnnouncementRow(
-    val id: Long? = null,              // 자동 증가 PK
+    val id: Long? = null,
+    val username : String,// 자동 증가 PK
     val company_name: String,
     val public: Boolean,
     val company_id: String?=null,
@@ -35,6 +36,7 @@ class AnnouncementRepositorySupabase(
     /** announcement insert 후 자동증가 id 반환 */
     override suspend fun insertAnnouncement(announcement: AnnouncementDto): Long {
         val row = AnnouncementRow(
+            username = announcement.username,
             company_name   = announcement.company_name,
             public         = announcement.public,
             company_id     = announcement.company_id,      // 🔧 기존 코드의 매핑 실수 수정
@@ -67,9 +69,15 @@ class AnnouncementRepositorySupabase(
             .decodeSingle<AnnouncementUrlRow>()
     }
 
-    override suspend fun fetchAnnouncements(): List<AnnouncementRow> {
+    override suspend fun fetchAnnouncements(username: String?): List<AnnouncementRow> {
         return client.from("announcement")
-            .select()
+            .select {
+                filter {
+                    if (!username.isNullOrBlank()) {
+                        eq("username", username) // username은 여기선 String이 확실함
+                    }
+                }
+            }
             .decodeList<AnnouncementRow>()
     }
 
