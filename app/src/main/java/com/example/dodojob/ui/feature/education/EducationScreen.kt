@@ -1,6 +1,5 @@
 package com.example.dodojob.ui.feature.education
 
-import com.example.dodojob.ui.feature.education.EducationViewModel
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -30,17 +29,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.ui.feature.main.BottomNavBar
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.example.dodojob.dao.fetchLectures
+import com.example.dodojob.dao.LectureRow
+import com.example.dodojob.dao.fetchDisplayNameByUsername
 
 /* =========================
  * Colors
@@ -53,99 +55,100 @@ private val BrandBlue  = Color(0xFF005FFF)
  * Data
  * ========================= */
 data class Course(
-    val id: String, //강의 클릭하면 해당 강의로 가게 할려고 둿음
-    @DrawableRes val imageRes: Int,
+    val id: String,                       // 강의 클릭시 전달할 ID
     val title: String,
-    val tag: String,    // 필터용
-    val sub: String,    // 중간 라인
-    val desc: String
+    val tag: String,                      // category
+    val sub: String,                      // explain
+    val imageUrl: String? = null,         // 썸네일 URL
+    @DrawableRes val imageRes: Int? = null// 로컬 이미지
+)
+
+/** Supabase Row → UI 모델 매핑 */
+private fun LectureRow.toCourse(): Course = Course(
+    id = id.toString(),
+    title = title.orEmpty(),
+    tag = category.orEmpty(),
+    sub = explain.orEmpty(),
+    imageUrl = thumbnail
 )
 
 /** 필터 탭 라벨 */
 private val filterTabs = listOf("전체", "영어", "컴퓨터", "요리", "교육", "응대", "기타")
 
-/** 추천 강의 */
 fun recommendedCourses() = listOf(
     Course(
         id = "eng-conv-basic",
         imageRes = R.drawable.edu_recom1,
         title = "영어 회화 입문",
         tag   = "영어",
-        sub   = "일상 표현부터 차근차근",
-        desc  = "기초 패턴과 상황별 회화로 부담없이 시작"
+        sub   = "일상 표현부터 차근차근"
     ),
     Course(
         id = "pc-basic-master",
         imageRes = R.drawable.edu_recom2,
         title = "컴퓨터 기초 마스터",
         tag   = "컴퓨터",
-        sub   = "문서·인터넷·이메일 한 번에",
-        desc  = "실습 위주로 바로 따라하는 필수 기능"
+        sub   = "문서·인터넷·이메일 한 번에"
     ),
     Course(
         id = "home-cooking",
         imageRes = R.drawable.edu_recom3,
         title = "집에서 즐기는 홈쿠킹",
         tag   = "요리",
-        sub   = "기초 재료 손질과 간단 레시피",
-        desc  = "매일 먹는 반찬부터 근사한 일품요리까지"
+        sub   = "기초 재료 손질과 간단 레시피"
     ),
     Course(
         id = "group-tutoring",
         imageRes = R.drawable.edu_recom4,
         title = "그룹 스터디 튜터링",
         tag   = "교육",
-        sub   = "주 1회 온라인 그룹 학습",
-        desc  = "함께 공부하며 동기부여 얻기"
+        sub   = "주 1회 온라인 그룹 학습"
     )
 )
 
-// ✅ 실시간 인기 강의
+/** 더미(로컬) 실시간 인기 강의 */
 fun liveHotCourses() = listOf(
     Course(
         id = "cs-customer",
         imageRes = R.drawable.edu_live1,
         title = "고객 응대 스킬",
         tag   = "응대",
-        sub   = "전화·대면 응대 기본",
-        desc  = "상황별 말하기와 친절한 커뮤니케이션"
+        sub   = "전화·대면 응대 기본"
     ),
     Course(
         id = "smartphone-pro",
         imageRes = R.drawable.edu_live2,
         title = "스마트폰 200% 활용",
         tag   = "컴퓨터",
-        sub   = "결제·사진·앱 활용 전반",
-        desc  = "초보도 쉽게 따라하는 실전 가이드"
+        sub   = "결제·사진·앱 활용 전반"
     ),
     Course(
         id = "watercolor-begin",
         imageRes = R.drawable.edu_live3,
         title = "물감과 친해지는 수채화",
         tag   = "기타",
-        sub   = "기초 드로잉과 색감 연습",
-        desc  = "간단한 소묘부터 분위기 있는 채색까지"
+        sub   = "기초 드로잉과 색감 연습"
     ),
     Course(
         id = "english-news-listening",
         imageRes = R.drawable.edu_live4,
         title = "영어 뉴스 리스닝",
         tag   = "영어",
-        sub   = "쉬운 뉴스로 리스닝 감 만들기",
-        desc  = "핵심 단어·표현으로 이해력 향상"
+        sub   = "쉬운 뉴스로 리스닝 감 만들기"
     )
 )
+
 /* =========================
  * Entry
  * ========================= */
 @Composable
 fun EducationHomeRoute(
     nav: NavController,
-    userName: String = "홍길동",
+    userName: String? = null,    // ⚠️ 여기 들어오는 값은 'username(=ID)'
     eduVm: EducationViewModel
 ) {
     EducationHomeScreen(
-        userName = userName,
+        userName = userName,      // ID를 그대로 전달하고, 화면 안에서 이름 조회함
         onCourseClick = { course ->
             nav.navigate(Route.EduLectureInitial.of(course.id))
         },
@@ -173,17 +176,62 @@ fun EducationHomeRoute(
  * ========================= */
 @Composable
 fun EducationHomeScreen(
-    userName: String,
+    userName: String?,
     onCourseClick: (Course) -> Unit,
     onOpenLibrary: () -> Unit,
-    bottomBar: @Composable () -> Unit,
+    bottomBar: @Composable (() -> Unit),
     favorites: Set<String>,
     onToggleFavorite: (String) -> Unit
 ) {
+    // ── 1) username(=ID) → name 조회해서 화면 표시용으로 사용 ─────────────
+    var displayName by remember { mutableStateOf("회원") }
+    var loadingName by remember { mutableStateOf(false) }
+    var nameError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(userName) {
+        if (!userName.isNullOrBlank()) {
+            loadingName = true
+            nameError = null
+            try {
+                val fetched = withContext(Dispatchers.IO) {
+                    fetchDisplayNameByUsername(userName)
+                }
+                displayName = fetched ?: userName
+            } catch (e: Exception) {
+                nameError = e.message
+                displayName = userName
+            } finally {
+                loadingName = false
+            }
+        } else {
+            displayName = "회원"
+        }
+    }
+    // ───────────────────────────────────────────────────────────────
+
     var pickedFilter by remember { mutableStateOf("전체") }
 
-    val recom = remember { recommendedCourses() }
-    val live  = remember { liveHotCourses() }
+    var supaCourses by remember { mutableStateOf<List<Course>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    // 로컬 fallback
+    val recomLocal = remember { recommendedCourses() }
+    val liveLocal  = remember { liveHotCourses() }
+
+    // 최초 로드
+    LaunchedEffect(Unit) {
+        loading = true
+        error = null
+        try {
+            val rows = withContext(Dispatchers.IO) { fetchLectures(limit = 30) }
+            supaCourses = rows.map { it.toCourse() }
+        } catch (e: Exception) {
+            error = e.message
+        } finally {
+            loading = false
+        }
+    }
 
     fun List<Course>.applyFilter(): List<Course> =
         if (pickedFilter == "전체") this else this.filter { it.tag == pickedFilter }
@@ -201,10 +249,10 @@ fun EducationHomeScreen(
         ) {
             // ===== Hero =====
             HeroSection(
-                userName = userName,
+                userName = displayName,
                 heroImageRes = R.drawable.edu_recom4,
                 onBellClick = { /* TODO */ },
-                onProfileClick = onOpenLibrary, // 프로필 아이콘 → 단일 화면
+                onProfileClick = onOpenLibrary,
                 topBarHorizontal = 16.dp,
                 topBarTop = 0.dp,
                 logoSize = 29.dp,
@@ -240,25 +288,34 @@ fun EducationHomeScreen(
             Spacer(Modifier.height(28.dp))
 
             AttendanceCard(
-                userName = userName,
+                userName = displayName,
                 modifier = Modifier.padding(horizontal = 16.dp),
-                onMyCourseClick = onOpenLibrary // 버튼 → 단일 화면
+                onMyCourseClick = onOpenLibrary
             )
 
             Spacer(Modifier.height(16.dp))
             SectionTitle(
-                text = "${userName}님을 위한 추천 강의",
+                text = "${displayName}님을 위한 추천 강의",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
             )
             Spacer(Modifier.height(12.dp))
 
-            CourseCarousel(
-                courses = recom.applyFilter(),
-                favs = favorites,
-                onToggleFav = onToggleFavorite,
-                onClick = onCourseClick,
-                modifier = Modifier.padding(start = 16.dp)
-            )
+            val recommendedList = (if (supaCourses.isNotEmpty()) supaCourses else recomLocal)
+                .applyFilter()
+
+            if (loading && supaCourses.isEmpty()) {
+                Text("불러오는 중...", modifier = Modifier.padding(horizontal = 16.dp))
+            } else if (error != null && supaCourses.isEmpty()) {
+                Text("로드 실패: $error", color = Color.Red, modifier = Modifier.padding(horizontal = 16.dp))
+            } else {
+                CourseCarousel(
+                    courses = recommendedList,
+                    favs = favorites,
+                    onToggleFav = onToggleFavorite,
+                    onClick = onCourseClick,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
 
             Spacer(Modifier.height(24.dp))
             SectionTitle(
@@ -268,7 +325,7 @@ fun EducationHomeScreen(
             Spacer(Modifier.height(12.dp))
 
             CourseCarousel(
-                courses = live.applyFilter(),
+                courses = (liveLocal).applyFilter(),
                 favs = favorites,
                 onToggleFav = onToggleFavorite,
                 onClick = onCourseClick,
@@ -283,7 +340,7 @@ fun EducationHomeScreen(
  * ========================= */
 @Composable
 private fun HeroSection(
-    userName: String,
+    userName: String?,
     @DrawableRes heroImageRes: Int,
     onBellClick: () -> Unit,
     onProfileClick: () -> Unit,
@@ -552,12 +609,23 @@ private fun CourseCard(
                 .height(225.dp)
                 .clip(RoundedCornerShape(10.dp))
         ) {
-            Image(
-                painter = painterResource(data.imageRes),
-                contentDescription = data.title,
-                modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop
-            )
+            // 🔹 URL > 로컬 순서로 이미지 렌더
+            if (!data.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = data.imageUrl,
+                    contentDescription = data.title,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else if (data.imageRes != null) {
+                Image(
+                    painter = painterResource(data.imageRes),
+                    contentDescription = data.title,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
             IconButton(
                 onClick = onToggleFav,
                 modifier = Modifier
@@ -595,15 +663,6 @@ private fun CourseCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = data.desc,
-                fontSize = 15.sp,
-                letterSpacing = (-0.019).em,
-                color = TitleBlack,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
@@ -611,7 +670,7 @@ private fun CourseCard(
 /* ---------- 출석/주간 카드 ---------- */
 @Composable
 private fun AttendanceCard(
-    userName: String,
+    userName: String?,
     modifier: Modifier = Modifier,
     days: List<String> = listOf("일","월","화","수","목","금","토"),
     dates: List<String> = listOf("1","2","3","4","5","6","7"),
@@ -710,7 +769,9 @@ private fun AttendanceCard(
 @Composable
 private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Row(
-        modifier = modifier.fillMaxWidth().heightIn(min = 36.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 36.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = TitleBlack)
@@ -755,4 +816,3 @@ fun MyCourseButton(
         )
     }
 }
-
