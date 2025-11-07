@@ -10,9 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,8 +31,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
+import com.example.dodojob.dao.fetchDisplayNameByUsername
+import com.example.dodojob.dao.fetchEmployerStatsByUsername
 import com.example.dodojob.navigation.Route
+import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /* ================= Font ================= */
 private val PretendardFamily = FontFamily(
@@ -49,23 +52,49 @@ private val BrandBlue = Color(0xFF005FFF)
 private val TextGray  = Color(0xFF828282)
 private val White     = Color(0xFFFFFFFF)
 
-/* ================= Fake Repo (데모 데이터) ================= */
-private object FakeMyRepo {
-    val managerName = "홍길동 담당자님"
-    data class StatRow(val title: String, val countText: String)
-    fun activityStats() = listOf(
-        StatRow("활성공고", "3건"),
-        StatRow("총 지원자", "3건"),
-        StatRow("채용완료", "1건"),
+/* ============ Divider ============ */
+@Composable
+private fun ThinDivider(modifier: Modifier = Modifier) {
+    Divider(
+        modifier = modifier,
+        color = Color(0xFFE8E8E8),
+        thickness = 1.dp
     )
 }
 
 /* ================= Entry ================= */
 @Composable
 fun EmployerMyRoute(nav: NavController) {
-    val activityStats = remember { FakeMyRepo.activityStats() }
 
-    // 기본 글꼴을 Pretendard SemiBold로 깔아두기
+    val username = CurrentUser.username
+
+    var managerDisplay by remember { mutableStateOf("담당자님") }
+    var statActive by remember { mutableStateOf(0) }
+    var statApplicants by remember { mutableStateOf(0) }
+    var statCompleted by remember { mutableStateOf(0) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+
+    LaunchedEffect(username) {
+        managerDisplay = "담당자님"
+        statActive = 0; statApplicants = 0; statCompleted = 0
+
+        val u = username
+        if (!u.isNullOrBlank()) {
+            val (name, stats) = withContext(Dispatchers.IO) {
+                val nm = runCatching { fetchDisplayNameByUsername(u) }.getOrNull()
+                val st = runCatching { fetchEmployerStatsByUsername(u) }.getOrNull()
+                nm to st
+            }
+            managerDisplay = (name?.takeIf { it.isNotBlank() }?.plus(" 담당자님")) ?: "담당자님"
+            stats?.let {
+                statActive = it.activeCount
+                statApplicants = it.applicantsCount
+                statCompleted = it.completedCount
+            }
+        }
+    }
+
     CompositionLocalProvider(
         LocalTextStyle provides TextStyle(
             fontFamily = PretendardFamily,
@@ -96,7 +125,6 @@ fun EmployerMyRoute(nav: NavController) {
                 contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                /* ===== 상단 헤더 ===== */
                 item {
                     Column(
                         modifier = Modifier
@@ -121,7 +149,6 @@ fun EmployerMyRoute(nav: NavController) {
                             )
                         }
 
-                        // 프로필/설정 줄
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -131,7 +158,6 @@ fun EmployerMyRoute(nav: NavController) {
                                 },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // 프로필 사진: employermyprofile
                             Image(
                                 painter = painterResource(id = R.drawable.employermyprofile),
                                 contentDescription = "프로필 사진",
@@ -144,7 +170,7 @@ fun EmployerMyRoute(nav: NavController) {
 
                             Column(Modifier.weight(1f)) {
                                 // 이름(파랑) + 담당자님(검정)
-                                val full = FakeMyRepo.managerName
+                                val full = managerDisplay
                                 val suffix = " 담당자님"
                                 val namePart = if (full.endsWith(suffix)) full.removeSuffix(suffix) else full
                                 val suffixPart = if (full.endsWith(suffix)) "담당자님" else ""
@@ -194,7 +220,7 @@ fun EmployerMyRoute(nav: NavController) {
                             }
                         }
 
-                        // 빠른 액션 4개 (라벨: Pretendard Medium)
+                        // 빠른 액션 4개
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -237,20 +263,26 @@ fun EmployerMyRoute(nav: NavController) {
                                 color = Color.Black,
                                 modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)
                             )
-                            activityStats.forEachIndexed { idx, row ->
+
+                            val stats = listOf(
+                                "활성공고" to "${statActive}건",
+                                "총 지원자" to "${statApplicants}건",
+                                "채용완료" to "${statCompleted}건",
+                            )
+
+                            stats.forEachIndexed { idx, (title, countText) ->
                                 ActivityRow(
-                                    title = row.title,
-                                    countText = row.countText,
+                                    title = title,
+                                    countText = countText,
                                     onClick = {
-                                        when (row.title) {
+                                        when (title) {
                                             "활성공고" -> nav.safeNavigate(Route.EmployerNotice.path)
                                             "총 지원자" -> nav.safeNavigate(Route.EmployerApplicant.path)
                                             "채용완료" -> nav.safeNavigate(Route.EmployerNotice.path)
                                         }
                                     }
                                 )
-                                if (idx != activityStats.lastIndex) {
-                                    // ThinDivider 위/아래 패딩 추가
+                                if (idx != stats.lastIndex) {
                                     ThinDivider(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -262,17 +294,23 @@ fun EmployerMyRoute(nav: NavController) {
                     }
                 }
 
-                /* ===== 섹션 리스트 (기본정보 등) ===== */
+                /* ===== 섹션 리스트 ===== */
                 item {
                     InfoSectionList(
                         sections = listOf("기본정보", "인증 및 보안", "알림 설정", "기업 인증"),
-                        onRowClick = { /* TODO: 각 섹션 상세 라우트 연결 */ }
+                        onRowClick = { /* TODO: 화면 이동 */ }
                     )
                 }
                 item {
                     InfoSectionList(
                         sections = listOf("공지 사항", "도움말 & 문의", "로그아웃"),
-                        onRowClick = { /* TODO: 라우트 연결 */ }
+                        onRowClick = { idx ->
+                            when (idx) {
+                                0 -> { /* 공지 사항 화면 이동 */ }
+                                1 -> { /* 도움말 & 문의 화면 이동 */ }
+                                2 -> { showLogoutDialog = true }
+                            }
+                        }
                     )
                 }
             }
@@ -306,7 +344,7 @@ private fun QuickAction(
             lineHeight = 23.sp,
             letterSpacing = (-0.5).sp,
             fontFamily = PretendardFamily,
-            fontWeight = FontWeight.Medium, // 라벨은 Medium
+            fontWeight = FontWeight.Medium,
             color = Color(0xFF262626),
             textAlign = TextAlign.Center
         )
