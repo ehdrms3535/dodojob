@@ -261,26 +261,23 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         ) {
             // 교육 홈
             composable(Route.EduHome.path) { entry ->
-                val parentEntry = remember(entry) { nav.getBackStackEntry(Route.EduGraph.path) }
                 val username = CurrentUser.username
-                val eduVm: EducationViewModel = viewModel(parentEntry)
                 EducationHomeRoute(
                     nav = nav,
-                    userName = username,
-                    eduVm = eduVm
+                    userName = username
                 )
             }
+
 
             // 내 강좌 (이어보기/찜한 강의)
             composable(Route.EduMy.path) { entry ->
                 val parentEntry = remember(entry) { nav.getBackStackEntry(Route.EduGraph.path) }
                 val eduVm: EducationViewModel = viewModel(parentEntry)
-                val all = remember { recommendedCourses() + liveHotCourses() }
+                val username = CurrentUser.username
+                val all = remember { recommendedCourses() + liveHotCoursesFallback() }
                 EducationLibraryScreen(
                     nav = nav,
-                    userName = "홍길동",
-                    favorites = eduVm.favorites,
-                    allCourses = all
+                    userName = username
                 )
             }
 

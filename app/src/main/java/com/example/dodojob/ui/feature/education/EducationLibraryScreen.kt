@@ -1,5 +1,8 @@
 package com.example.dodojob.ui.feature.education
 
+import android.app.Activity
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,7 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.*
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,50 +35,130 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.core.view.WindowCompat
 import com.example.dodojob.R
-import com.example.dodojob.navigation.Route
-import android.app.Activity
+import com.example.dodojob.dao.fetchAssignedCourses
+import com.example.dodojob.dao.fetchDisplayNameByUsername
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+/* ====================== 색상 ====================== */
 private val ScreenBg = Color(0xFFF1F5F7)
 private val BrandBlue = Color(0xFF005FFF)
 private val SubGray = Color(0xFF848484)
 
+/* ====================== UI 모델 ====================== */
+
+
+data class CoursewithFavorite(
+    val id: Long,
+    val title: String,
+    val sub: String? = null,        // lecture.explain
+    val imageUrl: String? = null,   // lecture.thumbnail
+    val buy: Boolean? = null,       // lecture_assign_user.buy
+    val favorite: Boolean? = null   // lecture_assign_user.favorite
+)
+
 enum class EduTab { Continue, Favorites }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/* ====================== 화면 ====================== */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun EducationLibraryScreen(
     nav: NavController,
-    userName: String,
-    favorites: Set<String>,
-    allCourses: List<Course>
+    userName: String?,
 ) {
     SetStatusBar(color = Color.Transparent, darkIcons = true)
-    var tab by remember { mutableStateOf(EduTab.Continue) }
-    val favCourses = remember(favorites, allCourses) {
-        allCourses.filter { it.title in favorites }
-    }
-    val count = if (tab == EduTab.Continue) allCourses.size else favCourses.size
 
-    Scaffold(
-        containerColor = ScreenBg
-    ) { padding ->
+    // 강의 로딩
+    var allCourses by remember { mutableStateOf<List<CoursewithFavorite>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(userName) {
+        if (!userName.isNullOrBlank()) {
+            loading = true
+            loadError = null
+            try {
+                // DTO(배정 + 강의 조인) → UI Course 매핑
+                val rows = withContext(Dispatchers.IO) {
+                    // /lecture_assign_user?select=buy,favorite,lecture(id,title,explain,thumbnail)&user=eq.{username}
+                    fetchAssignedCourses(userName)
+                }
+                allCourses = rows.mapNotNull { r ->
+                    val lec = r.lecture ?: return@mapNotNull null
+                    CoursewithFavorite(
+                        id       = lec.id,
+                        title    = lec.title ?: "(제목 없음)",
+                        sub      = lec.explain,
+                        imageUrl = lec.thumbnail,
+                        buy      = r.buy,
+                        favorite = r.favorite
+                    )
+                }
+            } catch (e: Exception) {
+                loadError = e.message
+                allCourses = emptyList()
+            } finally {
+                loading = false
+            }
+        } else {
+            allCourses = emptyList()
+        }
+    }
+
+    var tab by remember { mutableStateOf(EduTab.Continue) }
+
+    // ✅ 요구사항 필터
+    // 이어보기: buy == true
+    val continueCourses = remember(allCourses) {
+        allCourses.filter { it.buy == true }
+    }
+    // 찜: favorite == true && buy != true
+    val favCourses = remember(allCourses) {
+        allCourses.filter { it.favorite == true && it.buy != true }
+    }
+    // 카운트
+    val count = if (tab == EduTab.Continue) continueCourses.size else favCourses.size
+
+    // 닉네임
+    var displayName by remember { mutableStateOf("회원") }
+    var loadingName by remember { mutableStateOf(false) }
+    var nameError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(userName) {
+        if (!userName.isNullOrBlank()) {
+            loadingName = true
+            nameError = null
+            try {
+                val fetched = withContext(Dispatchers.IO) {
+                    fetchDisplayNameByUsername(userName)
+                }
+                displayName = fetched ?: userName
+            } catch (e: Exception) {
+                nameError = e.message
+                displayName = userName
+            } finally {
+                loadingName = false
+            }
+        } else {
+            displayName = "회원"
+        }
+    }
+
+    Scaffold(containerColor = ScreenBg) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // 상단 바
+            /* ───── 상단 바 ───── */
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.White)
                     .padding(top = 12.dp, bottom = 12.dp)
             ) {
-                // 뒤로가기
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -87,12 +173,9 @@ fun EducationLibraryScreen(
                         )
                     }
                 }
-
                 Spacer(Modifier.height(8.dp))
-
-                // 타이틀
                 Text(
-                    text = "${userName}님 강의",
+                    text = "${displayName}님 강의",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
@@ -100,7 +183,28 @@ fun EducationLibraryScreen(
                 )
             }
 
-            // 총 건수 + 탭바
+            /* ───── 로딩/에러 ───── */
+            if (loading) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                ) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            }
+            if (loadError != null) {
+                Text(
+                    text = "강의 불러오기 실패: $loadError",
+                    color = Color.Red,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
+            /* ───── 총 건수 + 탭바 ───── */
             Column(Modifier.background(Color.White)) {
                 Row(
                     Modifier
@@ -112,14 +216,9 @@ fun EducationLibraryScreen(
                     Text(
                         text = buildAnnotatedString {
                             append("총 ")
-                            withStyle(style = SpanStyle(color = BrandBlue)) {
-                                append("${count}건")
-                            }
-                            if (tab == EduTab.Continue) {
-                                append("의 강좌 수강 중")
-                            } else {
-                                append("의 강좌 찜")
-                            }
+                            withStyle(style = SpanStyle(color = BrandBlue)) { append("${count}건") }
+                            if (tab == EduTab.Continue) append("의 강좌 수강 중")
+                            else append("의 강좌 찜")
                         },
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -128,7 +227,6 @@ fun EducationLibraryScreen(
                     )
                 }
                 Spacer(Modifier.height(4.dp))
-
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -156,7 +254,7 @@ fun EducationLibraryScreen(
                 }
             }
 
-            // 콘텐츠
+            /* ───── 콘텐츠 ───── */
             Column(
                 Modifier
                     .fillMaxSize()
@@ -165,28 +263,31 @@ fun EducationLibraryScreen(
                     .padding(top = 32.dp, bottom = 20.dp, start = 16.dp, end = 16.dp)
             ) {
                 if (tab == EduTab.Continue) {
-                    if (allCourses.isEmpty()) {
+                    // ✅ buy == true 만
+                    if (continueCourses.isEmpty()) {
                         EmptyHint("아직 학습 중인 강의가 없어요.")
                     } else {
-                        allCourses.forEach { c ->
+                        continueCourses.forEach { c ->
                             MyCourseRowCard(
                                 title = c.title,
-                                subtitle = c.sub,
-                                onPlay = { nav.navigate(Route.EduLectureNormal.of(c.id)) }
+                                subtitle = c.sub ?: "",
+                                imageUrl = c.imageUrl,
+                                onPlay = { /* nav.navigate(Route.EduLectureNormal.of(c.id)) */ }
                             )
                             Spacer(Modifier.height(28.dp))
                         }
                     }
                 } else {
+                    // ✅ favorite == true && buy != true 만
                     if (favCourses.isEmpty()) {
                         EmptyHint("아직 찜한 강의가 없어요.")
                     } else {
                         favCourses.forEach { c ->
                             FavoriteRowItem(
                                 title = c.title,
-                                subtitle = c.sub,
-                                imageUrl = c.imageUrl, // 🔹 URL만 사용
-                                onClick = { nav.navigate(Route.EduLectureNormal.of(c.id)) }
+                                subtitle = c.sub ?: "",
+                                imageUrl = c.imageUrl,
+                                onClick = { /* nav.navigate(Route.EduLectureNormal.of(c.id)) */ }
                             )
                             Spacer(Modifier.height(28.dp))
                         }
@@ -197,6 +298,8 @@ fun EducationLibraryScreen(
         }
     }
 }
+
+/* ====================== 공용 컴포넌트 ====================== */
 
 @Composable
 private fun UnderlineTab(
@@ -247,6 +350,7 @@ private fun EmptyHint(text: String) {
 private fun MyCourseRowCard(
     title: String,
     subtitle: String,
+    imageUrl: String?,   // 썸네일 URL
     onPlay: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
@@ -256,15 +360,33 @@ private fun MyCourseRowCard(
                 .height(195.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(Color(0xFFD9D9D9))
-                .clickable(onClick = onPlay),
-            contentAlignment = Alignment.Center
+                .clickable(onClick = onPlay)
         ) {
+            // 썸네일
+            if (!imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "강의 썸네일",
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            // 어두운 오버레이
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = 0.2f))
+            )
+            // 재생 아이콘
             Image(
                 painter = painterResource(R.drawable.play_button),
                 contentDescription = "재생",
-                modifier = Modifier.size(60.dp)
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(60.dp)
             )
         }
+
         Column {
             Text(
                 text = title,
@@ -289,27 +411,11 @@ private fun MyCourseRowCard(
     }
 }
 
-/** 🔹 상태바 색상/아이콘 설정 */
-@Composable
-private fun SetStatusBar(color: Color, darkIcons: Boolean) {
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            window.statusBarColor = color.toArgb()
-            val controller = WindowCompat.getInsetsController(window, window.decorView)
-            controller.isAppearanceLightStatusBars = darkIcons
-        }
-    }
-}
-
-/** 🔹 썸네일 URL만 사용하는 찜한 강의 아이템 */
 @Composable
 private fun FavoriteRowItem(
     title: String,
     subtitle: String,
-    imageUrl: String?,        // Supabase 썸네일 URL
+    imageUrl: String?,
     onClick: () -> Unit
 ) {
     Row(
@@ -348,7 +454,7 @@ private fun FavoriteRowItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                Icon(
+                androidx.compose.material3.Icon(
                     imageVector = Icons.Filled.Favorite,
                     contentDescription = null,
                     tint = Color(0xFFFF2F00)
@@ -364,6 +470,21 @@ private fun FavoriteRowItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+/* 상태바 설정 */
+@Composable
+private fun SetStatusBar(color: Color, darkIcons: Boolean) {
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            window.statusBarColor = color.toArgb()
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+            controller.isAppearanceLightStatusBars = darkIcons
         }
     }
 }
