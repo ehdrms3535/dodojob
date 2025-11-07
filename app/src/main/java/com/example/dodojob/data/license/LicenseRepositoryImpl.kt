@@ -10,7 +10,7 @@ class LicenseRepositoryImpl(
     suspend fun list(username: String): List<LicenseModels> =
         client.from("license_senior")
             .select { filter { eq("username", username) } }
-            .decodeList()
+            .decodeList<LicenseModels>()
 
     suspend fun add(username: String, name: String, location: String, number: String) {
         val row = LicenseModels(
