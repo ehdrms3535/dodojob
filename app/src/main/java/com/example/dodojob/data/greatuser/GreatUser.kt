@@ -88,3 +88,19 @@ suspend fun fetchGreatUser(): List<GreatUser> {
         // header("Prefer", "count=exact")
     }.body()
 }
+
+suspend fun fetchGreatUserone(username: String?): GreatUser? {
+    val url = "https://bswcjushfcwsxswufejm.supabase.co/rest/v1/great_user_view"
+        val rows: List<GreatUser> = http.get(url) {
+            parameter("select", "*")
+            parameter("username", "eq.$username")
+            parameter("limit", "1")
+            header("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            header("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+            header("Accept", "application/json")
+        }.body()
+
+        return rows.firstOrNull()   // ✅ []면 null
+    }
+
+
