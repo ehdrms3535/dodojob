@@ -1,8 +1,5 @@
 package com.example.dodojob.ui.feature.announcement
 
-import android.content.pm.PackageManager
-import android.os.Build
-import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,7 +15,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
@@ -47,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.dodojob.R
+import com.example.dodojob.dao.fetchDisplayNameByUsername
 import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.data.announcement.AnnoucementRepository
 import com.example.dodojob.data.announcement.AnnouncementRepositorySupabase
@@ -59,7 +56,6 @@ import com.example.dodojob.session.CurrentUser
 import io.github.jan.supabase.storage.storage
 import io.ktor.http.ContentType
 import kotlinx.coroutines.launch
-import com.example.dodojob.dao.getUsernameById
 import com.example.dodojob.data.announcement.AnnouncementDto
 import com.example.dodojob.data.announcement.AnnoucementUrlDto
 import kotlinx.coroutines.Dispatchers
@@ -213,7 +209,7 @@ fun Announcement1Screen(
     val username = CurrentUser.username
     LaunchedEffect(username) {
         // 필요 시 사전 검증
-        runCatching { getUsernameById(username) }
+        runCatching { fetchDisplayNameByUsername(username) }
     }
     LaunchedEffect(username) {
         screenLoading = true
