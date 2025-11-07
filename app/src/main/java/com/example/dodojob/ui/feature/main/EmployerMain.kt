@@ -282,6 +282,7 @@ fun EmployerHomeRoute(nav: NavController) {
                         "home"      -> nav.safeNavigate(Route.EmployerHome.path)
                         "notice"    -> nav.safeNavigate(Route.EmployerNotice.path)
                         "applicant" -> nav.safeNavigate(Route.EmployerApplicant.path)
+                        "human_resource" -> nav.safeNavigate(Route.EmployerHumanResource.path)
                         "my"        -> nav.safeNavigate(Route.EmployerMy.path)
                     }
                 }
