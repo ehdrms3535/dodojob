@@ -31,6 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
+import com.example.dodojob.data.greatuser.GreatUser
+import com.example.dodojob.session.CareerModels
+import com.example.dodojob.session.GreatUserView
+import kotlinx.serialization.SerialName
 
 /* ===== 컬러 ===== */
 private val BrandBlue = Color(0xFF005FFF)
@@ -213,6 +217,13 @@ fun ApplicantInformationScreen(navController: NavController) {
 
     var selectedJob by remember { mutableStateOf(ApplicantFakeDB.defaultJob) }
 
+    val triplescareer = GreatUserView.careers.map { career ->
+        Triple(career.title, career.startDate, career.endDate)
+    }
+    val triplelicense = GreatUserView.licenses.map {lisense ->
+        Triple(lisense.location, lisense.name,lisense.number)
+    }
+
     Scaffold(
         containerColor = BgGray,
         topBar = { } // ← 고정 AppBar 비움(헤더는 본문 첫 줄에 배치하여 스크롤과 함께 이동)
@@ -257,11 +268,11 @@ fun ApplicantInformationScreen(navController: NavController) {
                         }
                         Spacer(Modifier.height(16.dp))
 
-                        KeyValueRow("이름",     ApplicantFakeDB.name)
-                        KeyValueRow("생년월일", ApplicantFakeDB.birth)
-                        KeyValueRow("전화번호", ApplicantFakeDB.phone)
-                        KeyValueRow("주소",     ApplicantFakeDB.address)
-                        KeyValueRow("이메일",   ApplicantFakeDB.email)
+                        KeyValueRow("이름",     GreatUserView.greatuser!!.name.toString())
+                        KeyValueRow("생년월일", GreatUserView.greatuser!!.birthdate.toString())
+                        KeyValueRow("전화번호", GreatUserView.greatuser!!.phone.toString())
+                        KeyValueRow("주소",     GreatUserView.greatuser!!.region.toString())
+                        KeyValueRow("이메일",   GreatUserView.greatuser!!.email.toString())
                     }
                 }
 
@@ -276,7 +287,7 @@ fun ApplicantInformationScreen(navController: NavController) {
                         onToggle = { careerExpanded = !careerExpanded }
                     )
                     if (careerExpanded) {
-                        ApplicantFakeDB.careers.forEachIndexed { i, (title, start, end) ->
+                        triplescareer.forEachIndexed { i, (title, start, end) ->
                             if (i > 0) {
                                 Spacer(Modifier.height(16.dp))
                                 ThinDivider()
@@ -284,7 +295,7 @@ fun ApplicantInformationScreen(navController: NavController) {
                             } else {
                                 Spacer(Modifier.height(8.dp))
                             }
-                            CareerItem(title, start, end)
+                            CareerItem(title.toString(), start.toString(), end.toString())
                         }
                         Spacer(Modifier.height(4.dp))
                     }
@@ -301,7 +312,7 @@ fun ApplicantInformationScreen(navController: NavController) {
                         onToggle = { licenseExpanded = !licenseExpanded }
                     )
                     if (licenseExpanded) {
-                        ApplicantFakeDB.licenses.forEachIndexed { i, (org, title, code) ->
+                        triplelicense.forEachIndexed { i, (org, title, code) ->
                             if (i > 0) {
                                 Spacer(Modifier.height(16.dp))
                                 ThinDivider()
@@ -309,7 +320,7 @@ fun ApplicantInformationScreen(navController: NavController) {
                             } else {
                                 Spacer(Modifier.height(8.dp))
                             }
-                            LicenseItem(org, title, code)
+                            LicenseItem(org.toString(), title.toString(), code.toString())
                         }
                         Spacer(Modifier.height(4.dp))
                     }

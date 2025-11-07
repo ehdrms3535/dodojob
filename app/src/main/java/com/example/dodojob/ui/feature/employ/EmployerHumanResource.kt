@@ -38,13 +38,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import com.example.dodojob.dao.fetchDisplayNameByUsername
+import com.example.dodojob.dao.getUsernameById
 import com.example.dodojob.ui.feature.employ.FakeTalentRepo.Talent
 import java.util.Calendar
 import kotlin.random.Random
 import com.example.dodojob.data.session.*
 import com.example.dodojob.session.JobBits
 import com.example.dodojob.data.career.CareerRepositoryImpl
+import com.example.dodojob.data.license.LicenseRepositoryImpl
 import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.session.GreatUserView
 
 
 /* =============== Fonts/Colors =============== */
@@ -163,8 +168,9 @@ class GreatUserViewModel : ViewModel() {
 
                     val (years, months) = repo.totalCareerPeriod(user.username ?: "")
 
+
                     TalentUi(
-                        name = user.name.toString(),
+                        name = user.username.toString(),
                         gender = user.gender.toString(),
                         age = diff,
                         seniorLevel = user.activityLevel!!.toInt(),
@@ -209,6 +215,11 @@ fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel
     val uiState by viewModel.uiState.collectAsState()
     var sort by remember { mutableStateOf("업데이트순") }
     val sortOptions = listOf("업데이트순", "이름순", "경력순")
+
+    val licenseRepo = LicenseRepositoryImpl(client)
+    val careerRepo = CareerRepositoryImpl(client)
+
+    val scope = rememberCoroutineScope()   // ← 추가
 
     val talents = uiState.talents
     val talentsSorted = remember(talents, sort) {
@@ -261,8 +272,28 @@ fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel
                 TalentCard(
                     data = t,
                     onClick = {
-                        nav.currentBackStackEntry?.savedStateHandle?.set("talent", t)
-                        nav.safeNavigate("view_resource_detail")
+                        scope.launch {  // ✅ suspend 함수 안전하게 호출
+                            var greatuserone = fetchGreatUserone(t.name)
+                            if (greatuserone == null) {
+                                greatuserone = GreatUser(        // ✅ 기본값 or 빈 객체 대입
+                                    name = t.name,
+                                    region = "-",
+                                    phone = "-",
+                                    email = "-",
+                                    gender = null,
+                                    username = null
+                                )
+                            }
+                            val licenses = licenseRepo.list(t.name)
+                            val careers = careerRepo.list(t.name)
+
+                            GreatUserView.setLicenses(licenses)
+                            GreatUserView.setCareers(careers)
+                            GreatUserView.setGreatuser(greatuserone)
+
+                            nav.currentBackStackEntry?.savedStateHandle?.set("talent", t)
+                            nav.safeNavigate("view_resource_detail")
+                        }
                     }
                 )
             }
@@ -328,13 +359,39 @@ private fun TalentCard(
     data: TalentUi,
     onClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val client = LocalSupabase.current  // ⚙️ 이미 CompositionLocal로 주입된 SupabaseClient라면
+    var displayName by remember { mutableStateOf<String?>(null) }
+
+    // 이름 비동기로 가져오기
+    LaunchedEffect(data.name) {
+        try {
+            val name = fetchDisplayNameByUsername(data.name.toString())
+            displayName = name ?: data.name   // 없으면 원래 username 그대로
+        } catch (e: Exception) {
+            e.printStackTrace()
+            displayName = data.name
+        }
+    }
+
     Card(
-        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         onClick = onClick
     ) {
-        Box(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp)
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
@@ -357,24 +414,47 @@ private fun TalentCard(
                             append("\n")
                             withStyle(SpanStyle(color = BrandBlue, fontWeight = FontWeight.Medium)) { append("${data.expYears}") }
                         },
-                        fontFamily = Pretendard, fontSize = 11.sp, lineHeight = 14.sp
+                        fontFamily = Pretendard,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp
                     )
                 }
+
                 Spacer(Modifier.width(20.dp))
+
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("${maskName(data.name)}", fontFamily = Pretendard, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        // ✅ 가져온 displayName 사용
+                        Text(
+                            text = maskName(displayName ?: data.name),
+                            fontFamily = Pretendard,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                         Spacer(Modifier.width(6.dp))
-                        Text("(${data.gender}, ${data.age}세)", fontSize = 15.sp, fontFamily = Pretendard, color = TextGray)
+                        Text(
+                            "(${data.gender}, ${data.age}세)",
+                            fontSize = 15.sp,
+                            fontFamily = Pretendard,
+                            color = TextGray
+                        )
                         Spacer(Modifier.width(6.dp))
-                        Icon(painterResource(medalResForLevel(data.seniorLevel)), contentDescription = "medal", tint = Color.Unspecified, modifier = Modifier.size(18.dp))
+                        Icon(
+                            painterResource(medalResForLevel(data.seniorLevel)),
+                            contentDescription = "medal",
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
+
                     Text("“${data.intro}”", fontFamily = Pretendard, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(painterResource(R.drawable.location), null, tint = TextGray, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(data.location, fontFamily = Pretendard, fontSize = 13.sp, color = TextGray, fontWeight = FontWeight.Medium)
                     }
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(painterResource(R.drawable.cargo), null, tint = TextGray, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
@@ -382,10 +462,17 @@ private fun TalentCard(
                     }
                 }
             }
-            Text("${data.updatedMinutesAgo}", fontFamily = Pretendard, fontSize = 11.sp, color = TextGray, modifier = Modifier.align(Alignment.TopEnd).padding(end = 20.dp))
+            Text(
+                "${data.updatedMinutesAgo}",
+                fontFamily = Pretendard,
+                fontSize = 11.sp,
+                color = TextGray,
+                modifier = Modifier.align(Alignment.TopEnd).padding(end = 20.dp)
+            )
         }
     }
 }
+
 
 /* =============== Utils =============== */
 private fun formatWithComma(n: Int?): String = "%,d".format(n)

@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -33,6 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
+import com.example.dodojob.dao.fetchDisplayNameByUsername
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.session.GreatUserView
+import com.example.dodojob.session.JobBits
+import kotlin.random.Random
 
 /* ===== Colors / Fonts ===== */
 private val BrandBlue = Color(0xFF005FFF)
@@ -53,6 +59,7 @@ fun ViewResourceDetailScreen(navController: NavController) {
     // 목록에서 넘겨준 TalentUi 사용 (없으면 기본 값)
     val passedTalent = navController.previousBackStackEntry?.savedStateHandle?.get<TalentUi>("talent")
     var talent by rememberSaveable { mutableStateOf(passedTalent) }
+
     val safeTalent = talent ?: TalentUi(
         name = "홍길동", gender = "여", age = 70, seniorLevel = 3,
         intro = "열심히 일 할 수 있습니다.", expYears = "34년",
@@ -65,6 +72,32 @@ fun ViewResourceDetailScreen(navController: NavController) {
     var licenseExpanded  by remember { mutableStateOf(true) }
     var isFavorite       by remember { mutableStateOf(false) }
 
+    val triplescareer = GreatUserView.careers.map { career ->
+        Triple(career.title, career.startDate, career.endDate)
+    }
+    val triplelicense = GreatUserView.licenses.map {lisense ->
+        Triple(lisense.location, lisense.name,lisense.number)
+    }
+
+    val jobtalent = JobBits.parse(JobBits.JobCategory.TALENT,GreatUserView.greatuser!!.job_talent)
+    val jobmanage = JobBits.parse(JobBits.JobCategory.TALENT,GreatUserView.greatuser!!.job_manage)
+    val jobservice = JobBits.parse(JobBits.JobCategory.TALENT,GreatUserView.greatuser!!.job_service)
+    val jobcare = JobBits.parse(JobBits.JobCategory.TALENT,GreatUserView.greatuser!!.job_care)
+
+    val allJobs = sequenceOf(
+        jobtalent,
+        jobmanage,
+        jobservice,
+        jobcare
+    ).flatten()
+        .filter { it.isNotBlank() }
+        .distinct()
+        .toList()
+
+    val randomJobs = allJobs.shuffled(Random(System.currentTimeMillis()))
+        .take(minOf(4, allJobs.size))
+
+
     Scaffold(containerColor = BgGray, topBar = { }) { inner ->
         Column(
             Modifier
@@ -75,9 +108,24 @@ fun ViewResourceDetailScreen(navController: NavController) {
             ScrollHeader(title = "인재 상세보기", onBack = { navController.popBackStack() })
             Spacer(Modifier.height(12.dp))
 
+            val context = LocalContext.current
+            val client = LocalSupabase.current  // ⚙️ 이미 CompositionLocal로 주입된 SupabaseClient라면
+            var displayName by remember { mutableStateOf<String?>(null) }
+
+            // 이름 비동기로 가져오기
+            LaunchedEffect(safeTalent.name) {
+                try {
+                    val name = fetchDisplayNameByUsername(safeTalent.name.toString())
+                    displayName = name ?: safeTalent.name   // 없으면 원래 username 그대로
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    displayName = safeTalent.name
+                }
+            }
+
             /* 헤더 카드 */
             TalentHeaderCard(
-                name = safeTalent.name,
+                name = displayName.toString(),
                 gender = safeTalent.gender,
                 age = safeTalent.age,
                 seniorLevel = safeTalent.seniorLevel,
@@ -102,11 +150,11 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         onToggle = { personalExpanded = !personalExpanded }
                     )
                     if (personalExpanded) {
-                        KeyValueRow("이름",     ApplicantFakeDB.name)
-                        KeyValueRow("생년월일", ApplicantFakeDB.birth)
-                        KeyValueRow("전화번호", ApplicantFakeDB.phone)
-                        KeyValueRow("주소",     ApplicantFakeDB.address)
-                        KeyValueRow("이메일",   ApplicantFakeDB.email)
+                        KeyValueRow("이름",     GreatUserView.greatuser!!.name.toString())
+                        KeyValueRow("생년월일", GreatUserView.greatuser!!.birthdate.toString())
+                        KeyValueRow("전화번호", GreatUserView.greatuser!!.phone.toString())
+                        KeyValueRow("주소",     GreatUserView.greatuser!!.region.toString())
+                        KeyValueRow("이메일",   GreatUserView.greatuser!!.email.toString())
                     }
                 }
 
@@ -121,9 +169,9 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         onToggle = { careerExpanded = !careerExpanded }
                     )
                     if (careerExpanded) {
-                        ApplicantFakeDB.careers.forEachIndexed { i, (title, start, end) ->
+                        triplescareer.forEachIndexed { i, (title, start, end) ->
                             if (i > 0) { Spacer(Modifier.height(16.dp)); ThinDivider(); Spacer(Modifier.height(16.dp)) }
-                            CareerItem(title, start, end)
+                            CareerItem(title.toString(), start.toString(), end.toString())
                         }
                     }
                 }
@@ -139,9 +187,9 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         onToggle = { licenseExpanded = !licenseExpanded }
                     )
                     if (licenseExpanded) {
-                        ApplicantFakeDB.licenses.forEachIndexed { i, (org, title, code) ->
+                        triplelicense.forEachIndexed { i, (org, title, code) ->
                             if (i > 0) { Spacer(Modifier.height(16.dp)); ThinDivider(); Spacer(Modifier.height(16.dp)) }
-                            LicenseItem(org, title, code)
+                            LicenseItem(org.toString(), title.toString(), code.toString())
                         }
                     }
                 }
