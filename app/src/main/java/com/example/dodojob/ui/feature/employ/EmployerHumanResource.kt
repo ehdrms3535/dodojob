@@ -40,11 +40,8 @@ import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import com.example.dodojob.dao.fetchDisplayNameByUsername
-import com.example.dodojob.dao.getUsernameById
-import com.example.dodojob.ui.feature.employ.FakeTalentRepo.Talent
 import java.util.Calendar
 import kotlin.random.Random
-import com.example.dodojob.data.session.*
 import com.example.dodojob.session.JobBits
 import com.example.dodojob.data.career.CareerRepositoryImpl
 import com.example.dodojob.data.license.LicenseRepositoryImpl
