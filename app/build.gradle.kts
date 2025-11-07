@@ -139,7 +139,9 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.4.0") // 너가 쓰는 2.x 최신으로
     implementation("io.github.jan-tennert.supabase:gotrue-kt:2.4.0") // (로그인 쓰면)
 
-
+    // 영상 재생용 플레이어
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
 
 
 }
