@@ -16,7 +16,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -97,9 +96,7 @@ fun ApplicationRoute(nav: NavController) {
         posting = posting,
         onBackClick = { nav.popBackStack() },
         onSubmit = {
-            nav.navigate(Route.Main.path) {
-                popUpTo(ApplyRoute.path) { inclusive = true }
-            }
+            nav.navigate(Route.ApplicationCompleted.path)
         }
     )
 }
