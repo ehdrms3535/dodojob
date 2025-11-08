@@ -2,6 +2,7 @@
 
 package com.example.dodojob.ui.feature.employ
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,9 +36,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
 import com.example.dodojob.dao.fetchDisplayNameByUsername
+import com.example.dodojob.data.greatuser.ScrappedGreatUserDto
+import com.example.dodojob.data.greatuser.ScrappedGreatUserSupabase
 import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.session.GreatUserView
 import com.example.dodojob.session.JobBits
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 /* ===== Colors / Fonts ===== */
@@ -96,7 +102,9 @@ fun ViewResourceDetailScreen(navController: NavController) {
 
     val randomJobs = allJobs.shuffled(Random(System.currentTimeMillis()))
         .take(minOf(4, allJobs.size))
-
+    val client = LocalSupabase.current
+    val scope = rememberCoroutineScope()
+    val repo = ScrappedGreatUserSupabase(client) // Supabase client 주입받은 것
 
     Scaffold(containerColor = BgGray, topBar = { }) { inner ->
         Column(
@@ -209,8 +217,33 @@ fun ViewResourceDetailScreen(navController: NavController) {
             // ===== edge-to-edge 하단 바: 패딩 없는 루트 Column 레벨 =====
             BottomActionBar(
                 isFavorite = isFavorite,
-                onFavoriteToggle = { isFavorite = it },
-                onInviteClick = { /* TODO: 면접 제의하기 */ },
+                onFavoriteToggle = { next ->
+                    scope.launch {
+                        val dto = ScrappedGreatUserDto(
+                            employ = CurrentUser.companyid.toString(),
+                            senior = safeTalent.name,
+                            isreal = true
+                        )
+
+                        // ✅ 낙관적 업데이트(선반영) 후 결과 보고 롤백/유지 중 택1
+                        val prev = isFavorite
+                        isFavorite = next  // 화면 즉시 반영
+
+                        val result = runCatching {
+                            if (next) repo.insertSGU(dto) else repo.deleteSGU(dto)
+                        }
+
+                        if (result.isSuccess) {
+                            Log.d("Scrap", if (next) "insert success ✅" else "delete success ✅")
+                        } else {
+                            // ❌ 실패하면 화면 되돌리기
+                            isFavorite = prev
+                            Log.e("Scrap", (if (next) "insert" else "delete") +
+                                    " failed ❌: ${result.exceptionOrNull()?.message}")
+                        }
+                    }
+                },
+                onInviteClick = { /* ... */ },
                 modifier = Modifier.fillMaxWidth()
             )
             // ⛔️ 아래 불필요 스페이서 제거 (회색 여백 원인)
