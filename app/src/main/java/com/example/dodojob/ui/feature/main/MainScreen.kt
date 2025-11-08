@@ -15,17 +15,13 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
@@ -39,7 +35,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.dodojob.R
-import com.example.dodojob.dao.getUsernameById
+import com.example.dodojob.dao.fetchDisplayNameByUsername
 import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.session.CurrentUser
@@ -60,8 +56,6 @@ import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.dodojob.dao.fetchCompanyImagesMap
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.clip
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
@@ -348,7 +342,7 @@ fun MainScreen(
     val client = LocalSupabase.current
     val currentuser = CurrentUser.username
     LaunchedEffect(currentuser) {
-        user = getUsernameById(currentuser) // ✅ suspend 안전 호출
+        user = fetchDisplayNameByUsername(currentuser) // ✅ suspend 안전 호출
     }
     val limitedTailored = state.tailoredJobs.take(3)
 

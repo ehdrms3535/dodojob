@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/dodojob/dao/EduAssignDao.kt  (파일명 자유)
 package com.example.dodojob.dao
 
 import com.example.dodojob.BuildConfig
@@ -7,6 +6,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import kotlinx.serialization.Serializable
+
 
 /* ─────────────────────────
  * 1) Lecture 단일 행(DTO)
@@ -76,22 +76,4 @@ suspend fun fetchAssignedCourses(
     }.body()
 }
 
-/* ─────────────────────────
- * (선택) 예전 별도 즐겨찾기 테이블을 쓴다면
- * ───────────────────────── */
-@kotlin.jvm.JvmOverloads
-suspend fun fetchFavoriteLectureIds(
-    username: String,
-    supabaseUrl: String = BuildConfig.SUPABASE_URL,
-    token: String = BuildConfig.SUPABASE_ANON_KEY
-): Set<Long> {
-    val url = "$supabaseUrl/rest/v1/lecture_favorite"
-    @Serializable data class FavRow(val lecture: Long)
-    val rows: List<FavRow> = http.get(url) {
-        parameter("select", "lecture")
-        parameter("user", "eq.$username")
-        header("apikey", token)
-        header("Authorization", "Bearer $token")
-    }.body()
-    return rows.map { it.lecture }.toSet()
-}
+
