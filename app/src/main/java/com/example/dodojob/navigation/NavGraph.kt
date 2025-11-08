@@ -1,5 +1,6 @@
 package com.example.dodojob.navigation
 
+import com.example.dodojob.ui.feature.application.ApplyCompletedScreen
 import com.example.dodojob.ui.feature.verify.PreVerifyScreen
 import com.example.dodojob.ui.feature.main.AdOneScreen
 import com.example.dodojob.ui.feature.main.AdTwoScreen
@@ -195,6 +196,17 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         }
 
         composable(ApplyRoute.path) { ApplicationRoute(nav) } // 지원서 작성
+        composable(Route.ApplicationCompleted.path) {          // 🔹 지원 완료
+            ApplyCompletedScreen(
+                onAnyClick = {
+                    nav.navigate(Route.Main.path) {
+                        // application / application_completed 둘 다 스택에서 제거
+                        popUpTo(Route.Application.path) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
         composable(Route.Support.path) { SupportRoute(nav) } // 지원 내역
         composable(Route.RecentlyViewed.path) { RecentViewedRoute(nav) } // 최근 본 공고
         composable(Route.LikedJob.path) { LikedJobsRoute(nav) } // 좋아요한 공고
