@@ -101,7 +101,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             createdDate = created
         )
     }
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
+    NavHost(navController = nav,startDestination = Route.Login.path) {
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path) { LoginScreen(nav, sessionVm) }        // 3. 시니어 로그인
@@ -180,7 +180,10 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                         onBack = { nav.popBackStack() },
                         onToggleLike = { /* TODO: 좋아요 토글 rpc 연결 */ },
                         onCall = { /* TODO: 전화 액션 */ },
-                        onApply = { /* TODO: 지원 액션 */ }
+                        onApply = { /* TODO: 지원 액션 */ },
+                        onSimpleApply = {
+                            nav.navigate(ApplyRoute.path)
+                        }
                     )
                 } ?: run {
                     // 로드 실패/없음 처리
