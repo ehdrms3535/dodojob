@@ -467,8 +467,3 @@ fun CheckItemWithText(
         )
     }
 }
-
-/* NavGraph
-composable(ApplyRoute.path) { ApplicationRoute(nav) }
-nav.navigate(ApplyRoute.path)
-*/
