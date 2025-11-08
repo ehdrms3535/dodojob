@@ -32,6 +32,7 @@ import kotlinx.serialization.json.Json
 import com.example.dodojob.session.SessionViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.dodojob.dao.getCompanyIdByUsername
 
 
 @Serializable
@@ -179,6 +180,8 @@ fun PreLoginScreen(nav: NavController, sessionvm: SessionViewModel) {
                             user
                         }.onSuccess { user ->
                             CurrentUser.setLogin(user.username, user.password)
+                            CurrentUser.setCompanyid(getCompanyIdByUsername(user.username))
+
                             sessionvm.setLogin(
                                 id = user.id,
                                 name = user.username,
