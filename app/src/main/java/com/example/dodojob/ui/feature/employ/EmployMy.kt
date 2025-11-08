@@ -38,6 +38,8 @@ import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.feature.main.EmployerBottomNavBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 /* ================= Font ================= */
 private val PretendardFamily = FontFamily(
@@ -72,7 +74,7 @@ fun EmployerMyRoute(nav: NavController) {
     var statActive by remember { mutableStateOf(0) }
     var statApplicants by remember { mutableStateOf(0) }
     var statCompleted by remember { mutableStateOf(0) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
 
     LaunchedEffect(username) {
@@ -308,7 +310,21 @@ fun EmployerMyRoute(nav: NavController) {
                             when (idx) {
                                 0 -> { /* 공지 사항 화면 이동 */ }
                                 1 -> { /* 도움말 & 문의 화면 이동 */ }
-                                2 -> { showLogoutDialog = true }
+                                2 -> {
+                                    if (busy) return@InfoSectionList
+                                    busy = true
+                                    scope.launch {
+                                        runCatching {
+                                            CurrentUser.clear()
+                                        }
+
+                                        nav.navigate("login") {
+                                            popUpTo(0) { inclusive = true }
+                                            launchSingleTop = true
+                                        }
+                                        busy = false
+                                    }
+                                }
                             }
                         }
                     )

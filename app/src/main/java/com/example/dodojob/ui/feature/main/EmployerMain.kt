@@ -17,8 +17,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,14 +36,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 import com.example.dodojob.R
-import com.example.dodojob.dao.getUsernameById
+import com.example.dodojob.dao.fetchDisplayNameByUsername
 import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.data.user.UserRepository
 import com.example.dodojob.data.user.UserRepositorySupabase
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.session.CurrentUser
 import kotlinx.coroutines.delay
-import com.example.dodojob.dao.getUsernameById
 import com.example.dodojob.dao.getCompanyIdByUsername
 import com.example.dodojob.dao.getCompanyRowCount
 import com.example.dodojob.dao.getannounce
@@ -232,7 +229,7 @@ fun EmployerHomeRoute(nav: NavController) {
     val currentuser = CurrentUser.username
     LaunchedEffect(currentuser)
     {
-        user = getUsernameById(currentuser) // ✅ 안전하게 suspend 함수 호출
+        user = fetchDisplayNameByUsername(currentuser) // ✅ 안전하게 suspend 함수 호출
         val companyId = getCompanyIdByUsername(currentuser)
         activeNotices = getCompanyRowCount(companyId)
         newApplicantsToday = getannounce24(companyId)
