@@ -125,6 +125,7 @@ fun EducationHomeRoute(
             nav.currentBackStackEntry?.savedStateHandle?.set(
                 "lec_payload",
                 LecturePayload(
+                    lectureId = c.id,
                     title     = c.title,
                     subtitle  = c.sub,
                     thumbnail = c.imageUrl,
