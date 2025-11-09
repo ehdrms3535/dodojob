@@ -30,7 +30,8 @@ data class LectureLiteDto(
     val id: Long,
     val title: String? = null,
     val explain: String? = null,
-    val thumbnail: String? = null
+    val thumbnail: String? = null,
+    val url: String? = null
 )
 
 @Serializable
@@ -69,7 +70,7 @@ suspend fun fetchAssignedCourses(
 ): List<LectureAssignUserRow> {
     val url = "$supabaseUrl/rest/v1/lecture_assign_user"
     return http.get(url) {
-        parameter("select", "buy,favorite,lecture:lecture(id,title,explain,thumbnail)")
+        parameter("select", "buy,favorite,lecture:lecture(id,title,explain,thumbnail,url)")
         parameter("user", "eq.$username")
         header("apikey", token)
         header("Authorization", "Bearer $token")

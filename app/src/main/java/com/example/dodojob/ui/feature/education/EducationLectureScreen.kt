@@ -36,9 +36,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import coil.compose.AsyncImage
 import com.example.dodojob.R
-
-// ✅ Media3 (ExoPlayer)
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
@@ -55,7 +54,7 @@ private val TextGray = Color(0xFF848484)
 private val NavBarBg = Color(0xFFF4F5F7)
 
 // =====================
-/* Data / Enums */
+// Data / Enums
 // =====================
 private enum class LecTab { Weekly, Tasks }
 
@@ -183,14 +182,54 @@ private val courseContents: Map<String, CourseContent> = mapOf(
 )
 
 private val courseMetas: Map<String, CourseMeta> = mapOf(
-    "eng-conv-basic" to CourseMeta("영어 회화 입문","일상 표현부터 차근차근","언어 · DODO EDU","기초 패턴과 상황별 회화로 부담없이 시작"),
-    "pc-basic-master" to CourseMeta("컴퓨터 기초 마스터","문서·인터넷·이메일 한 번에","IT · DODO EDU","실습 위주로 바로 따라하는 필수 기능"),
-    "home-cooking" to CourseMeta("집에서 즐기는 홈쿠킹","기초 재료 손질과 간단한 레시피","요리 · DODO EDU","매일 먹는 반찬부터 근사한 일품요리까지"),
-    "group-tutoring" to CourseMeta("그룹 스터디 튜터링","주 1회 온라인 그룹 학습","교육 · DODO EDU","함께 공부하며 동기부여 얻기"),
-    "cs-customer" to CourseMeta("고객 응대 스킬","전화·대면 응대 기본","직무 · DODO EDU","상황별 말하기와 친절한 커뮤니케이션"),
-    "smartphone-pro" to CourseMeta("스마트폰 200% 활용","결제·사진·앱 활용 전반","IT · DODO EDU","초보도 쉽게 따라하는 실전 가이드"),
-    "watercolor-begin" to CourseMeta("물감과 친해지는 수채화","기초 드로잉과 색감 연습","취미 · DODO EDU","간단한 소묘부터 분위기 있는 채색까지"),
-    "english-news-listening" to CourseMeta("영어 뉴스 리스닝","쉬운 뉴스로 리스닝 감 만들기","언어 · DODO EDU","핵심 단어·표현으로 이해력 향상")
+    "eng-conv-basic" to CourseMeta(
+        "영어 회화 입문",
+        "일상 표현부터 차근차근",
+        "언어 · DODO EDU",
+        "기초 패턴과 상황별 회화로 부담없이 시작"
+    ),
+    "pc-basic-master" to CourseMeta(
+        "컴퓨터 기초 마스터",
+        "문서·인터넷·이메일 한 번에",
+        "IT · DODO EDU",
+        "실습 위주로 바로 따라하는 필수 기능"
+    ),
+    "home-cooking" to CourseMeta(
+        "집에서 즐기는 홈쿠킹",
+        "기초 재료 손질과 간단한 레시피",
+        "요리 · DODO EDU",
+        "매일 먹는 반찬부터 근사한 일품요리까지"
+    ),
+    "group-tutoring" to CourseMeta(
+        "그룹 스터디 튜터링",
+        "주 1회 온라인 그룹 학습",
+        "교육 · DODO EDU",
+        "함께 공부하며 동기부여 얻기"
+    ),
+    "cs-customer" to CourseMeta(
+        "고객 응대 스킬",
+        "전화·대면 응대 기본",
+        "직무 · DODO EDU",
+        "상황별 말하기와 친절한 커뮤니케이션"
+    ),
+    "smartphone-pro" to CourseMeta(
+        "스마트폰 200% 활용",
+        "결제·사진·앱 활용 전반",
+        "IT · DODO EDU",
+        "초보도 쉽게 따라하는 실전 가이드"
+    ),
+    "watercolor-begin" to CourseMeta(
+        "물감과 친해지는 수채화",
+        "기초 드로잉과 색감 연습",
+        "취미 · DODO EDU",
+        "간단한 소묘부터 분위기 있는 채색까지"
+    ),
+    "english-news-listening" to CourseMeta(
+        "영어 뉴스 리스닝",
+        "쉬운 뉴스로 리스닝 감 만들기",
+        "언어 · DODO EDU",
+        "핵심 단어·표현으로 이해력 향상"
+    )
 )
 
 // =====================
@@ -203,24 +242,42 @@ fun EducationLectureScreen(
     showEnrollOnLaunch: Boolean = true,
     showEnrollTrigger: Boolean = false,
     onNavigatePaymentComplete: () -> Unit = {},
-    // ✅ 추가: 화면 외부에서 전달받은 영상 URL (공개/서명 URL 모두 OK)
-    videoUrl: String? = null
+    videoUrl: String? = null,
+    heroTitle: String? = null,
+    heroSubtitle: String? = null,
+    heroThumbnail: String? = null
 ) {
     var selectedTab by remember { mutableStateOf(LecTab.Weekly) }
     var weeklySelectedIndex by remember { mutableStateOf(0) }
     val tasksSelected = remember { mutableStateListOf<Int>() }
 
     var showEnroll by remember { mutableStateOf(showEnrollOnLaunch) }
-    var play by remember { mutableStateOf(false) } // ✅ 재생 토글
+    var play by remember { mutableStateOf(false) }
 
     val content = remember(courseId) {
         courseContents[courseId] ?: CourseContent(
-            weekly = listOf(Lesson("오리엔테이션", "05:00"), Lesson("기본 개념 익히기", "08:30")),
-            tasks = listOf(Task("시작 설문 제출"), Task("1주차 복습 퀴즈"))
+            weekly = listOf(
+                Lesson("오리엔테이션", "05:00"),
+                Lesson("기본 개념 익히기", "08:30")
+            ),
+            tasks = listOf(
+                Task("시작 설문 제출"),
+                Task("1주차 복습 퀴즈")
+            )
         )
     }
-    val meta = remember(courseId) {
-        courseMetas[courseId] ?: CourseMeta("온라인 강의", "학습을 시작해보세요", "DODO EDU", "주차별 커리큘럼과 과제를 확인하세요")
+
+    val meta = remember(courseId, heroTitle, heroSubtitle) {
+        val base = courseMetas[courseId] ?: CourseMeta(
+            heroTitle = "온라인 강의",
+            headline = "학습을 시작해보세요",
+            meta = "DODO EDU",
+            desc = "주차별 커리큘럼과 과제를 확인하세요"
+        )
+        base.copy(
+            heroTitle = heroTitle ?: base.heroTitle,
+            headline = heroSubtitle ?: base.headline
+        )
     }
 
     Surface(color = ScreenBg) {
@@ -230,16 +287,25 @@ fun EducationLectureScreen(
 
                 HeroBlock(
                     meta = meta,
-                    onEnrollClick = { showEnroll = true },
                     showEnrollTrigger = showEnrollTrigger,
-                    // ✅ 회색 썸네일 영역을 누르면 재생
-                    onPlayClick = { if (!videoUrl.isNullOrBlank()) play = true }
+                    onEnrollClick = { showEnroll = true },
+                    onPlayClick = {
+                        if (!videoUrl.isNullOrBlank()) {
+                            play = true
+                        }
+                    },
+                    thumbnailUrl = heroThumbnail,
+                    videoUrl = videoUrl,
+                    isPlaying = play
                 )
 
                 Column(Modifier.background(Color.White)) {
                     Spacer(Modifier.height(4.dp))
                     Row(
-                        Modifier.fillMaxWidth().height(45.dp).background(Color.White),
+                        Modifier
+                            .fillMaxWidth()
+                            .height(45.dp)
+                            .background(Color.White),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.Bottom
                     ) {
@@ -248,13 +314,16 @@ fun EducationLectureScreen(
                             horizontalArrangement = Arrangement.spacedBy(60.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            UnderlineTab("주차별", selectedTab == LecTab.Weekly) { selectedTab = LecTab.Weekly }
-                            UnderlineTab("학습과제", selectedTab == LecTab.Tasks) { selectedTab = LecTab.Tasks }
+                            UnderlineTab("주차별", selectedTab == LecTab.Weekly) {
+                                selectedTab = LecTab.Weekly
+                            }
+                            UnderlineTab("학습과제", selectedTab == LecTab.Tasks) {
+                                selectedTab = LecTab.Tasks
+                            }
                         }
                     }
                 }
 
-                // ✅ 탭 콘텐츠
                 Box(modifier = Modifier.weight(1f)) {
                     if (selectedTab == LecTab.Weekly) {
                         LessonList(
@@ -269,20 +338,11 @@ fun EducationLectureScreen(
                             tasks = content.tasks,
                             selected = tasksSelected.toSet(),
                             onToggle = { idx ->
-                                if (tasksSelected.contains(idx)) tasksSelected.remove(idx) else tasksSelected.add(idx)
+                                if (tasksSelected.contains(idx)) tasksSelected.remove(idx)
+                                else tasksSelected.add(idx)
                             }
                         )
                     }
-                }
-
-                // ✅ 영상 플레이어: play=true && URL 존재 시 노출
-                if (play && !videoUrl.isNullOrBlank()) {
-                    VideoPlayerBox(
-                        url = videoUrl,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                    )
                 }
 
                 BottomNavBarStub()
@@ -301,6 +361,9 @@ fun EducationLectureScreen(
     }
 }
 
+// =====================
+// Video Player
+// =====================
 @Composable
 private fun VideoPlayerBox(url: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -311,7 +374,9 @@ private fun VideoPlayerBox(url: String, modifier: Modifier = Modifier) {
             playWhenReady = true
         }
     }
-    DisposableEffect(Unit) { onDispose { player.release() } }
+    DisposableEffect(Unit) {
+        onDispose { player.release() }
+    }
 
     Box(modifier.background(Color.Black)) {
         AndroidView(
@@ -326,6 +391,9 @@ private fun VideoPlayerBox(url: String, modifier: Modifier = Modifier) {
     }
 }
 
+// =====================
+// UI 서브 컴포넌트들
+// =====================
 @Composable
 private fun TopBar(onBack: () -> Unit) {
     Column(
@@ -357,8 +425,10 @@ private fun HeroBlock(
     meta: CourseMeta,
     onEnrollClick: () -> Unit = {},
     showEnrollTrigger: Boolean = false,
-    // ✅ 추가: 재생 트리거
-    onPlayClick: () -> Unit = {}
+    onPlayClick: () -> Unit = {},
+    thumbnailUrl: String? = null,
+    videoUrl: String? = null,
+    isPlaying: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -373,23 +443,61 @@ private fun HeroBlock(
                 .height(195.dp)
                 .clip(RoundedCornerShape(0.dp))
                 .background(Color(0xFFD9D9D9))
-                .clickable { onPlayClick() }, // ✅ 클릭 시 재생
+                .clickable {
+                    if (!videoUrl.isNullOrBlank()) onPlayClick()
+                },
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.play_button),
-                contentDescription = "재생",
-                modifier = Modifier.size(60.dp),
-                contentScale = ContentScale.Fit
-            )
+            if (isPlaying && !videoUrl.isNullOrBlank()) {
+                VideoPlayerBox(
+                    url = videoUrl,
+                    modifier = Modifier.matchParentSize()
+                )
+            } else {
+                if (!thumbnailUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = thumbnailUrl,
+                        contentDescription = meta.heroTitle,
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.25f))
+                    )
+                }
+                Image(
+                    painter = painterResource(id = R.drawable.play_button),
+                    contentDescription = "재생",
+                    modifier = Modifier.size(60.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
         Spacer(Modifier.height(12.dp))
-        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
-            Text(text = meta.heroTitle, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+        ) {
+            Text(
+                text = meta.heroTitle,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(Modifier.height(14.dp))
             Text(text = meta.headline, fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(2.dp))
-            Text(text = "${meta.meta} · ${meta.desc}", fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = "${meta.meta} · ${meta.desc}",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             if (showEnrollTrigger) {
                 Spacer(Modifier.height(16.dp))
                 Box(
@@ -402,7 +510,12 @@ private fun HeroBlock(
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "수강신청", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Blue)
+                    Text(
+                        text = "수강신청",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Blue
+                    )
                 }
             }
         }
@@ -414,11 +527,23 @@ private fun UnderlineTab(text: String, selected: Boolean, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
-        modifier = Modifier.height(35.dp).clickable { onClick() }
+        modifier = Modifier
+            .height(35.dp)
+            .clickable { onClick() }
     ) {
-        Text(text = text, fontSize = 18.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = if (selected) Blue else Color.Black)
+        Text(
+            text = text,
+            fontSize = 18.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) Blue else Color.Black
+        )
         Spacer(Modifier.height(6.dp))
-        Box(Modifier.width(68.dp).height(4.dp).background(if (selected) Blue else Color.Transparent))
+        Box(
+            Modifier
+                .width(68.dp)
+                .height(4.dp)
+                .background(if (selected) Blue else Color.Transparent)
+        )
     }
 }
 
@@ -431,11 +556,22 @@ private fun LessonList(
     isMulti: Boolean,
     onToggleMulti: (Int) -> Unit = {}
 ) {
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).background(Color.White)) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .background(Color.White)
+    ) {
         lessons.forEachIndexed { index, lesson ->
             if (index == 0) Divider(color = LineGray, thickness = 1.dp, modifier = Modifier.fillMaxWidth())
             val selected = if (isMulti) multiSelected.contains(index) else (index == selectedIndex)
-            LessonRow(lesson.title, lesson.duration, selected, true, !isMulti) {
+            LessonRow(
+                lesson.title,
+                lesson.duration,
+                selected,
+                true,
+                !isMulti
+            ) {
                 if (isMulti) onToggleMulti(index) else onSelectSingle(index)
             }
             if (index != lessons.lastIndex) Divider(color = LineGray, thickness = 1.dp, modifier = Modifier.fillMaxWidth())
@@ -464,15 +600,38 @@ private fun LessonRow(
             .padding(horizontal = 27.dp, vertical = 24.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.Medium, color = titleColor, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Image(painter = painterResource(id = checkIcon), contentDescription = if (selected) "선택됨" else "선택 안됨", modifier = Modifier.size(27.dp).clip(RoundedCornerShape(10.dp)))
+            Text(
+                text = title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                color = titleColor,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Image(
+                painter = painterResource(id = checkIcon),
+                contentDescription = if (selected) "선택됨" else "선택 안됨",
+                modifier = Modifier
+                    .size(27.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            )
         }
         if (showDuration) {
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(painter = painterResource(id = R.drawable.play_button), contentDescription = "재생", modifier = Modifier.size(20.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.play_button),
+                    contentDescription = "재생",
+                    modifier = Modifier.size(20.dp)
+                )
                 Spacer(Modifier.width(10.dp))
-                Text(text = duration, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = TextGray)
+                Text(
+                    text = duration,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextGray
+                )
             }
         }
     }
@@ -480,7 +639,12 @@ private fun LessonRow(
 
 @Composable
 private fun TaskList(tasks: List<Task>, selected: Set<Int>, onToggle: (Int) -> Unit) {
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).background(Color.White)) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .background(Color.White)
+    ) {
         tasks.forEachIndexed { index, task ->
             if (index == 0) Divider(color = LineGray, thickness = 1.dp, modifier = Modifier.fillMaxWidth())
             val isChecked = selected.contains(index)
@@ -501,27 +665,58 @@ private fun TaskRow(title: String, checked: Boolean, onClick: () -> Unit) {
             .padding(horizontal = 27.dp, vertical = 20.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = titleColor, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = titleColor,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             val icon = if (checked) R.drawable.checked_mark else R.drawable.unchecked_mark
-            Image(painter = painterResource(id = icon), contentDescription = if (checked) "완료" else "미완료", modifier = Modifier.size(24.dp))
+            Image(
+                painter = painterResource(id = icon),
+                contentDescription = if (checked) "완료" else "미완료",
+                modifier = Modifier.size(24.dp)
+            )
         }
-        // 설명(노트) 출력 없음
     }
 }
 
 @Composable
 private fun BottomNavBarStub() {
-    Box(Modifier.fillMaxWidth().height(43.dp).background(NavBarBg))
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(43.dp)
+            .background(NavBarBg)
+    )
 }
 
+/* 수강신청 바텀시트 */
 @Composable
-private fun EnrollBottomSheet(visible: Boolean, priceText: String, onDismiss: () -> Unit, onPrimaryClick: () -> Unit) {
+private fun EnrollBottomSheet(
+    visible: Boolean,
+    priceText: String,
+    onDismiss: () -> Unit,
+    onPrimaryClick: () -> Unit
+) {
     val sheetHeight = 179.dp
     val scrimColor = Color(0xFF3E454B).copy(alpha = 0.6f)
 
-    AnimatedVisibility(visible = visible, enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + slideInVertically { it },
+        exit = fadeOut() + slideOutVertically { it }
+    ) {
         Box(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(scrimColor).clickable { onDismiss() })
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(scrimColor)
+                    .clickable { onDismiss() }
+            )
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -531,18 +726,44 @@ private fun EnrollBottomSheet(visible: Boolean, priceText: String, onDismiss: ()
                     .background(Color.White)
                     .padding(start = 32.dp, top = 11.dp, end = 27.dp, bottom = 20.dp)
             ) {
-                Row(Modifier.fillMaxWidth().height(54.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "수강신청", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Blue)
-                        IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterEnd)) {
-                            val painter = runCatching { painterResource(id = R.drawable.x_circle) }.getOrNull()
+                        Text(
+                            text = "수강신청",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Blue
+                        )
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.align(Alignment.CenterEnd)
+                        ) {
+                            val painter = runCatching {
+                                painterResource(id = R.drawable.x_circle)
+                            }.getOrNull()
                             if (painter != null) {
-                                Image(painter = painter, contentDescription = "닫기", modifier = Modifier.size(26.dp))
+                                Image(
+                                    painter = painter,
+                                    contentDescription = "닫기",
+                                    modifier = Modifier.size(26.dp)
+                                )
                             } else {
-                                Icon(imageVector = Icons.Filled.Close, contentDescription = "닫기", tint = LineGray, modifier = Modifier.size(26.dp))
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "닫기",
+                                    tint = LineGray,
+                                    modifier = Modifier.size(26.dp)
+                                )
                             }
                         }
                     }
@@ -557,7 +778,12 @@ private fun EnrollBottomSheet(visible: Boolean, priceText: String, onDismiss: ()
                         .clickable { onPrimaryClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "${priceText} 결제하기", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                    Text(
+                        text = "${priceText} 결제하기",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
                 }
             }
         }
@@ -570,8 +796,11 @@ private fun PreviewEducationLectureScreen() {
     EducationLectureScreen(
         courseId = "watercolor-begin",
         showEnrollOnLaunch = true,
-        showEnrollTrigger = false,
-        videoUrl = null // 프리뷰에선 URL 없음
+        showEnrollTrigger = true,
+        videoUrl = "https://example.com/sample.mp4",
+        heroTitle = "물감과 친해지는 수채화",
+        heroSubtitle = "기초 드로잉과 색감 연습",
+        heroThumbnail = null
     )
 }
 
@@ -583,7 +812,8 @@ private fun SetStatusBar(color: Color, darkIcons: Boolean) {
             val window = (view.context as Activity).window
             WindowCompat.setDecorFitsSystemWindows(window, false)
             window.statusBarColor = color.toArgb()
-            WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = darkIcons
+            WindowCompat.getInsetsController(window, window.decorView)
+                .isAppearanceLightStatusBars = darkIcons
         }
     }
 }
