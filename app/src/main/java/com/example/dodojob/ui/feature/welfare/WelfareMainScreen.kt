@@ -42,7 +42,7 @@ import com.example.dodojob.R
 import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.data.welfare.*
 import com.example.dodojob.session.CurrentUser
-import com.example.dodojob.ui.feature.main.BottomNavBar
+import com.example.dodojob.ui.components.AppBottomBar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -221,7 +221,6 @@ fun WelfareHomeRoute(
         vm.loadHome(username)
         vm.loadCategories()
 
-
         runCatching {
             getSeniorInformation(username)
         }.onSuccess { info ->
@@ -238,21 +237,16 @@ fun WelfareHomeRoute(
 
     val handleBottomClick: (String) -> Unit = { key ->
         when (key) {
-            "home"      -> nav.navigate("main") { launchSingleTop = true }
-            "edu"       -> nav.navigate("edu")
-            "welfare","welfare/home"   -> {}
-            "my"        -> nav.navigate("my") { launchSingleTop = true }
+            "home" -> nav.navigate("main") { launchSingleTop = true }
+            "edu"  -> nav.navigate("edu")
+            "welfare", "welfare/home" -> { /* 현재 화면 */ }
+            "my"   -> nav.navigate("my") { launchSingleTop = true }
         }
     }
 
     WelfareHomeScreen(
         userName = displayName,
-        onBottomClick = handleBottomClick,
-        bottomBar = {
-            BottomNavBar(
-                current = "welfare/home",
-                onClick = handleBottomClick
-            )},
+        onBottomClick = handleBottomClick,     // ✅ AppBottomBar에 넘길 콜백
         onCardClick = { /* 상세 이동 */ },
         onClickHealth = { nav.navigate(WelfareRoutes.categoryOf(CategoryTab.Health)) },
         onClickLeisure = { nav.navigate(WelfareRoutes.categoryOf(CategoryTab.Leisure)) },
@@ -269,7 +263,6 @@ fun WelfareHomeRoute(
 private fun WelfareHomeScreen(
     userName: String,
     onBottomClick: (String) -> Unit,
-    bottomBar: @Composable () -> Unit,
     onCardClick: () -> Unit,
     onClickHealth: () -> Unit,
     onClickLeisure: () -> Unit,
@@ -288,7 +281,12 @@ private fun WelfareHomeScreen(
 
     Scaffold(
         containerColor = ScreenBg,
-        bottomBar = bottomBar,
+        bottomBar = {
+            AppBottomBar(
+                current = WelfareRoutes.Home,   // "welfare/home"
+                onClick = onBottomClick
+            )
+        },
         topBar = {
             Row(
                 modifier = Modifier
