@@ -1,3 +1,4 @@
+// app/src/main/java/com/example/dodojob/ui/feature/education/EducationLectureScreen.kt
 package com.example.dodojob.ui.feature.education
 
 import android.app.Activity
@@ -39,13 +40,13 @@ import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
 import com.example.dodojob.R
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.example.dodojob.session.CurrentUser
 
-// =====================
-// Colors
-// =====================
+/* 색상 */
 private val ScreenBg = Color(0xFFF1F5F7)
 private val Blue = Color(0xFF005FFF)
 private val BlueSoft = Color(0xFFDEEBFF)
@@ -53,9 +54,7 @@ private val LineGray = Color(0xFFD9D9D9)
 private val TextGray = Color(0xFF848484)
 private val NavBarBg = Color(0xFFF4F5F7)
 
-// =====================
-// Data / Enums
-// =====================
+/* 데이터 */
 private enum class LecTab { Weekly, Tasks }
 
 private data class Lesson(val title: String, val duration: String)
@@ -71,9 +70,7 @@ private data class CourseMeta(
     val desc: String
 )
 
-// =====================
-// 더미 컨텐츠/메타 (프리뷰용)
-// =====================
+/* 더미 컨텐츠/메타 (프리뷰/폴백) */
 private val courseContents: Map<String, CourseContent> = mapOf(
     "eng-conv-basic" to CourseContent(
         weekly = listOf(
@@ -182,59 +179,17 @@ private val courseContents: Map<String, CourseContent> = mapOf(
 )
 
 private val courseMetas: Map<String, CourseMeta> = mapOf(
-    "eng-conv-basic" to CourseMeta(
-        "영어 회화 입문",
-        "일상 표현부터 차근차근",
-        "언어 · DODO EDU",
-        "기초 패턴과 상황별 회화로 부담없이 시작"
-    ),
-    "pc-basic-master" to CourseMeta(
-        "컴퓨터 기초 마스터",
-        "문서·인터넷·이메일 한 번에",
-        "IT · DODO EDU",
-        "실습 위주로 바로 따라하는 필수 기능"
-    ),
-    "home-cooking" to CourseMeta(
-        "집에서 즐기는 홈쿠킹",
-        "기초 재료 손질과 간단한 레시피",
-        "요리 · DODO EDU",
-        "매일 먹는 반찬부터 근사한 일품요리까지"
-    ),
-    "group-tutoring" to CourseMeta(
-        "그룹 스터디 튜터링",
-        "주 1회 온라인 그룹 학습",
-        "교육 · DODO EDU",
-        "함께 공부하며 동기부여 얻기"
-    ),
-    "cs-customer" to CourseMeta(
-        "고객 응대 스킬",
-        "전화·대면 응대 기본",
-        "직무 · DODO EDU",
-        "상황별 말하기와 친절한 커뮤니케이션"
-    ),
-    "smartphone-pro" to CourseMeta(
-        "스마트폰 200% 활용",
-        "결제·사진·앱 활용 전반",
-        "IT · DODO EDU",
-        "초보도 쉽게 따라하는 실전 가이드"
-    ),
-    "watercolor-begin" to CourseMeta(
-        "물감과 친해지는 수채화",
-        "기초 드로잉과 색감 연습",
-        "취미 · DODO EDU",
-        "간단한 소묘부터 분위기 있는 채색까지"
-    ),
-    "english-news-listening" to CourseMeta(
-        "영어 뉴스 리스닝",
-        "쉬운 뉴스로 리스닝 감 만들기",
-        "언어 · DODO EDU",
-        "핵심 단어·표현으로 이해력 향상"
-    )
+    "eng-conv-basic" to CourseMeta("영어 회화 입문","일상 표현부터 차근차근","언어 · DODO EDU","기초 패턴과 상황별 회화로 부담없이 시작"),
+    "pc-basic-master" to CourseMeta("컴퓨터 기초 마스터","문서·인터넷·이메일 한 번에","IT · DODO EDU","실습 위주로 바로 따라하는 필수 기능"),
+    "home-cooking" to CourseMeta("집에서 즐기는 홈쿠킹","기초 재료 손질과 간단한 레시피","요리 · DODO EDU","매일 먹는 반찬부터 근사한 일품요리까지"),
+    "group-tutoring" to CourseMeta("그룹 스터디 튜터링","주 1회 온라인 그룹 학습","교육 · DODO EDU","함께 공부하며 동기부여 얻기"),
+    "cs-customer" to CourseMeta("고객 응대 스킬","전화·대면 응대 기본","직무 · DODO EDU","상황별 말하기와 친절한 커뮤니케이션"),
+    "smartphone-pro" to CourseMeta("스마트폰 200% 활용","결제·사진·앱 활용 전반","IT · DODO EDU","초보도 쉽게 따라하는 실전 가이드"),
+    "watercolor-begin" to CourseMeta("물감과 친해지는 수채화","기초 드로잉과 색감 연습","취미 · DODO EDU","간단한 소묘부터 분위기 있는 채색까지"),
+    "english-news-listening" to CourseMeta("영어 뉴스 리스닝","쉬운 뉴스로 리스닝 감 만들기","언어 · DODO EDU","핵심 단어·표현으로 이해력 향상")
 )
 
-// =====================
-// Lecture Screen
-// =====================
+/* =====================  Lecture Screen  ===================== */
 @Composable
 fun EducationLectureScreen(
     courseId: String = "",
@@ -245,13 +200,25 @@ fun EducationLectureScreen(
     videoUrl: String? = null,
     heroTitle: String? = null,
     heroSubtitle: String? = null,
-    heroThumbnail: String? = null
+    heroThumbnail: String? = null,
+    viewModel: EducationViewModel = viewModel()
 ) {
+    val username = CurrentUser.username
+
+    // 화면 진입 시 유저 기준으로 Supabase 상태 로딩
+    LaunchedEffect(username) {
+        viewModel.loadAssigned(username)
+    }
+
     var selectedTab by remember { mutableStateOf(LecTab.Weekly) }
     var weeklySelectedIndex by remember { mutableStateOf(0) }
     val tasksSelected = remember { mutableStateListOf<Int>() }
 
-    var showEnroll by remember { mutableStateOf(showEnrollOnLaunch) }
+    // ViewModel에서 구매 여부 가져오기
+    val isPurchased = viewModel.isPurchased(courseId)
+
+    // 결제 안 한 상태에서만 자동 오픈
+    var showEnroll by remember { mutableStateOf(showEnrollOnLaunch && !isPurchased) }
     var play by remember { mutableStateOf(false) }
 
     val content = remember(courseId) {
@@ -270,33 +237,41 @@ fun EducationLectureScreen(
     val meta = remember(courseId, heroTitle, heroSubtitle) {
         val base = courseMetas[courseId] ?: CourseMeta(
             heroTitle = "온라인 강의",
-            headline = "학습을 시작해보세요",
-            meta = "DODO EDU",
-            desc = "주차별 커리큘럼과 과제를 확인하세요"
+            headline  = "학습을 시작해보세요",
+            meta      = "DODO EDU",
+            desc      = "주차별 커리큘럼과 과제를 확인하세요"
         )
         base.copy(
             heroTitle = heroTitle ?: base.heroTitle,
-            headline = heroSubtitle ?: base.headline
+            headline  = heroSubtitle ?: base.headline
         )
     }
 
     Surface(color = ScreenBg) {
-        Box(Modifier.fillMaxSize().background(ScreenBg)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(ScreenBg)
+        ) {
             Column(Modifier.fillMaxSize()) {
                 TopBar(onBack = onBack)
 
                 HeroBlock(
                     meta = meta,
-                    showEnrollTrigger = showEnrollTrigger,
+                    showEnrollTrigger = showEnrollTrigger && !isPurchased,
                     onEnrollClick = { showEnroll = true },
+                    thumbnailUrl = heroThumbnail,
+                    // 썸네일 클릭 시 로직
                     onPlayClick = {
-                        if (!videoUrl.isNullOrBlank()) {
+                        if (!isPurchased) {
+                            showEnroll = true
+                        } else if (!videoUrl.isNullOrBlank()) {
                             play = true
                         }
                     },
-                    thumbnailUrl = heroThumbnail,
+                    isPurchased = isPurchased,
                     videoUrl = videoUrl,
-                    isPlaying = play
+                    play = play
                 )
 
                 Column(Modifier.background(Color.White)) {
@@ -348,11 +323,14 @@ fun EducationLectureScreen(
                 BottomNavBarStub()
             }
 
+            // 수강신청 바텀시트
             EnrollBottomSheet(
                 visible = showEnroll,
                 priceText = "18,000원",
                 onDismiss = { showEnroll = false },
                 onPrimaryClick = {
+                    // ViewModel에 구매 반영 + Supabase upsert
+                    viewModel.buyLecture(courseId, username)
                     showEnroll = false
                     onNavigatePaymentComplete()
                 }
@@ -361,9 +339,7 @@ fun EducationLectureScreen(
     }
 }
 
-// =====================
-// Video Player
-// =====================
+/* ===================== Video Player ===================== */
 @Composable
 private fun VideoPlayerBox(url: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -391,9 +367,8 @@ private fun VideoPlayerBox(url: String, modifier: Modifier = Modifier) {
     }
 }
 
-// =====================
-// UI 서브 컴포넌트들
-// =====================
+/* ===================== Sub UI ===================== */
+
 @Composable
 private fun TopBar(onBack: () -> Unit) {
     Column(
@@ -427,8 +402,9 @@ private fun HeroBlock(
     showEnrollTrigger: Boolean = false,
     onPlayClick: () -> Unit = {},
     thumbnailUrl: String? = null,
-    videoUrl: String? = null,
-    isPlaying: Boolean = false
+    isPurchased: Boolean,
+    videoUrl: String?,
+    play: Boolean
 ) {
     Column(
         modifier = Modifier
@@ -443,12 +419,10 @@ private fun HeroBlock(
                 .height(195.dp)
                 .clip(RoundedCornerShape(0.dp))
                 .background(Color(0xFFD9D9D9))
-                .clickable {
-                    if (!videoUrl.isNullOrBlank()) onPlayClick()
-                },
+                .clickable { onPlayClick() },
             contentAlignment = Alignment.Center
         ) {
-            if (isPlaying && !videoUrl.isNullOrBlank()) {
+            if (play && isPurchased && !videoUrl.isNullOrBlank()) {
                 VideoPlayerBox(
                     url = videoUrl,
                     modifier = Modifier.matchParentSize()
@@ -511,7 +485,7 @@ private fun HeroBlock(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "수강신청",
+                        text = if (isPurchased) "수강 중" else "수강신청",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Blue
@@ -526,7 +500,7 @@ private fun HeroBlock(
 private fun UnderlineTab(text: String, selected: Boolean, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom,
+        verticalArrangement = Arrangement.Bottom,   // ✅ 여기!
         modifier = Modifier
             .height(35.dp)
             .clickable { onClick() }
@@ -547,6 +521,7 @@ private fun UnderlineTab(text: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+
 @Composable
 private fun LessonList(
     lessons: List<Lesson>,
@@ -566,11 +541,11 @@ private fun LessonList(
             if (index == 0) Divider(color = LineGray, thickness = 1.dp, modifier = Modifier.fillMaxWidth())
             val selected = if (isMulti) multiSelected.contains(index) else (index == selectedIndex)
             LessonRow(
-                lesson.title,
-                lesson.duration,
-                selected,
-                true,
-                !isMulti
+                title = lesson.title,
+                duration = lesson.duration,
+                selected = selected,
+                colorizeWhenSelected = true,
+                showDuration = !isMulti
             ) {
                 if (isMulti) onToggleMulti(index) else onSelectSingle(index)
             }
@@ -797,7 +772,7 @@ private fun PreviewEducationLectureScreen() {
         courseId = "watercolor-begin",
         showEnrollOnLaunch = true,
         showEnrollTrigger = true,
-        videoUrl = "https://example.com/sample.mp4",
+        videoUrl = null,
         heroTitle = "물감과 친해지는 수채화",
         heroSubtitle = "기초 드로잉과 색감 연습",
         heroThumbnail = null
@@ -808,7 +783,7 @@ private fun PreviewEducationLectureScreen() {
 private fun SetStatusBar(color: Color, darkIcons: Boolean) {
     val view = LocalView.current
     if (!view.isInEditMode) {
-        androidx.compose.runtime.SideEffect {
+        SideEffect {
             val window = (view.context as Activity).window
             WindowCompat.setDecorFitsSystemWindows(window, false)
             window.statusBarColor = color.toArgb()

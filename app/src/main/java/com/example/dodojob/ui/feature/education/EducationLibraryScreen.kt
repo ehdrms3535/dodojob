@@ -42,6 +42,7 @@ import com.example.dodojob.dao.fetchDisplayNameByUsername
 import com.example.dodojob.navigation.Route
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.Long
 
 /* ====================== 색상 ====================== */
 private val ScreenBg = Color(0xFFF1F5F7)
@@ -278,6 +279,7 @@ fun EducationLibraryScreen(
                                 onPlay = { nav.currentBackStackEntry?.savedStateHandle?.set(
                                     "lec_payload",
                                     LecturePayload(
+                                        lectureId = c.id,
                                         title     = c.title,
                                         subtitle  = c.sub,
                                         thumbnail = c.imageUrl,
@@ -303,6 +305,7 @@ fun EducationLibraryScreen(
                                     nav.currentBackStackEntry?.savedStateHandle?.set(
                                         "lec_payload",
                                         LecturePayload(
+                                            lectureId = c.id,
                                             title     = c.title,
                                             subtitle  = c.sub,
                                             thumbnail = c.imageUrl,
