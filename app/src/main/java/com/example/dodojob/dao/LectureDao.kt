@@ -6,6 +6,10 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import kotlinx.serialization.Serializable
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 
 
 /* ─────────────────────────
@@ -64,7 +68,7 @@ suspend fun fetchLectures(
  *   - 화면에서 map 해서 UI Course로 바꾸세요.
  * ───────────────────────── */
 suspend fun fetchAssignedCourses(
-    username: String,
+    username: String?,
     supabaseUrl: String = BuildConfig.SUPABASE_URL,
     token: String = BuildConfig.SUPABASE_ANON_KEY
 ): List<LectureAssignUserRow> {
@@ -76,5 +80,46 @@ suspend fun fetchAssignedCourses(
         header("Authorization", "Bearer $token")
     }.body()
 }
+
+@Serializable
+data class LectureAssignUserInsert(
+    val user: String?,
+    val lecture: Long,
+    val buy: Boolean? = null,
+    val favorite: Boolean? = null
+)
+
+/**
+ * lecture_assign_user 에 (user, lecture) 기준 upsert
+ */
+suspend fun upsertLectureAssignUser(
+    username: String?,
+    lectureId: Long,
+    buy: Boolean? = null,
+    favorite: Boolean? = null,
+    supabaseUrl: String = BuildConfig.SUPABASE_URL,
+    token: String = BuildConfig.SUPABASE_ANON_KEY
+) {
+    val url = "$supabaseUrl/rest/v1/lecture_assign_user"
+
+    http.post(url) {
+        // upsert 설정
+        header("apikey", token)
+        header("Authorization", "Bearer $token")
+        header("Prefer", "resolution=merge-duplicates")   // 충돌시 merge
+        parameter("on_conflict", "user,lecture")          // unique (user, lecture)
+
+        contentType(ContentType.Application.Json)
+        setBody(
+            LectureAssignUserInsert(
+                user = username,
+                lecture = lectureId,
+                buy = buy,
+                favorite = favorite
+            )
+        )
+    }
+}
+
 
 
