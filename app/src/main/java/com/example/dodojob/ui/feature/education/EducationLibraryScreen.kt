@@ -39,6 +39,7 @@ import androidx.core.view.WindowCompat
 import com.example.dodojob.R
 import com.example.dodojob.dao.fetchAssignedCourses
 import com.example.dodojob.dao.fetchDisplayNameByUsername
+import com.example.dodojob.navigation.Route
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -55,6 +56,7 @@ data class CoursewithFavorite(
     val title: String,
     val sub: String? = null,        // lecture.explain
     val imageUrl: String? = null,   // lecture.thumbnail
+    val videoUrl: String?= null,    // lecture.url
     val buy: Boolean? = null,       // lecture_assign_user.buy
     val favorite: Boolean? = null   // lecture_assign_user.favorite
 )
@@ -92,6 +94,7 @@ fun EducationLibraryScreen(
                         title    = lec.title ?: "(제목 없음)",
                         sub      = lec.explain,
                         imageUrl = lec.thumbnail,
+                        videoUrl = lec.url,
                         buy      = r.buy,
                         favorite = r.favorite
                     )
@@ -263,7 +266,7 @@ fun EducationLibraryScreen(
                     .padding(top = 32.dp, bottom = 20.dp, start = 16.dp, end = 16.dp)
             ) {
                 if (tab == EduTab.Continue) {
-                    // ✅ buy == true 만
+                    // buy == true 만
                     if (continueCourses.isEmpty()) {
                         EmptyHint("아직 학습 중인 강의가 없어요.")
                     } else {
@@ -272,13 +275,22 @@ fun EducationLibraryScreen(
                                 title = c.title,
                                 subtitle = c.sub ?: "",
                                 imageUrl = c.imageUrl,
-                                onPlay = { /* nav.navigate(Route.EduLectureNormal.of(c.id)) */ }
+                                onPlay = { nav.currentBackStackEntry?.savedStateHandle?.set(
+                                    "lec_payload",
+                                    LecturePayload(
+                                        title     = c.title,
+                                        subtitle  = c.sub,
+                                        thumbnail = c.imageUrl,
+                                        videoUrl  = c.videoUrl
+                                    )
+                                )
+                                    nav.navigate(Route.EduLectureNormal.of(c.id.toString()))}
                             )
                             Spacer(Modifier.height(28.dp))
                         }
                     }
                 } else {
-                    // ✅ favorite == true && buy != true 만
+                    // favorite == true && buy != true 만
                     if (favCourses.isEmpty()) {
                         EmptyHint("아직 찜한 강의가 없어요.")
                     } else {
@@ -287,7 +299,17 @@ fun EducationLibraryScreen(
                                 title = c.title,
                                 subtitle = c.sub ?: "",
                                 imageUrl = c.imageUrl,
-                                onClick = { /* nav.navigate(Route.EduLectureNormal.of(c.id)) */ }
+                                onClick = {
+                                    nav.currentBackStackEntry?.savedStateHandle?.set(
+                                        "lec_payload",
+                                        LecturePayload(
+                                            title     = c.title,
+                                            subtitle  = c.sub,
+                                            thumbnail = c.imageUrl,
+                                            videoUrl  = c.videoUrl
+                                        )
+                                    )
+                                    nav.navigate(Route.EduLectureNormal.of(c.id.toString()))}
                             )
                             Spacer(Modifier.height(28.dp))
                         }
@@ -350,7 +372,7 @@ private fun EmptyHint(text: String) {
 private fun MyCourseRowCard(
     title: String,
     subtitle: String,
-    imageUrl: String?,   // 썸네일 URL
+    imageUrl: String?,
     onPlay: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
