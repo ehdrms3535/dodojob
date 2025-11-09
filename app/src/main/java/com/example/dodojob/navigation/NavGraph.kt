@@ -102,7 +102,8 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             createdDate = created
         )
     }
-    NavHost(navController = nav,startDestination = Route.PreLogin.path) {
+    NavHost(navController = nav, startDestination = Route.Intro.path) {
+
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path) { LoginScreen(nav, sessionVm) }        // 3. 시니어 로그인
@@ -114,7 +115,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.SignUpComplete.path) { SignUpCompleteScreen(nav) } // 4-2. 회원가입 성공
         composable(Route.EmploySignupsec.path) { EmploySignUpIdPwScreen(nav) }
         composable(Route.EmploySignup.path) { EmployerSignupScreen(nav) }
-        composable(Route.PostingRegisterCompleteScreen.path) {PostingRegisterCompleteScreen(nav)}
+        composable(Route.PostingRegisterCompleteScreen.path) { PostingRegisterCompleteScreen(nav) }
 
         composable(Route.JobType.path) { JobTypeScreen(nav) }      // 5. 회원가입 이후
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }    //
@@ -304,6 +305,10 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                     ?.savedStateHandle
                     ?.get<LecturePayload>("lec_payload")
 
+                // EduGraph 스코프의 ViewModel을 쓰고 싶으면:
+                val parentEntry = remember(backStackEntry) { nav.getBackStackEntry(Route.EduGraph.path) }
+                val eduVm: EducationViewModel = viewModel(parentEntry)
+
                 EducationLectureScreen(
                     courseId = courseId,
                     showEnrollOnLaunch = true,
@@ -313,7 +318,8 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                     videoUrl      = payload?.videoUrl,
                     heroTitle     = payload?.title,
                     heroSubtitle  = payload?.subtitle,
-                    heroThumbnail = payload?.thumbnail
+                    heroThumbnail = payload?.thumbnail,
+                    viewModel     = eduVm           // ✅ 이름은 'viewModel'
                 )
             }
 
@@ -346,6 +352,9 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                     ?.savedStateHandle
                     ?.get<LecturePayload>("lec_payload")
 
+                val parentEntry = remember(backStackEntry) { nav.getBackStackEntry(Route.EduGraph.path) }
+                val eduVm: EducationViewModel = viewModel(parentEntry)
+
                 EducationLectureScreen(
                     courseId = courseId,
                     showEnrollOnLaunch = false,
@@ -355,7 +364,8 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                     videoUrl      = payload?.videoUrl,
                     heroTitle     = payload?.title,
                     heroSubtitle  = payload?.subtitle,
-                    heroThumbnail = payload?.thumbnail
+                    heroThumbnail = payload?.thumbnail,
+                    viewModel     = eduVm          // ✅ 여기도 동일
                 )
             }
         }
