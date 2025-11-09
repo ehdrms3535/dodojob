@@ -60,6 +60,8 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import com.example.dodojob.data.recommend.fetchAiRecommendedJobs
+import com.example.dodojob.ui.components.AppBottomBar
+
 /* ===================== 데이터 모델 ===================== */
 
 data class JobCardUi(
@@ -360,13 +362,14 @@ fun MainScreen(
 
     Scaffold(
         containerColor = screenBg,
-        bottomBar = { BottomNavBar(
-            current = "home",
-            onClick = { key->
-                if(showPopup) showPopup=false
-                onShortcut(key)
-            }
-        )
+        bottomBar = {
+            AppBottomBar(
+                current = "home",
+                onClick = { key ->
+                    if (showPopup) showPopup = false
+                    onShortcut(key)
+                }
+            )
         }
     ) { padding ->
         Box(

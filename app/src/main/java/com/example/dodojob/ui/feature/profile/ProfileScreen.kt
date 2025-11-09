@@ -1,6 +1,8 @@
 package com.example.dodojob.ui.feature.profile
 
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,12 +11,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -27,10 +29,7 @@ import com.example.dodojob.R
 import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
-import com.example.dodojob.ui.feature.main.BottomNavBar
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-
+import com.example.dodojob.ui.components.AppBottomBar
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -80,13 +79,13 @@ fun ProfileRoute(nav: NavController) {
     val eduCompleted = s.eduCompleted
     val createdAt = s.user?.created_at
 
-    val StringBuilder = StringBuilder()
-    StringBuilder.append(
-        createdAt?.substring(0,4)+"."+createdAt?.substring(5,7) + "." + createdAt?.substring(8,10)
+    val sb = StringBuilder()
+    sb.append(
+        createdAt?.substring(0, 4) + "." +
+                createdAt?.substring(5, 7) + "." +
+                createdAt?.substring(8, 10)
     )
-    val joinedDate = StringBuilder.toString()
-
-
+    val joinedDate = sb.toString()
 
     ProfileScreen(
         name = displayName,
@@ -94,15 +93,15 @@ fun ProfileRoute(nav: NavController) {
         resumeViews = resumeViews,
         recentCount = recentCount,
         likedCount = likedCount,
+        activityLevel = activityLevel,
         onClickResumeCreate = {},
-        onClickResumeManage = {nav.navigate("Resume")},
+        onClickResumeManage = { nav.navigate("Resume") },
         onClickBookmarks = { nav.navigate("liked_job") },
         onClickRecent = { nav.navigate("recently_viewed") },
         onClickActivityLevel = {
-            // 화면에 보이는 현재 사용자 지표들을 바로 페이로드로 구성
             val payload = ActivityLevelData(
                 name = displayName ?: "사용자",
-                level = (activityLevel.coerceIn(1, 3)),
+                level = activityLevel.toInt().coerceIn(1, 3).toLong(),
                 applyWithinYear = applyWithinYear,
                 realWorkExpCount = realWorkExpCount,
                 eduCompleted = eduCompleted,
@@ -113,10 +112,8 @@ fun ProfileRoute(nav: NavController) {
                 ?.savedStateHandle
                 ?.set("activity_level_payload", payload)
 
-            // 이동
             nav.navigate("activity_level")
         },
-        onClickEditProfile = {},
         onClickChangePw = { nav.navigate("change_password") },
         onClickLogout = { showLogout = true },
         onClickLeave = { showLeave = true },
@@ -130,6 +127,7 @@ fun ProfileRoute(nav: NavController) {
             }
         }
     )
+
     if (showLeave) {
         LeaveDialog(
             currentUsername = CurrentUser.username,
@@ -144,13 +142,14 @@ fun ProfileRoute(nav: NavController) {
             onClosed = { showLogout = false }
         )
     }
-
 }
 
 @Composable
 private fun LoadingOrErrorBox(text: String, sub: String? = null) {
     val screenBg = Color(0xFFF1F5F7)
-    Scaffold(containerColor = screenBg) { padding ->
+    Scaffold(
+        containerColor = screenBg
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -177,12 +176,12 @@ fun ProfileScreen(
     resumeViews: Long,
     recentCount: Long,
     likedCount: Long,
+    activityLevel: Long,
     onClickResumeCreate: () -> Unit,
     onClickResumeManage: () -> Unit,
     onClickBookmarks: () -> Unit,
     onClickRecent: () -> Unit,
     onClickActivityLevel: () -> Unit,
-    onClickEditProfile: () -> Unit,
     onClickChangePw: () -> Unit,
     onClickLogout: () -> Unit,
     onClickLeave: () -> Unit,
@@ -192,126 +191,193 @@ fun ProfileScreen(
     val screenBg = Color(0xFFF1F5F7)
     var notifOn by remember { mutableStateOf(true) }
 
+    val levelInt = activityLevel.toInt().coerceIn(1, 3)
+    val medalRes = when (levelInt) {
+        1 -> R.drawable.red_medal
+        2 -> R.drawable.yellow_medal
+        else -> R.drawable.blue_medal
+    }
+
     Scaffold(
         containerColor = screenBg,
-        bottomBar = { BottomNavBar(current = "my", onClick = onShortcut) }
+        bottomBar = { AppBottomBar(current = "my", onClick = onShortcut) }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = "앱 로고",
-                    modifier = Modifier.size(24.dp),
-                    contentScale = ContentScale.Fit
-                )
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = { /* 알림센터 이동 */ }) {
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "알림",
-                        tint = Color(0xFF696969)
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.senior_id),
-                    contentDescription = "프로필 사진",
-                    modifier = Modifier
-                        .size(75.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-                Text(
-                    text = " ${name ?: "사용자"}님",
-                    fontSize = 27.sp,
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.019).em
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            ResumeCard(
-                brandBlue = brandBlue,
-                applyCount = applyCount,
-                resumeViews = resumeViews,
-                onClickResumeCreate = onClickResumeCreate,
-                onClickResumeManage = onClickResumeManage
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(1.dp),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Row(
+                // 상단 그라데이션 헤더
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .height(264.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                bottomStart = 10.dp,
+                                bottomEnd = 10.dp
+                            )
+                        )
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF005FFF),
+                                    Color(0xFF76A9FF)
+                                )
+                            )
+                        )
                 ) {
-                    Text("알림", fontSize = 22.sp, color = Color.Black, fontWeight = FontWeight.Bold)
-                    Switch(
-                        checked = notifOn,
-                        onCheckedChange = { notifOn = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = brandBlue,
-                            checkedTrackColor = Color(0xFFB2D4FF),
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = Color(0xFFE0E0E0)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // 로고 + 알림 아이콘
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.profile_logo),
+                                contentDescription = "프로필 로고",
+                                modifier = Modifier.size(28.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Image(
+                                painter = painterResource(id = R.drawable.profile_bell),
+                                contentDescription = "알림",
+                                modifier = Modifier.size(32.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+
+                        // 프로필 사진 + 이름 + 메달
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.senior_id),
+                                contentDescription = "프로필 사진",
+                                modifier = Modifier
+                                    .size(104.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "${name ?: "사용자"}님",
+                                    fontSize = 32.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = (-0.019).em
+                                )
+                                Image(
+                                    painter = painterResource(id = medalRes),
+                                    contentDescription = "활동 레벨 메달",
+                                    modifier = Modifier
+                                        .height(36.dp)
+                                        .width(22.dp)
+                                        .offset(y = 4.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 헤더 위로 겹쳐 올라오는 이력서 카드
+                ResumeCard(
+                    brandBlue = brandBlue,
+                    applyCount = applyCount,
+                    resumeViews = resumeViews,
+                    onClickResumeCreate = onClickResumeCreate,
+                    onClickResumeManage = onClickResumeManage,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .offset(y = (-40).dp)
+                )
+
+                // 나머지 카드들
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .offset(y = (-20).dp)
+                ) {
+                    // 알림 카드
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(1.dp),
+                        shape = RoundedCornerShape(7.38.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "알림",
+                                fontSize = 24.sp,
+                                color = Color.Black,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Switch(
+                                checked = notifOn,
+                                onCheckedChange = { notifOn = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = brandBlue,
+                                    checkedTrackColor = Color(0xFFB2D4FF),
+                                    uncheckedThumbColor = Color.White,
+                                    uncheckedTrackColor = Color(0xFFE0E0E0)
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    SectionListCard(
+                        title = "나의 활동",
+                        items = listOf(
+                            RowItem("최근 본 공고", suffix = "${recentCount}건", onClick = onClickRecent),
+                            RowItem("좋아한 일자리", suffix = "${likedCount}건", onClick = onClickBookmarks),
+                            RowItem("활동 레벨", onClick = onClickActivityLevel)
                         )
                     )
+
+                    Spacer(Modifier.height(20.dp))
+
+                    SectionListCard(
+                        title = "개인정보 관리",
+                        items = listOf(
+                            RowItem("비밀번호 변경", onClick = onClickChangePw),
+                            RowItem("로그아웃", onClick = onClickLogout),
+                            RowItem("회원 탈퇴", onClick = onClickLeave)
+                        )
+                    )
+
+                    Spacer(Modifier.height(24.dp))
                 }
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            SectionListCard(
-                title = "나의 활동",
-                items = listOf(
-                    RowItem("최근 본 공고", suffix = "${recentCount}건", onClick = onClickRecent),
-                    RowItem("좋아한 일자리", suffix = "${likedCount}건", onClick = onClickBookmarks),
-                    RowItem("활동 레벨", onClick = onClickActivityLevel)
-                )
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            SectionListCard(
-                title = "개인정보 관리",
-                items = listOf(
-                    RowItem("회원정보 수정", onClick = onClickEditProfile),
-                    RowItem("비밀번호 변경", onClick = onClickChangePw),
-                    RowItem("로그아웃", onClick = onClickLogout),
-                    RowItem("회원 탈퇴", onClick = onClickLeave)
-                )
-            )
-
-            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -322,32 +388,55 @@ private fun ResumeCard(
     applyCount: Long,
     resumeViews: Long,
     onClickResumeCreate: () -> Unit,
-    onClickResumeManage: () -> Unit
+    onClickResumeManage: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(1.dp),
-        shape = RoundedCornerShape(10.dp)
+        shape = RoundedCornerShape(7.38.dp)
     ) {
-        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
             ) {
                 Button(
                     onClick = onClickResumeCreate,
-                    modifier = Modifier.weight(1f).height(40.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
-                ) { Text("이력서 등록", fontSize = 14.sp) }
+                ) {
+                    Text(
+                        "이력서 등록",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
+                }
 
                 Button(
                     onClick = onClickResumeManage,
-                    modifier = Modifier.weight(1f).height(40.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = brandBlue)
-                ) { Text("이력서 관리", fontSize = 14.sp) }
+                ) {
+                    Text(
+                        "이력서 관리",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
+                }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -357,7 +446,10 @@ private fun ResumeCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 StatCell("입사지원 현황", "${applyCount}건", Modifier.weight(1f))
-                VerticalDivider(modifier = Modifier.height(36.dp), color = Color(0xFFDDDDDD))
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = Color(0xFFDDDDDD)
+                )
                 StatCell("이력서 열람", "${resumeViews}건", Modifier.weight(1f))
             }
         }
@@ -372,8 +464,19 @@ private fun StatCell(title: String, value: String, modifier: Modifier = Modifier
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(title, fontSize = 12.sp, color = Color(0xFF8E8E8E))
-        Text(value, fontSize = 18.sp, color = brandBlue, fontWeight = FontWeight.Bold)
+        Text(
+            title,
+            fontSize = 14.sp,
+            color = Color(0xFF000000),
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            value,
+            fontSize = 24.sp,
+            color = brandBlue,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -394,43 +497,84 @@ private fun SectionListCard(title: String, items: List<RowItem>) {
         Column(Modifier.fillMaxWidth()) {
             Text(
                 text = title,
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
-                modifier = Modifier.padding(top = 14.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
+                modifier = Modifier.padding(
+                    top = 20.dp,
+                    start = 20.dp,
+                    end = 20.dp,
+                    bottom = 12.dp
+                )
             )
-            items.forEachIndexed { idx, item ->
+            items.forEach { item ->
                 SectionRow(item.label, item.suffix, item.onClick)
-                if (idx < items.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        thickness = 1.dp,
-                        color = Color(0xFFF0F0F0)
-                    )
-                }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
 private fun SectionRow(text: String, suffix: String? = null, onClick: () -> Unit) {
+    val brandBlue = Color(0xFF005FFF)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text, fontSize = 14.sp, color = Color(0xFF222222), modifier = Modifier.weight(1f))
+        Text(
+            text,
+            fontSize = 20.sp,
+            color = Color(0xFF9C9C9C),
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f)
+        )
         if (suffix != null) {
-            Text(suffix, fontSize = 14.sp, color = Color(0xFF222222))
+            val suffixColor =
+                if (suffix.endsWith("건")) brandBlue else Color(0xFF222222)
+            Text(
+                suffix,
+                fontSize = 20.sp,
+                color = suffixColor,
+                fontWeight = FontWeight.SemiBold
+            )
             Spacer(Modifier.width(6.dp))
         }
-        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = Color(0xFF9BA2A8))
+        Icon(
+            Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = Color(0xFF9BA2A8)
+        )
     }
 }
 
-
+@Preview(
+    name = "Profile Screen Preview",
+    showBackground = true,
+    backgroundColor = 0xFFF1F5F7
+)
+@Composable
+fun ProfileScreenPreview() {
+    ProfileScreen(
+        name = "홍길동",
+        applyCount = 4,
+        resumeViews = 2,
+        recentCount = 5,
+        likedCount = 7,
+        activityLevel = 2L,
+        onClickResumeCreate = { },
+        onClickResumeManage = { },
+        onClickBookmarks = { },
+        onClickRecent = { },
+        onClickActivityLevel = { },
+        onClickChangePw = { },
+        onClickLogout = { },
+        onClickLeave = { },
+        onShortcut = { }
+    )
+}
