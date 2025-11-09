@@ -283,33 +283,41 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                 )
             }
 
-
             // 내 강좌 (이어보기/찜한 강의)
             composable(Route.EduMy.path) { entry ->
                 val parentEntry = remember(entry) { nav.getBackStackEntry(Route.EduGraph.path) }
                 val eduVm: EducationViewModel = viewModel(parentEntry)
                 val username = CurrentUser.username
-                val all = remember { recommendedCourses() + liveHotCoursesFallback() }
                 EducationLibraryScreen(
                     nav = nav,
                     userName = username
                 )
             }
 
-            // ✅ 강의 초기 진입(수강신청 시트 자동 오픈) — courseId 인자 추가
             composable(
                 route = Route.EduLectureInitial.path, // "edu_lecture_ini/{courseId}"
                 arguments = listOf(navArgument("courseId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+
+                val payload = nav.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<LecturePayload>("lec_payload")
+
                 EducationLectureScreen(
                     courseId = courseId,
                     showEnrollOnLaunch = true,
                     showEnrollTrigger = false,
                     onNavigatePaymentComplete = { nav.navigate(Route.EduPaymentComplete.of(courseId)) },
-                    onBack = { nav.popBackStack() }
+                    onBack = { nav.popBackStack() },
+                    videoUrl      = payload?.videoUrl,
+                    heroTitle     = payload?.title,
+                    heroSubtitle  = payload?.subtitle,
+                    heroThumbnail = payload?.thumbnail
                 )
             }
+
+
 
             // 결제 완료
             composable(
@@ -320,7 +328,6 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
 
                 PaymentCompleteScreen(
                     onDone = {
-                        // ✅ 같은 코스로 일반 강의 화면 진입 + 초기 진입 화면 제거
                         nav.navigate(Route.EduLectureNormal.of(courseId)) {
                             popUpTo(Route.EduLectureInitial.path) { inclusive = true }
                             launchSingleTop = true
@@ -329,19 +336,26 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                 )
             }
 
-
-            // ✅ 일반 강의 화면 — courseId 인자 추가
             composable(
                 route = Route.EduLectureNormal.path, // "edu_lecture_nor/{courseId}"
                 arguments = listOf(navArgument("courseId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+
+                val payload = nav.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<LecturePayload>("lec_payload")
+
                 EducationLectureScreen(
                     courseId = courseId,
                     showEnrollOnLaunch = false,
                     showEnrollTrigger = false,
                     onNavigatePaymentComplete = { /* not used */ },
-                    onBack = { nav.popBackStack() }
+                    onBack = { nav.popBackStack() },
+                    videoUrl      = payload?.videoUrl,
+                    heroTitle     = payload?.title,
+                    heroSubtitle  = payload?.subtitle,
+                    heroThumbnail = payload?.thumbnail
                 )
             }
         }

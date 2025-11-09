@@ -63,7 +63,8 @@ data class Course(
     val tag: String,
     val sub: String,
     val imageUrl: String? = null,
-    @DrawableRes val imageRes: Int? = null
+    @DrawableRes val imageRes: Int? = null,
+    val videoUrl: String? = null
 )
 
 private fun LectureRow.toCourse(): Course = Course(
@@ -71,7 +72,8 @@ private fun LectureRow.toCourse(): Course = Course(
     title = title.orEmpty(),
     tag = category.orEmpty(),
     sub = explain.orEmpty(),
-    imageUrl = thumbnail
+    imageUrl = thumbnail,
+    videoUrl = url
 )
 
 private val filterTabs = listOf("전체", "영어", "컴퓨터", "요리", "교육", "응대", "기타")
@@ -105,7 +107,18 @@ fun EducationHomeRoute(
 ) {
     EducationHomeScreen(
         userName = userName,
-        onCourseClick = { c -> nav.navigate(Route.EduLectureInitial.of(c.id.toString())) },
+        onCourseClick = { c ->
+            nav.currentBackStackEntry?.savedStateHandle?.set(
+                "lec_payload",
+                LecturePayload(
+                    title     = c.title,
+                    subtitle  = c.sub,
+                    thumbnail = c.imageUrl,
+                    videoUrl  = c.videoUrl
+                )
+            )
+            nav.navigate(Route.EduLectureInitial.of(c.id.toString()))
+        },
         onOpenLibrary = { nav.navigate(Route.EduMy.path) },
         bottomBar = {
             BottomNavBar(
