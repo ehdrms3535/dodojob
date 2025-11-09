@@ -5,6 +5,7 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class LecturePayload(
+    val lectureId: Long,
     val title: String? = null,
     val subtitle: String? = null,
     val thumbnail: String? = null,
