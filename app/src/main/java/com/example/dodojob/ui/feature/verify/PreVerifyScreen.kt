@@ -36,11 +36,11 @@ import com.example.dodojob.session.SessionViewModel
 
 @Parcelize
 data class PreVerifyPrefill(
-    val name : String,
-    val gender : String,
-    val rrnFront : String,
-    val rrnBackFirst : String,
-    val region : String,
+    val name: String,
+    val gender: String,
+    val rrnFront: String,
+    val rrnBackFirst: String,
+    val region: String,
     val phone: String,
     val verifiedAt: Long
 ) : Parcelable
@@ -54,10 +54,10 @@ fun PreVerifyScreen(
 
     var name by remember { mutableStateOf(TextFieldValue("")) }
     var gender by remember { mutableStateOf("남") }
-    var rrnFront by remember { mutableStateOf("") }
+    var rrnFront by remember { mutableStateOf(TextFieldValue("")) }
     var rrnBackFirst by remember { mutableStateOf("") }
     var region by remember { mutableStateOf(TextFieldValue("")) }
-    var phone by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf(TextFieldValue("")) }
     val role = sessionVm.role.collectAsState().value
 
     Scaffold(
@@ -73,7 +73,7 @@ fun PreVerifyScreen(
                         .background(Color(0xFFEFEFEF))
                 )
 
-                // 뒤로가기 (LoginScreen과 동일한 위치/터치영역)
+                // 뒤로가기
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -117,19 +117,19 @@ fun PreVerifyScreen(
                     onClick = {
                         val ok = name.text.isNotBlank()
                                 && (gender == "남" || gender == "여")
-                                && rrnFront.length == 6
+                                && rrnFront.text.length == 6
                                 && rrnBackFirst.length == 1
-                                && phone.length in 10..11
+                                && phone.text.length in 10..11
 
                         if (!ok) return@Button
 
                         val prefill = PreVerifyPrefill(
                             name = name.text.trim(),
                             gender = gender,
-                            rrnFront = rrnFront,
+                            rrnFront = rrnFront.text.trim(),
                             rrnBackFirst = rrnBackFirst,
                             region = region.text.trim(),
-                            phone = phone,
+                            phone = phone.text.trim(),
                             verifiedAt = System.currentTimeMillis()
                         )
                         nav.currentBackStackEntry?.savedStateHandle?.set("prefill", prefill)
@@ -211,12 +211,11 @@ fun PreVerifyScreen(
                         .fillMaxWidth(0.50f)
                         .height(underlineHeight)
                 ) {
-                    // 플레이스홀더 15
                     BasicTextField(
-                        value = TextFieldValue(rrnFront),
+                        value = rrnFront,
                         onValueChange = { s ->
                             val filtered = s.text.filter { it.isDigit() }.take(6)
-                            rrnFront = filtered
+                            rrnFront = s.copy(text = filtered)
                         },
                         textStyle = TextStyle(color = Color.Black, fontSize = 18.sp),
                         singleLine = true,
@@ -226,7 +225,7 @@ fun PreVerifyScreen(
                             .padding(bottom = 6.dp),
                         decorationBox = { inner ->
                             Box(Modifier.fillMaxWidth()) {
-                                if (rrnFront.isEmpty()) {
+                                if (rrnFront.text.isEmpty()) {
                                     Text(
                                         "주민등록번호 앞 6자리",
                                         color = Color(0xFFA6A6A6),
@@ -262,7 +261,12 @@ fun PreVerifyScreen(
                         .height(underlineHeight),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    MaskDotsRow(count = 6, diameter = 10.dp, color = Color(0xFF757575), gap = 8.dp)
+                    MaskDotsRow(
+                        count = 6,
+                        diameter = 10.dp,
+                        color = Color(0xFF757575),
+                        gap = 8.dp
+                    )
                 }
             }
 
@@ -284,10 +288,10 @@ fun PreVerifyScreen(
             FieldLabel18("휴대전화")
             Spacer(Modifier.height(6.dp))
             KoreanUnderlineField15(
-                value = TextFieldValue(phone),
+                value = phone,
                 onValueChange = { s ->
                     val filtered = s.text.filter { it.isDigit() }.take(11)
-                    phone = filtered
+                    phone = s.copy(text = filtered)
                 },
                 placeholder = "휴대전화 번호 입력"
             )
@@ -297,7 +301,7 @@ fun PreVerifyScreen(
     }
 }
 
-/* ----------------- 재사용 컴포넌트 (폰트사이즈만 조정) ----------------- */
+/* ----------------- 재사용 컴포넌트 ----------------- */
 
 // 라벨 18/500
 @Composable
@@ -347,7 +351,7 @@ private fun KoreanUnderlineField15(
     }
 }
 
-// 거주지역 박스 내부 입력 — 텍스트 18, (placeholder 없음)
+// 거주지역 박스 내부 입력
 @Composable
 private fun RegionFieldKorean(
     value: TextFieldValue,
@@ -386,7 +390,7 @@ private fun RegionFieldKorean(
     }
 }
 
-// 주민등록번호 뒷 첫 자리 네모 (배경 통일)
+// 주민등록번호 뒷 첫 자리 네모
 @Composable
 private fun OneDigitNumberBox(
     value: String,
@@ -419,7 +423,7 @@ private fun OneDigitNumberBox(
     }
 }
 
-// 마스킹점
+// 마스킹 점들
 @Composable
 private fun MaskDotsRow(
     count: Int,

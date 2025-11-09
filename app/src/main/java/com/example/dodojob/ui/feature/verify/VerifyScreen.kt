@@ -23,6 +23,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -54,10 +55,13 @@ fun VerifyScreen(
 
     var name by remember { mutableStateOf(TextFieldValue("")) }
     var gender by remember { mutableStateOf("남") }
-    var rrnFront by remember { mutableStateOf("") }
+
+    // ⭐ 바뀐 부분: rrnFront, phone 을 TextFieldValue 로 관리
+    var rrnFront by remember { mutableStateOf(TextFieldValue("")) }
     var rrnBackFirst by remember { mutableStateOf("") }
     var region by remember { mutableStateOf(TextFieldValue("")) }
-    var phone by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf(TextFieldValue("")) }
+
     val role = sessionVm.role.collectAsState().value
 
     Scaffold(
@@ -116,19 +120,19 @@ fun VerifyScreen(
                     onClick = {
                         val ok = name.text.isNotBlank()
                                 && (gender == "남" || gender == "여")
-                                && rrnFront.length == 6
+                                && rrnFront.text.length == 6
                                 && rrnBackFirst.length == 1
-                                && phone.length in 10..11
+                                && phone.text.length in 10..11
 
                         if (!ok) return@Button
 
                         val prefill = SignUpPrefill(
                             name = name.text.trim(),
                             gender = gender,
-                            rrnFront = rrnFront,
+                            rrnFront = rrnFront.text.trim(),
                             rrnBackFirst = rrnBackFirst,
                             region = region.text.trim(),
-                            phone = phone,
+                            phone = phone.text.trim(),
                             verifiedAt = System.currentTimeMillis()
                         )
                         nav.currentBackStackEntry?.savedStateHandle?.set("prefill", prefill)
@@ -202,10 +206,13 @@ fun VerifyScreen(
                         .height(underlineHeight)
                 ) {
                     BasicTextField(
-                        value = TextFieldValue(rrnFront),
+                        value = rrnFront,
                         onValueChange = { s ->
                             val filtered = s.text.filter { it.isDigit() }.take(6)
-                            rrnFront = filtered
+                            rrnFront = TextFieldValue(
+                                text = filtered,
+                                selection = TextRange(filtered.length) // ⭐ 커서 맨 뒤로
+                            )
                         },
                         textStyle = TextStyle(color = Color.Black, fontSize = 16.sp),
                         singleLine = true,
@@ -215,7 +222,7 @@ fun VerifyScreen(
                             .padding(bottom = 6.dp),
                         decorationBox = { inner ->
                             Box(Modifier.fillMaxWidth()) {
-                                if (rrnFront.isEmpty()) {
+                                if (rrnFront.text.isEmpty()) {
                                     Text("주민등록번호 앞 6자리", color = Color(0xFFA6A6A6), fontSize = 18.sp)
                                 }
                                 inner()
@@ -269,10 +276,13 @@ fun VerifyScreen(
             FieldLabel("휴대전화")
             Spacer(Modifier.height(6.dp))
             KoreanUnderlineField(
-                value = TextFieldValue(phone),
+                value = phone,
                 onValueChange = { s ->
                     val filtered = s.text.filter { it.isDigit() }.take(11)
-                    phone = filtered
+                    phone = TextFieldValue(
+                        text = filtered,
+                        selection = TextRange(filtered.length) // ⭐ 커서 맨 뒤로
+                    )
                 },
                 placeholder = "휴대전화 번호 입력"
             )
@@ -369,7 +379,7 @@ private fun OneDigitNumberBox(
             .width(40.dp)
             .height(height)
             .border(1.dp, Color(0xFFD9D9D9))
-            .background(Color(0xFFF1F5F7)), // ✅ 배경 통일 (#F1F5F7)
+            .background(Color(0xFFF1F5F7)), // 배경 통일 (#F1F5F7)
         contentAlignment = Alignment.Center
     ) {
         BasicTextField(
