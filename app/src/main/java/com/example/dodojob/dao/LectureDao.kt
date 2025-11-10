@@ -85,6 +85,7 @@ suspend fun fetchAssignedCourses(
     }.body()
 }
 
+
 @Serializable
 data class LectureAssignUserInsert(
     val user: String?,
@@ -129,3 +130,34 @@ suspend fun upsertLectureAssignUser(
         )
     }
 }
+
+/* ─────────────────────────
+ * 6) lecture_weekly 단일 행(DTO)
+ * ───────────────────────── */
+@Serializable
+data class LectureWeeklyRow(
+    val id: Long,
+    val lecture: Long? = null,
+    val title: String? = null,
+    val number: Long? = null,
+    val time: String? = null
+)
+
+/* ─────────────────────────
+ * 7) 특정 강의의 주차 목록 조회
+ * ───────────────────────── */
+suspend fun fetchLectureWeekly(
+    lectureId: Long,
+    supabaseUrl: String = BuildConfig.SUPABASE_URL,
+    token: String = BuildConfig.SUPABASE_ANON_KEY
+): List<LectureWeeklyRow> {
+    val url = "$supabaseUrl/rest/v1/lecture_weekly"
+    return http.get(url) {
+        parameter("select", "id,lecture,title,number,time")
+        parameter("lecture", "eq.$lectureId")
+        parameter("order", "number.asc")   // number 오름차순 정렬
+        header("apikey", token)
+        header("Authorization", "Bearer $token")
+    }.body()
+}
+
