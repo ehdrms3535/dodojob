@@ -1,5 +1,6 @@
 package com.example.dodojob.navigation
 
+import com.example.dodojob.ui.feature.application.ApplyCompletedScreen
 import com.example.dodojob.ui.feature.verify.PreVerifyScreen
 import com.example.dodojob.ui.feature.main.AdOneScreen
 import com.example.dodojob.ui.feature.main.AdTwoScreen
@@ -101,7 +102,9 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             createdDate = created
         )
     }
-    NavHost(navController = nav,startDestination = Route.Intro.path) {
+
+    NavHost(navController = nav, startDestination = Route.Intro.path) {
+      
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
         composable(Route.Login.path) { LoginScreen(nav, sessionVm) }        // 3. 시니어 로그인
@@ -113,7 +116,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.SignUpComplete.path) { SignUpCompleteScreen(nav) } // 4-2. 회원가입 성공
         composable(Route.EmploySignupsec.path) { EmploySignUpIdPwScreen(nav) }
         composable(Route.EmploySignup.path) { EmployerSignupScreen(nav) }
-        composable(Route.PostingRegisterCompleteScreen.path) {PostingRegisterCompleteScreen(nav)}
+        composable(Route.PostingRegisterCompleteScreen.path) { PostingRegisterCompleteScreen(nav) }
 
         composable(Route.JobType.path) { JobTypeScreen(nav) }      // 5. 회원가입 이후
         composable(Route.Hope.path) { HopeWorkFilterScreen(nav) }    //
@@ -180,7 +183,10 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                         onBack = { nav.popBackStack() },
                         onToggleLike = { /* TODO: 좋아요 토글 rpc 연결 */ },
                         onCall = { /* TODO: 전화 액션 */ },
-                        onApply = { /* TODO: 지원 액션 */ }
+                        onApply = { /* TODO: 지원 액션 */ },
+                        onSimpleApply = {
+                            nav.navigate(ApplyRoute.path)
+                        }
                     )
                 } ?: run {
                     // 로드 실패/없음 처리
@@ -192,6 +198,17 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         }
 
         composable(ApplyRoute.path) { ApplicationRoute(nav) } // 지원서 작성
+        composable(Route.ApplicationCompleted.path) {          // 🔹 지원 완료
+            ApplyCompletedScreen(
+                onAnyClick = {
+                    nav.navigate(Route.Main.path) {
+                        // application / application_completed 둘 다 스택에서 제거
+                        popUpTo(Route.Application.path) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
         composable(Route.Support.path) { SupportRoute(nav) } // 지원 내역
         composable(Route.RecentlyViewed.path) { RecentViewedRoute(nav) } // 최근 본 공고
         composable(Route.LikedJob.path) { LikedJobsRoute(nav) } // 좋아요한 공고
@@ -268,33 +285,46 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                 )
             }
 
-
             // 내 강좌 (이어보기/찜한 강의)
             composable(Route.EduMy.path) { entry ->
                 val parentEntry = remember(entry) { nav.getBackStackEntry(Route.EduGraph.path) }
                 val eduVm: EducationViewModel = viewModel(parentEntry)
                 val username = CurrentUser.username
-                val all = remember { recommendedCourses() + liveHotCoursesFallback() }
                 EducationLibraryScreen(
                     nav = nav,
                     userName = username
                 )
             }
 
-            // ✅ 강의 초기 진입(수강신청 시트 자동 오픈) — courseId 인자 추가
             composable(
                 route = Route.EduLectureInitial.path, // "edu_lecture_ini/{courseId}"
                 arguments = listOf(navArgument("courseId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+
+                val payload = nav.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<LecturePayload>("lec_payload")
+
+                // EduGraph 스코프의 ViewModel을 쓰고 싶으면:
+                val parentEntry = remember(backStackEntry) { nav.getBackStackEntry(Route.EduGraph.path) }
+                val eduVm: EducationViewModel = viewModel(parentEntry)
+
                 EducationLectureScreen(
                     courseId = courseId,
                     showEnrollOnLaunch = true,
                     showEnrollTrigger = false,
                     onNavigatePaymentComplete = { nav.navigate(Route.EduPaymentComplete.of(courseId)) },
-                    onBack = { nav.popBackStack() }
+                    onBack = { nav.popBackStack() },
+                    videoUrl      = payload?.videoUrl,
+                    heroTitle     = payload?.title,
+                    heroSubtitle  = payload?.subtitle,
+                    heroThumbnail = payload?.thumbnail,
+                    viewModel     = eduVm           // ✅ 이름은 'viewModel'
                 )
             }
+
+
 
             // 결제 완료
             composable(
@@ -305,7 +335,6 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
 
                 PaymentCompleteScreen(
                     onDone = {
-                        // ✅ 같은 코스로 일반 강의 화면 진입 + 초기 진입 화면 제거
                         nav.navigate(Route.EduLectureNormal.of(courseId)) {
                             popUpTo(Route.EduLectureInitial.path) { inclusive = true }
                             launchSingleTop = true
@@ -314,19 +343,30 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                 )
             }
 
-
-            // ✅ 일반 강의 화면 — courseId 인자 추가
             composable(
                 route = Route.EduLectureNormal.path, // "edu_lecture_nor/{courseId}"
                 arguments = listOf(navArgument("courseId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+
+                val payload = nav.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<LecturePayload>("lec_payload")
+
+                val parentEntry = remember(backStackEntry) { nav.getBackStackEntry(Route.EduGraph.path) }
+                val eduVm: EducationViewModel = viewModel(parentEntry)
+
                 EducationLectureScreen(
                     courseId = courseId,
                     showEnrollOnLaunch = false,
                     showEnrollTrigger = false,
                     onNavigatePaymentComplete = { /* not used */ },
-                    onBack = { nav.popBackStack() }
+                    onBack = { nav.popBackStack() },
+                    videoUrl      = payload?.videoUrl,
+                    heroTitle     = payload?.title,
+                    heroSubtitle  = payload?.subtitle,
+                    heroThumbnail = payload?.thumbnail,
+                    viewModel     = eduVm          // ✅ 여기도 동일
                 )
             }
         }

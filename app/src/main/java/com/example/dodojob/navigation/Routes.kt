@@ -36,6 +36,7 @@ sealed class Route(val path: String) {
     data object My : Route("my")
     data object Resume : Route("resume")
     data object Application : Route("application")
+    data object ApplicationCompleted : Route("application_completed")
     data object Support : Route("support")
     data object Todo : Route("todo")
     data object TodoRealtime : Route("todo_realtime")

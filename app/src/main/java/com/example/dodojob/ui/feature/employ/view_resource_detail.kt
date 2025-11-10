@@ -42,7 +42,6 @@ import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.session.GreatUserView
 import com.example.dodojob.session.JobBits
-import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 import com.example.dodojob.data.greatuser.existSGU
