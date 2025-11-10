@@ -1,5 +1,9 @@
+@file:OptIn(ExperimentalFoundationApi::class)
 package com.example.dodojob.ui.feature.education
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -37,7 +41,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
-import com.example.dodojob.ui.feature.main.BottomNavBar
+import com.example.dodojob.ui.components.AppBottomBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,7 +67,8 @@ data class Course(
     val tag: String,
     val sub: String,
     val imageUrl: String? = null,
-    @DrawableRes val imageRes: Int? = null
+    @DrawableRes val imageRes: Int? = null,
+    val videoUrl: String? = null
 )
 
 private fun LectureRow.toCourse(): Course = Course(
@@ -71,7 +76,8 @@ private fun LectureRow.toCourse(): Course = Course(
     title = title.orEmpty(),
     tag = category.orEmpty(),
     sub = explain.orEmpty(),
-    imageUrl = thumbnail
+    imageUrl = thumbnail,
+    videoUrl = url
 )
 
 private val filterTabs = listOf("전체", "영어", "컴퓨터", "요리", "교육", "응대", "기타")
@@ -103,23 +109,33 @@ fun EducationHomeRoute(
     nav: NavController,
     userName: String? = null
 ) {
+    // 바텀바 탭 클릭 시 네비게이션 콜백
+    val handleBottomClick: (String) -> Unit = { key ->
+        when (key) {
+            "home" -> nav.navigate(Route.Main.path) { launchSingleTop = true }
+            "edu"  -> { /* 현재 화면 */ }
+            "welfare" -> nav.navigate("welfare/home") { launchSingleTop = true }
+            "my"   -> nav.navigate(Route.My.path) { launchSingleTop = true }
+        }
+    }
+
     EducationHomeScreen(
         userName = userName,
-        onCourseClick = { c -> nav.navigate(Route.EduLectureInitial.of(c.id.toString())) },
-        onOpenLibrary = { nav.navigate(Route.EduMy.path) },
-        bottomBar = {
-            BottomNavBar(
-                current = "edu",
-                onClick = { key ->
-                    when (key) {
-                        "home"    -> nav.navigate(Route.Main.path) { launchSingleTop = true }
-                        "edu"     -> {}
-                        "welfare" -> nav.navigate("welfare/home") { launchSingleTop = true }
-                        "my"      -> nav.navigate(Route.My.path) { launchSingleTop = true }
-                    }
-                }
+        onCourseClick = { c ->
+            nav.currentBackStackEntry?.savedStateHandle?.set(
+                "lec_payload",
+                LecturePayload(
+                    lectureId = c.id,
+                    title     = c.title,
+                    subtitle  = c.sub,
+                    thumbnail = c.imageUrl,
+                    videoUrl  = c.videoUrl
+                )
             )
-        }
+            nav.navigate(Route.EduLectureInitial.of(c.id.toString()))
+        },
+        onOpenLibrary = { nav.navigate(Route.EduMy.path) },
+        onBottomClick = handleBottomClick       // ✅ bottomBar 대신 콜백만 내려보냄
     )
 }
 
@@ -129,7 +145,7 @@ fun EducationHomeScreen(
     userName: String?,
     onCourseClick: (Course) -> Unit,
     onOpenLibrary: () -> Unit,
-    bottomBar: @Composable (() -> Unit)
+    onBottomClick: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
 
@@ -217,7 +233,12 @@ fun EducationHomeScreen(
 
     Scaffold(
         containerColor = ScreenBg,
-        bottomBar = bottomBar,
+        bottomBar = {
+            AppBottomBar(
+                current = "edu",          // ✅ 교육 탭 활성
+                onClick = onBottomClick   // "home","edu","welfare","my" 넘어옴
+            )
+        },
         topBar = { Spacer(modifier = Modifier.fillMaxWidth().statusBarsPadding()) }
     ) { padding ->
         Column(
@@ -465,19 +486,28 @@ private fun CourseCarousel(
     onClick: (Course) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(end = 16.dp)
-    ) {
-        items(courses) { course ->
-            CourseCard(
-                data = course,
-                initialIsFav = course.id in favIds,
-                onToggleFav = { newFav -> onToggleFav(course, newFav) },
-                onClick = { onClick(course) }
-            )
-        }
+    if (courses.isEmpty()) return
+
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        pageCount = { courses.size }
+    )
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = modifier
+            .fillMaxWidth(),
+        contentPadding = PaddingValues(start = 0.dp, end = 16.dp),
+        pageSpacing = 10.dp
+    ) { page ->
+        val course = courses[page]
+
+        CourseCard(
+            data = course,
+            initialIsFav = course.id in favIds,
+            onToggleFav = { newFav -> onToggleFav(course, newFav) },
+            onClick = { onClick(course) }
+        )
     }
 }
 
@@ -491,7 +521,7 @@ private fun CourseCard(
     var isFav by remember { mutableStateOf(initialIsFav) }
 
     Column(
-        modifier = Modifier.width(375.dp).clickable { onClick() }
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
         Box(
             modifier = Modifier.fillMaxWidth().height(225.dp).clip(RoundedCornerShape(10.dp))

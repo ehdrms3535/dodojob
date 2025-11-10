@@ -11,22 +11,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.material3.Text
 import com.example.dodojob.R
 
 private object BarSpec {
     val Container = Color.White
-    val Active = Color(0xFF005FFF)
-    val Inactive = Color(0xFF828282)
-    val BarHeight = 72.dp
-    val TopPadding = 9.dp
-    val Gap = 24.dp
-    val ItemW = 48.dp
-    val ItemH = 69.dp
-    val IconSize = 30.dp
+    val Active = Color(0xFF005FFF)   // (지금은 아이콘에 포함돼 있어서 미사용)
+    val Inactive = Color(0xFF828282) // (지금은 아이콘에 포함돼 있어서 미사용)
+
+    val BottomPadding = 12.dp
+    val TopPadding = 9.dp           // Figma: top padding 9
+    val Gap = 40.dp                 // Figma: gap 35px
+    val ItemW = 48.dp               // Figma: width 48
+    val ItemH = 69.dp               // Figma: height 69
+
+    val BarHeight = TopPadding + ItemH + BottomPadding
 }
 
 enum class AppTab(val key: String, val label: String) {
@@ -48,7 +47,10 @@ fun AppBottomBar(
             .fillMaxWidth()
             .height(BarSpec.BarHeight)
             .background(BarSpec.Container)
-            .padding(top = BarSpec.TopPadding)
+            .padding(
+                top = BarSpec.TopPadding,
+                bottom = BarSpec.BottomPadding
+            )
     ) {
         Row(
             modifier = Modifier
@@ -91,6 +93,7 @@ fun AppBottomBar(
     }
 }
 
+
 /** 문자열 호환 버전 (기존 코드 drop-in) */
 @Composable
 fun AppBottomBar(
@@ -101,7 +104,7 @@ fun AppBottomBar(
     val cur = when (current) {
         "home" -> AppTab.Home
         "edu" -> AppTab.Edu
-        "welfare" -> AppTab.Welfare
+        "welfare", "welfare/home" -> AppTab.Welfare
         "my" -> AppTab.My
         else -> AppTab.Home
     }
@@ -121,27 +124,19 @@ private fun BottomItem(
     unselectedIcon: Int,
     onClick: () -> Unit
 ) {
-    val color = if (selected) BarSpec.Active else BarSpec.Inactive
     Column(
         modifier = Modifier
             .width(BarSpec.ItemW)
             .height(BarSpec.ItemH)
             .clickable { onClick() },
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Image(
             painter = painterResource(id = if (selected) selectedIcon else unselectedIcon),
             contentDescription = label,
-            modifier = Modifier.size(BarSpec.IconSize),
+            modifier = Modifier.fillMaxSize(), // 아이콘 리소스(48x69)에 맞게 전체 사용
             contentScale = ContentScale.Fit
-        )
-        Spacer(Modifier.height(5.dp))
-        Text(
-            text = label,
-            color = color,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            lineHeight = 24.sp, // 디자인의 150% 느낌
         )
     }
 }

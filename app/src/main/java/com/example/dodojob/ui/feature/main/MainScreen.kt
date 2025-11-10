@@ -60,6 +60,9 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import com.example.dodojob.data.recommend.fetchAiRecommendedJobs
+import com.example.dodojob.ui.components.AppBottomBar
+import android.content.Context
+
 /* ===================== 데이터 모델 ===================== */
 
 data class JobCardUi(
@@ -79,8 +82,6 @@ fun RecoJob.toJobCardUi(): JobCardUi = JobCardUi(
     dday = "없음", // 남은일
     imageUrl = "https://bswcjushfcwsxswufejm.supabase.co/storage/v1/object/public/company_images/workplace/2345/1759684464991_1daad090-6d3c-4ab7-a3d3-89eb01898561.jpg"
 )
-
-
 
 data class JobSummary(
     val id: String,
@@ -127,6 +128,7 @@ private fun splitDdayParts(dday: String): Pair<String, String> {
     val rest = dday.drop(idx + 2 + digits.length) // 예: " | 경력,신입"
     return dPart to rest
 }
+
 object MainFakeRepository {
     fun loadAiJobs(): List<JobSummary> = listOf(
         JobSummary("j1","대구 전통시장 상인회","[시장형사업단]","채소·과일 포장 및 판매","상품 포장·진열 및 간단한 판매 보조","D-12 | 경력"),
@@ -175,10 +177,8 @@ fun computeDday(
     }
 }
 
-
 fun List<RecoJob>.toJobDetailList(imageMap: Map<Long, String>): List<JobCardUi> =
     map { job ->
-        //val fallbackUrl = imageMap[12L] ?: "https://bswcjushfcwsxswufejm.supabase.co/storage/v1/object/public/company_images/workplace/2345/Rectangle293.png"
         val url = imageMap[job.id]
         val talents = listOf(
             "영어 회화", "악기 지도", "요리 강사", "역사 강의",
@@ -187,18 +187,17 @@ fun List<RecoJob>.toJobDetailList(imageMap: Map<Long, String>): List<JobCardUi> 
         )
 
         val dday = computeDday(
-            createdAtIso = job.created_at,      // 서버 ISO8601 문자열
-            isPaid = job.is_paid,               // announcement_pricing.price
-            paidDays = job.paid_days            // announcement_pricing.date
+            createdAtIso = job.created_at,
+            isPaid = job.is_paid,
+            paidDays = job.paid_days
         )
 
-        // 2️⃣ job.talent가 "0000011111" 형태일 때
         val selected = job.talent
             ?.toList()
             ?.mapIndexedNotNull { index, c ->
                 if (c == '1') talents.getOrNull(index) else null
             }
-            ?.take(2) // 앞에서 2개만
+            ?.take(2)
             ?.joinToString(" | ") ?: "없음"
 
         JobCardUi(
@@ -207,12 +206,9 @@ fun List<RecoJob>.toJobDetailList(imageMap: Map<Long, String>): List<JobCardUi> 
             condition = "| $selected",
             desc = job.major ?: "-",
             dday = dday,
-            imageUrl = url ?: "" // 없으면 빈 문자열 -> AsyncImage가 에러/placeholder 처리
+            imageUrl = url ?: ""
         )
     }
-
-
-
 
 /* ===================== ViewModel ===================== */
 
@@ -226,12 +222,12 @@ class MainViewModel : ViewModel() {
     )
 
     val uiState: StateFlow<MainUiState> = _uiState
+
     fun fetchRpcAiRecommendations() {
         viewModelScope.launch {
             val username = CurrentUser.username ?: return@launch
             try {
                 val recoList = fetchAiRecommendedJobs(username)
-                // RecoJob → JobSummary 변환
                 val aiList = recoList.map { job ->
                     val tag = if (job.career_required == true) "[경력]" else "[무관]"
                     val Dday = computeDday(
@@ -266,23 +262,20 @@ class MainViewModel : ViewModel() {
                 region = null, years = 0, gender = null
             )
 
-            // 2) 공고 id로 이미지들 일괄 조회
             val ids = recoList.map { it.id }.distinct()
-            val imageMap = fetchCompanyImagesMap(ids) // ← 여기!
+            val imageMap = fetchCompanyImagesMap(ids)
 
-            // 3) UI 모델 변환 (이미지 매핑 사용)
             val tailored = recoList.toJobDetailList(imageMap)
             _uiState.update { it.copy(tailoredJobs = tailored) }
         }
     }
+
     fun onSearchChange(text: String) { _uiState.update { it.copy(searchText = text) } }
+
     fun refreshRecommendations() {
         _uiState.update { it.copy(aiJobs = it.aiJobs.shuffled(), tailoredJobs = it.tailoredJobs.shuffled()) }
     }
 }
-
-
-
 
 /* ===================== Route 진입점 ===================== */
 
@@ -300,7 +293,7 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
         onJobClick = { id->
             val idL = id.toLong()
             nav.navigate(Route.JobDetail.of(idL))
-                     },
+        },
         onTailoredClick = { id-> nav.navigate(Route.JobDetail.of(id)) },
         onOpenCalendar = { nav.navigate(Route.Map.path)  },
         onShortcut = { key ->
@@ -341,12 +334,17 @@ fun MainScreen(
     var user by remember { mutableStateOf<String?>(null) }
     val client = LocalSupabase.current
     val currentuser = CurrentUser.username
+
     LaunchedEffect(currentuser) {
-        user = fetchDisplayNameByUsername(currentuser) // ✅ suspend 안전 호출
+        user = fetchDisplayNameByUsername(currentuser)
     }
+
     val limitedTailored = state.tailoredJobs.take(3)
 
-
+    val context = LocalContext.current
+    var showPopup by remember {
+        mutableStateOf(shouldShowHomePopup(context))
+    }
 
     var bannerIndex by remember { mutableStateOf(0) }
     LaunchedEffect(state.banners.size) {
@@ -356,17 +354,16 @@ fun MainScreen(
         }
     }
 
-    var showPopup by remember { mutableStateOf(true) } // 화면 진입 시 팝업 노출
-
     Scaffold(
         containerColor = screenBg,
-        bottomBar = { BottomNavBar(
-            current = "home",
-            onClick = { key->
-                if(showPopup) showPopup=false
-                onShortcut(key)
-            }
-        )
+        bottomBar = {
+            AppBottomBar(
+                current = "home",
+                onClick = { key ->
+                    if (showPopup) showPopup = false
+                    onShortcut(key)
+                }
+            )
         }
     ) { padding ->
         Box(
@@ -406,7 +403,7 @@ fun MainScreen(
                     )
                 }
 
-                /* 2) 검색창 (둥근 + 연한테두리 + 그림자) */
+                /* 2) 검색창 */
                 item {
                     SearchBar(
                         value = state.searchText,
@@ -415,7 +412,7 @@ fun MainScreen(
                     )
                 }
 
-                /* 3) 면접 일정 카드 (PNG, 원본비율) */
+                /* 3) 면접 일정 카드 */
                 item {
                     Box(Modifier.padding(horizontal = 16.dp)) {
                         InterviewCalendarCard(onClick = onOpenCalendar)
@@ -424,12 +421,12 @@ fun MainScreen(
 
                 /* 4) (위) AI 추천 일자리 — 2×2 */
                 item {
-                    val sectionGap = 12.dp   // ← 여기만 바꿔서 여백 조절
+                    val sectionGap = 12.dp
 
                     Column(Modifier.padding(horizontal = 16.dp)) {
-                        Spacer(Modifier.height(sectionGap))                    // ↑ 위 여백(캘린더 카드와 간격)
+                        Spacer(Modifier.height(sectionGap))
                         SectionTitle("${user}님을 위한 AI 추천 일자리")
-                        Spacer(Modifier.height(sectionGap))                    // ↓ 아래 여백(카드 그리드와 간격)
+                        Spacer(Modifier.height(sectionGap))
                     }
                 }
 
@@ -468,7 +465,7 @@ fun MainScreen(
                                 R.drawable.main_banner3
                             ),
                             pageSpacing = 10.dp,
-                            onClickIndex = { idx -> onBannerClick(idx) }   // 0→광고1, 1→광고2, 2→광고3
+                            onClickIndex = { idx -> onBannerClick(idx) }
                         )
                     }
                 }
@@ -478,7 +475,7 @@ fun MainScreen(
                     val sectionGap = 12.dp
 
                     Column(Modifier.padding(horizontal = 16.dp)) {
-                        Spacer(Modifier.height(sectionGap)) // ↑ 위 여백
+                        Spacer(Modifier.height(sectionGap))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -487,7 +484,7 @@ fun MainScreen(
                             SectionTitle("${user}님을 위한 맞춤형 일자리")
                             Spacer(Modifier.weight(1f))
                             IconButton(
-                                onClick = onRefreshTailored,   // ← 새로고침 콜백
+                                onClick = onRefreshTailored,
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Image(
@@ -498,7 +495,7 @@ fun MainScreen(
                             }
                         }
 
-                        Spacer(Modifier.height(sectionGap)) // ↓ 아래 여백
+                        Spacer(Modifier.height(sectionGap))
                     }
                 }
 
@@ -507,15 +504,16 @@ fun MainScreen(
                         JobDetailCard(job = jd, onClick = { onTailoredClick(jd.id) })
                     }
                 }
-
-                // ✅ "다른 일자리 추천받기" 버튼 제거됨
             }
 
-            // ✅ 하단 팝업 (네비 위에 72dp 띄움)
+            // ✅ 하단 팝업
             if (showPopup) {
                 HomePopupDialog(
                     onDismiss = { showPopup = false },
-                    onCloseToday = { showPopup = false /* TODO: 하루 안보기 저장 */ }
+                    onCloseToday = {
+                        hideHomePopupToday(context)  // 오늘 하루 숨김 저장
+                        showPopup = false            // 즉시 닫기
+                    }
                 )
             }
         }
@@ -532,28 +530,23 @@ fun HomePopupDialog(
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
-            usePlatformDefaultWidth = false, // 전체 폭 사용
+            usePlatformDefaultWidth = false,
             dismissOnBackPress = true,
             dismissOnClickOutside = true
         )
     ) {
-        // Dialog 컨텐츠(=화면 위에 떠있는 레이어)
         Box(
             modifier = Modifier
-                .fillMaxSize() // 스크린 전체
-            // 기본 Dialog scrim이 있지만, 농도를 더 주고 싶으면 아래 배경을 추가할 수 있음
-            //.background(Color(0x99000000)) // 필요시 활성화
+                .fillMaxSize()
         ) {
-            // 하단 붙은 팝업 카드
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .wrapContentHeight()
                     .clip(RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp))
-                    .background(Color.White) // 버튼 바가 흰색이므로 베이스는 White
+                    .background(Color.White)
             ) {
-                // 🔹 광고 이미지 (리소스만, 원본비율 유지, 잘림 없음)
                 val painter = painterResource(R.drawable.ad_lifis)
                 val ratio = remember(painter) {
                     val s = painter.intrinsicSize
@@ -577,7 +570,6 @@ fun HomePopupDialog(
                     contentScale = ContentScale.Fit
                 )
 
-                // 🔹 하단 컨트롤 바
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -609,7 +601,6 @@ fun HomePopupDialog(
     }
 }
 
-
 /* ---------- 스크롤되는 헤더(로고/알림) ---------- */
 @Composable
 fun ScrollHeaderRow(
@@ -624,11 +615,10 @@ fun ScrollHeaderRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .padding(start = 0.dp, end = 12.dp), // 왼쪽으로 더 붙임
+                .padding(start = 0.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 로고 버튼 (여백 최소화)
             TextButton(onClick = onLogoClick, contentPadding = PaddingValues(0.dp)) {
                 Box(
                     modifier = Modifier
@@ -645,7 +635,6 @@ fun ScrollHeaderRow(
                 }
             }
 
-            // 알림 버튼
             IconButton(onClick = onNotifyClick) {
                 Box(
                     modifier = Modifier
@@ -705,13 +694,12 @@ private fun SearchBar(
     }
 }
 
-/* ---------- 캘린더 버튼: PNG + 원본 비율 ---------- */
+/* ---------- 캘린더 버튼 ---------- */
 @Composable
 private fun InterviewCalendarCard(onClick: () -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     val painter = painterResource(R.drawable.main_schedule)
 
-    // 원본 비율 계산 (fallback: 340x148)
     val ratio = remember(painter) {
         val s = painter.intrinsicSize
         val w = s.width
@@ -793,7 +781,7 @@ private fun SectionTitle(text: String) {
     Text(text = text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
 }
 
-/* ---------- 유틸: D-day 남은 날짜 파싱 ---------- */
+/* ---------- 유틸: D-day ---------- */
 private fun parseDaysLeft(dday: String): Int? {
     val idx = dday.indexOf("D-")
     if (idx == -1) return null
@@ -826,7 +814,6 @@ private fun JobSummaryCard(
                 .fillMaxSize()
                 .padding(12.dp)
         ) {
-            // 상단 정보
             Column {
                 Text(
                     job.org,
@@ -847,7 +834,6 @@ private fun JobSummaryCard(
                     style = LocalTextStyle.current.copy(lineBreak = LineBreak.Paragraph)
                 )
                 Spacer(Modifier.height(8.dp))
-                // 제목: 1줄 + 말줄임표
                 Text(
                     job.title,
                     fontSize = 18.sp,
@@ -859,15 +845,13 @@ private fun JobSummaryCard(
                 )
             }
 
-            // 하단 고정
             Spacer(Modifier.weight(1f))
 
-            // "D-x"만 색, 뒤는 검정
             val (dPart, rest) = remember(job.dday) { splitDdayParts(job.dday) }
             Text(
                 text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = ddayColor)) { append(dPart) } // D-x
-                    append(rest)                                             // " | 경력…" (검정)
+                    withStyle(SpanStyle(color = ddayColor)) { append(dPart) }
+                    append(rest)
                 },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -882,7 +866,7 @@ private fun JobSummaryCard(
 private fun JobDetailCard(job: JobCardUi, onClick: () -> Unit) {
     val daysLeft = remember(job.dday) { parseDaysLeft(job.dday) }
     val ddayColor = if (daysLeft != null && daysLeft <= 10) Color.Red else Color(0xFF005FFF)
-    val (dPart, _) = remember(job.dday) { splitDdayParts(job.dday) } // "D-x"만 추출
+    val (dPart, _) = remember(job.dday) { splitDdayParts(job.dday) }
 
     Card(
         onClick = onClick,
@@ -894,7 +878,6 @@ private fun JobDetailCard(job: JobCardUi, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(3.dp)
     ) {
         Column {
-            // 🔹 이미지 영역 (추후 실제 이미지로 교체 가능)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -903,26 +886,22 @@ private fun JobDetailCard(job: JobCardUi, onClick: () -> Unit) {
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(job.imageUrl)     // ✅ 예: https://bswc...jpg
+                        .data(job.imageUrl)
                         .crossfade(true)
                         .build(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    // placeholder / error는 선택
-                    // placeholder = painterResource(R.drawable.placeholder),
-                    // error = painterResource(R.drawable.placeholder)
+                    contentScale = ContentScale.Crop
                 )
-                // ⬇️ 왼쪽 하단 고정
+
                 DdayBadge(
                     dday = job.dday,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(12.dp)     // 이미지 모서리에서 12dp 띄움
+                        .padding(12.dp)
                 )
             }
 
-            // 본문
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -935,7 +914,6 @@ private fun JobDetailCard(job: JobCardUi, onClick: () -> Unit) {
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(job.desc, fontSize = 14.sp, color = Color.Black)
-                // ⬇️ 하단 D-day 텍스트는 제거 (배지로 대체)
             }
         }
     }
@@ -954,7 +932,7 @@ private fun SectionTitleWithRefresh(
         Spacer(Modifier.weight(1f))
         IconButton(
             onClick = onRefresh,
-            modifier = Modifier.size(36.dp) // 터치 타겟 확보
+            modifier = Modifier.size(36.dp)
         ) {
             Image(
                 painter = painterResource(id = R.drawable.refresh),
@@ -969,26 +947,26 @@ private fun SectionTitleWithRefresh(
 private fun DdayBadge(dday: String, modifier: Modifier = Modifier) {
     val daysLeft = parseDaysLeft(dday)
     val color = if (daysLeft != null && daysLeft <= 10)
-        Color(0xFFFF2F00)     // 스펙: 빨강 #FF2F00 (D-10 이하)
+        Color(0xFFFF2F00)
     else
-        Color(0xFF005FFF)     // 스펙: 파랑 #005FFF
+        Color(0xFF005FFF)
 
-    val (dPart, _) = splitDdayParts(dday) // "D-x"만 표기
+    val (dPart, _) = splitDdayParts(dday)
 
     Row(
         modifier = modifier
-            .height(24.dp)                                    // 스펙: 높이 24
-            .background(color, RoundedCornerShape(10.dp))     // 스펙: 라운드 10
-            .padding(horizontal = 10.dp),                     // 스펙: 좌우 패딩 10
+            .height(24.dp)
+            .background(color, RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = dPart,                                     // 예: "D-13"
+            text = dPart,
             color = Color.White,
-            fontSize = 16.sp,                                 // 스펙: 16
-            fontWeight = FontWeight.Medium,                   // 스펙: 500
-            lineHeight = 24.sp,                               // 스펙: line-height 24
-            letterSpacing = (-0.019).em                       // 스펙: -0.019em
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            lineHeight = 24.sp,
+            letterSpacing = (-0.019).em
         )
     }
 }
@@ -998,8 +976,8 @@ private fun DdayBadge(dday: String, modifier: Modifier = Modifier) {
 fun AutoRotatingAd(
     banners: List<AdBanner>,
     autoIntervalMs: Long = 5_000L,
-    height: Dp = 184.dp,         // ⬆️ 기본 높이 상향
-    pageSpacing: Dp = 10.dp      // ⬅️ 페이지(배너) 간격
+    height: Dp = 184.dp,
+    pageSpacing: Dp = 10.dp
 ) {
     val realCount = banners.size
     if (realCount == 0) {
@@ -1038,7 +1016,7 @@ fun AutoRotatingAd(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(height),             // ⬅️ 늘어난 높이 반영
+            .height(height),
         shape = CardDefaults.shape,
         elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -1047,16 +1025,15 @@ fun AutoRotatingAd(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
-                pageSpacing = pageSpacing    // ⬅️ 배너 사이 간격
+                pageSpacing = pageSpacing
             ) { page ->
                 val idx = (page % realCount + realCount) % realCount
                 val banner = banners[idx]
 
-                // pageSpacing이 없는 Compose 버전이면 아래 padding 한 줄만 남겨도 OK
                 Card(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 0.dp),  // (fallback 시 pageSpacing/2 로 조절)
+                        .padding(horizontal = 0.dp),
                     shape = CardDefaults.shape,
                     colors = CardDefaults.cardColors(containerColor = banner.bg),
                     elevation = CardDefaults.cardElevation(0.dp)
@@ -1068,7 +1045,7 @@ fun AutoRotatingAd(
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
                                 .padding(end = 12.dp)
-                                .size((height * 0.70f).coerceAtLeast(110.dp)), // 높이 커진 만큼 아이콘도 비율 보정
+                                .size((height * 0.70f).coerceAtLeast(110.dp)),
                             contentScale = ContentScale.Fit
                         )
 
@@ -1122,9 +1099,9 @@ fun AutoRotatingAd(
 private fun BannerCarousel(
     images: List<Int>,
     autoIntervalMs: Long = 5_000L,
-    pageSpacing: Dp = 8.dp,                 // 배너 사이 간격
+    pageSpacing: Dp = 8.dp,
     aspectRatioFallback: Float = 360f / 170f,
-    onClickIndex: (Int) -> Unit             // ✅ 추가
+    onClickIndex: (Int) -> Unit
 ) {
     if (images.isEmpty()) return
 
@@ -1158,7 +1135,7 @@ private fun BannerCarousel(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(ratio),             // ✅ 원본 비율 유지 → 안 잘림
+            .aspectRatio(ratio),
         shape = CardDefaults.shape,
         elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -1176,13 +1153,12 @@ private fun BannerCarousel(
                     contentDescription = "banner ${idx + 1}",
                     modifier = Modifier
                         .fillMaxSize()
-                        .clickable { onClickIndex(idx) }, // ✅ 클릭 전달
-                    contentScale = ContentScale.Fit,      // ✅ 크롭 방지
+                        .clickable { onClickIndex(idx) },
+                    contentScale = ContentScale.Fit,
                     alignment = Alignment.Center
                 )
             }
 
-            // ●●● 인디케이터
             val currentReal = (pagerState.currentPage % realCount + realCount) % realCount
             Row(
                 modifier = Modifier
@@ -1204,4 +1180,28 @@ private fun BannerCarousel(
             }
         }
     }
+}
+
+/* ---------- "오늘 하루 그만 보기" 상태 저장용 SharedPreferences ---------- */
+
+private const val PREFS_HOME_POPUP = "home_popup_prefs"
+private const val KEY_HIDE_UNTIL_EPOCH_DAY = "hide_until_epoch_day"
+
+// 오늘 팝업을 보여줘야 하는지 여부
+private fun shouldShowHomePopup(context: Context): Boolean {
+    val prefs = context.getSharedPreferences(PREFS_HOME_POPUP, Context.MODE_PRIVATE)
+    val hideUntil = prefs.getLong(KEY_HIDE_UNTIL_EPOCH_DAY, -1L)
+    if (hideUntil == -1L) return true
+
+    val today = LocalDate.now().toEpochDay()
+    return today > hideUntil
+}
+
+// "오늘 그만보기" 선택 시 오늘까지만 숨기도록 저장
+private fun hideHomePopupToday(context: Context) {
+    val prefs = context.getSharedPreferences(PREFS_HOME_POPUP, Context.MODE_PRIVATE)
+    val today = LocalDate.now().toEpochDay()
+    prefs.edit()
+        .putLong(KEY_HIDE_UNTIL_EPOCH_DAY, today)
+        .apply()
 }
