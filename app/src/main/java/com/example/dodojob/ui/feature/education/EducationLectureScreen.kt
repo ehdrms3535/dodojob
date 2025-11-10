@@ -45,7 +45,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.dodojob.session.CurrentUser
 import kotlinx.coroutines.delay
-import kotlin.math.abs
 
 /* 색상 */
 private val ScreenBg = Color(0xFFF1F5F7)
@@ -70,6 +69,33 @@ private data class CourseMeta(
     val meta: String,
     val desc: String
 )
+
+
+/* =====================  시간 포맷/파싱 함수  ===================== */
+/**
+ * DB에서 "70000" 같은 ms값을 "1분 10초" 형식으로 변환
+ */
+private fun formatTimeString(raw: String?): String {
+    if (raw.isNullOrBlank()) return "0초"
+    val millis = raw.filter { it.isDigit() }.toLongOrNull() ?: return "0초"
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+
+    return when {
+        minutes > 0 -> "${minutes}분 ${seconds}초"
+        else -> "${seconds}초"
+    }
+}
+
+/**
+ * DB에 저장된 ms 문자열을 Long(ms)로 파싱
+ * 예: "7959" -> 7959L
+ */
+private fun parseMillis(raw: String?): Long {
+    if (raw.isNullOrBlank()) return 0L
+    return raw.filter { it.isDigit() }.toLongOrNull() ?: 0L
+}
 
 /* 더미 컨텐츠/메타 (프리뷰/폴백) */
 private val courseContents: Map<String, CourseContent> = mapOf(
@@ -205,14 +231,27 @@ fun EducationLectureScreen(
     viewModel: EducationViewModel = viewModel()
 ) {
     val username = CurrentUser.username
+    val context = LocalContext.current
+
+    // ExoPlayer를 화면 레벨에서 한 번만 생성
+    val player = remember {
+        ExoPlayer.Builder(context).build()
+    }
 
     // 화면 진입 시 유저 기준으로 Supabase 상태 로딩
     LaunchedEffect(username) {
         viewModel.loadAssigned(username)
     }
 
+    // 강의 주차 커리큘럼 로딩
+    LaunchedEffect(courseId) {
+        if (courseId.isNotBlank()) {
+            viewModel.loadWeekly(courseId)
+        }
+    }
+
     var selectedTab by remember { mutableStateOf(LecTab.Weekly) }
-    var weeklySelectedIndex by remember { mutableStateOf(0) }
+    var weeklySelectedIndex by remember { mutableStateOf(0) } // 이제 강조에는 안 씀, 클릭 인덱스 보관만
     val tasksSelected = remember { mutableStateListOf<Int>() }
 
     // ViewModel에서 구매 여부 / 마지막 시청 위치 가져오기
@@ -236,6 +275,53 @@ fun EducationLectureScreen(
         )
     }
 
+    // DB weeklyRows → 화면 표시용 Lesson 리스트
+    val weeklyLessons: List<Lesson> = remember(viewModel.weeklyRows, content) {
+        if (viewModel.weeklyRows.isNotEmpty()) {
+            viewModel.weeklyRows.map { row ->
+                Lesson(
+                    title = row.title ?: "제목 없음",
+                    duration = formatTimeString(row.time)   // "70000" -> "1분 10초"
+                )
+            }
+        } else {
+            content.weekly
+        }
+    }
+
+    // 각 주차 시작 ms 리스트
+    val weeklyStartMs: List<Long> = remember(viewModel.weeklyRows) {
+        if (viewModel.weeklyRows.isNotEmpty()) {
+            viewModel.weeklyRows.map { row -> parseMillis(row.time) }
+        } else {
+            emptyList()
+        }
+    }
+
+    // 현재 시청 위치 기준으로 "완료" 처리할 주차 인덱스 계산
+    val completedIndices: Set<Int> = remember(weeklyStartMs, lastPositionMs) {
+        val result = mutableSetOf<Int>()
+
+        for (i in weeklyStartMs.indices) {
+            val thisStart = weeklyStartMs[i]
+            val nextStart = weeklyStartMs.getOrNull(i + 1)
+
+            if (nextStart != null) {
+                // 다음 주차 시작 시간을 지났으면 이전 주차 완료
+                if (lastPositionMs >= nextStart) {
+                    result += i
+                }
+            } else {
+                // 마지막 주차는 시작 후 5초 이상 지나면 완료로 간주
+                if (lastPositionMs >= thisStart + 5_000) {
+                    result += i
+                }
+            }
+        }
+
+        result.toSet()
+    }
+
     val meta = remember(courseId, heroTitle, heroSubtitle) {
         val base = courseMetas[courseId] ?: CourseMeta(
             heroTitle = "온라인 강의",
@@ -247,6 +333,13 @@ fun EducationLectureScreen(
             heroTitle = heroTitle ?: base.heroTitle,
             headline  = heroSubtitle ?: base.headline
         )
+    }
+
+    // 화면 사라질 때 player 해제
+    DisposableEffect(player) {
+        onDispose {
+            player.release()
+        }
     }
 
     Surface(color = ScreenBg) {
@@ -277,7 +370,8 @@ fun EducationLectureScreen(
                     startPositionMs = lastPositionMs,
                     onPositionChange = { pos ->
                         viewModel.updateLastPosition(courseId, username, pos)
-                    }
+                    },
+                    player = player
                 )
 
                 Column(Modifier.background(Color.White)) {
@@ -308,10 +402,21 @@ fun EducationLectureScreen(
                 Box(modifier = Modifier.weight(1f)) {
                     if (selectedTab == LecTab.Weekly) {
                         LessonList(
-                            lessons = content.weekly,
+                            lessons = weeklyLessons,   // DB 기반 + 포맷된 시간
                             selectedIndex = weeklySelectedIndex,
-                            onSelectSingle = { weeklySelectedIndex = it },
-                            multiSelected = emptySet(),
+                            onSelectSingle = { index ->
+                                // 클릭 인덱스는 유지만 하고 (UI 강조 X)
+                                weeklySelectedIndex = index
+
+                                // 주차 클릭 시 해당 주차 시작 ms로 이동
+                                val rawTime = viewModel.weeklyRows.getOrNull(index)?.time
+                                val seekMs = parseMillis(rawTime)
+                                if (seekMs > 0L) {
+                                    player.seekTo(seekMs)
+                                }
+                            },
+                            // 자동 완료된 주차 인덱스들만 강조
+                            multiSelected = completedIndices,
                             isMulti = false
                         )
                     } else {
@@ -348,30 +453,19 @@ fun EducationLectureScreen(
 /* ===================== Video Player ===================== */
 @Composable
 private fun VideoPlayerBox(
+    player: ExoPlayer,
     url: String,
     startPositionMs: Long,
     onPositionChange: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val player = remember(url) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(url))
-            prepare()
-            if (startPositionMs > 0L) {
-                seekTo(startPositionMs)
-            }
-            playWhenReady = true
-        }
-    }
-
-    // startPositionMs 가 뒤늦게 로딩되는 경우 한 번 더 맞춰줌
-    LaunchedEffect(startPositionMs) {
-        if (startPositionMs > 0L &&
-            abs(player.currentPosition - startPositionMs) > 1_000
-        ) {
+    LaunchedEffect(url) {
+        player.setMediaItem(MediaItem.fromUri(url))
+        player.prepare()
+        if (startPositionMs > 0L) {
             player.seekTo(startPositionMs)
         }
+        player.playWhenReady = true
     }
 
     // 일정 주기로 재생 위치 콜백 (Supabase 저장용)
@@ -379,13 +473,6 @@ private fun VideoPlayerBox(
         while (true) {
             delay(5_000) // 5초마다
             onPositionChange(player.currentPosition)
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            onPositionChange(player.currentPosition)
-            player.release()
         }
     }
 
@@ -441,7 +528,8 @@ private fun HeroBlock(
     videoUrl: String?,
     play: Boolean,
     startPositionMs: Long,
-    onPositionChange: (Long) -> Unit
+    onPositionChange: (Long) -> Unit,
+    player: ExoPlayer
 ) {
     Column(
         modifier = Modifier
@@ -461,6 +549,7 @@ private fun HeroBlock(
         ) {
             if (play && isPurchased && !videoUrl.isNullOrBlank()) {
                 VideoPlayerBox(
+                    player = player,
                     url = videoUrl,
                     startPositionMs = startPositionMs,
                     onPositionChange = onPositionChange,
@@ -563,7 +652,7 @@ private fun UnderlineTab(text: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun LessonList(
     lessons: List<Lesson>,
-    selectedIndex: Int,
+    selectedIndex: Int, // 현재는 강조에 사용 안 함
     onSelectSingle: (Int) -> Unit,
     multiSelected: Set<Int>,
     isMulti: Boolean,
@@ -577,7 +666,8 @@ private fun LessonList(
     ) {
         lessons.forEachIndexed { index, lesson ->
             if (index == 0) Divider(color = LineGray, thickness = 1.dp, modifier = Modifier.fillMaxWidth())
-            val selected = if (isMulti) multiSelected.contains(index) else (index == selectedIndex)
+            // ✅ 현재 클릭한 주차는 강조 X, 자동 완료된 주차(multiSelected)만 강조
+            val selected = multiSelected.contains(index)
             LessonRow(
                 title = lesson.title,
                 duration = lesson.duration,
