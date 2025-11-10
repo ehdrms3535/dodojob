@@ -1,6 +1,8 @@
 package com.example.dodojob.data.greatuser
 
+import android.util.Log
 import com.example.dodojob.BuildConfig
+import io.github.jan.supabase.storage.storage
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
@@ -8,6 +10,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.statement.request
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
@@ -58,6 +61,11 @@ data class GreatUser(
     val eduCompleted : Boolean? = null
 )
 
+@Serializable
+data class ScrGreatUser(
+    val senior : String
+)
+
 private val http by lazy {
     HttpClient(OkHttp) {
         install(ContentNegotiation) {
@@ -104,3 +112,41 @@ suspend fun fetchGreatUserone(username: String?): GreatUser? {
     }
 
 
+suspend fun SrafetchGreatUser(companyId: String?): List<GreatUser> {
+    if (companyId.isNullOrBlank()) return emptyList()
+    Log.d("SUPA", "🧩 Step1: companyId=$companyId")
+    val urlScrap = "https://bswcjushfcwsxswufejm.supabase.co/rest/v1/scrappedgreatuser"
+    val scrapped: List<ScrGreatUser> = http.get(urlScrap) {
+        parameter("select", "senior")
+        parameter("employ", "eq.$companyId")
+        header("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        header("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        header("Accept", "application/json")
+    }.body()
+    Log.d("SUPA", "🧩 Step2: scrapped size=${scrapped.size}, first=${scrapped.firstOrNull()?.senior}")
+
+    val username = scrapped.map { it.senior }.filterNotNull().distinct()
+    if (username.isEmpty()) {
+        Log.w("SUPA", "⚠️ No scrapped users for companyId=$companyId")
+        return emptyList()
+    }
+
+    val csv = username.joinToString(",") { it }
+    Log.d("SUPA", "🟦 Step3: usernames=$csv")
+    val urlUser = "https://bswcjushfcwsxswufejm.supabase.co/rest/v1/great_user_view"
+
+    val response = http.get(urlUser) {
+        parameter("select", "*")
+        parameter("username", "in.($csv)")
+        header("apikey", BuildConfig.SUPABASE_ANON_KEY)
+        header("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        header("Accept", "application/json")
+    }
+
+    Log.d("SUPA", "🟩 Step4: status=${response.status}")
+
+    val result: List<GreatUser> = response.body()
+    Log.d("SUPA", "✅ Step5: result.size=${result.size}")
+
+    return result
+}
