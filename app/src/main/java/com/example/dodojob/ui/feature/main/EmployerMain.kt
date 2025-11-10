@@ -47,7 +47,9 @@ import com.example.dodojob.dao.getCompanyIdByUsername
 import com.example.dodojob.dao.getCompanyRowCount
 import com.example.dodojob.dao.getannounce
 import com.example.dodojob.dao.getannounce24
-
+import com.example.dodojob.dao.getRecentApplicantsByCompany
+import com.example.dodojob.data.career.CareerRepositoryImpl
+import com.example.dodojob.dao.http
 
 /* ================= Colors ================= */
 private val ScreenBg  = Color(0xFFF1F5F7)
@@ -97,6 +99,8 @@ object FakeEmployerRepo {
         )
     }
 }
+
+
 
 /* ================= Data for UI ================= */
 data class ApplicantUi(
@@ -227,18 +231,27 @@ fun EmployerHomeRoute(nav: NavController) {
     var activeNotices by remember { mutableStateOf(0) }         // 진행 중 공고 수
 
     val currentuser = CurrentUser.username
+    var applicantsUi by remember { mutableStateOf<List<ApplicantUi>>(emptyList()) }
+
+    val careerRepo = remember(client) { CareerRepositoryImpl(client) }
+
     LaunchedEffect(currentuser)
     {
         user = fetchDisplayNameByUsername(currentuser) // ✅ 안전하게 suspend 함수 호출
         val companyId = getCompanyIdByUsername(currentuser)
-        activeNotices = getCompanyRowCount(companyId)
-        newApplicantsToday = getannounce24(companyId)
-        unreadResumes = getannounce(companyId)
+        activeNotices = getCompanyRowCount(currentuser)
+        newApplicantsToday = getannounce24(currentuser)
+        unreadResumes = getannounce(currentuser)
+        applicantsUi = getRecentApplicantsByCompany(
+            username = currentuser,
+            careerRepo = careerRepo,
+            http = http
+        )
     }
 
 
 
-
+/*
     val applicantsUi = remember {
         FakeEmployerRepo.getRecentApplicants().map {
             ApplicantUi(
@@ -252,7 +265,7 @@ fun EmployerHomeRoute(nav: NavController) {
             )
         }
     }
-
+*/
     // ★ 광고 배너들: employeradvertisement1/2/3 사용
     val adBanners = remember {
         listOf(

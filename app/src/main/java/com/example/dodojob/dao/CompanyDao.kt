@@ -76,7 +76,7 @@ suspend fun getCompanyIdByUsername(
 }
 
 suspend fun getCompanyRowCount(
-    companyId: String?,
+    username: String?,
     supabaseUrl: String = BuildConfig.SUPABASE_URL,
     token: String = BuildConfig.SUPABASE_ANON_KEY
 ): Int {
@@ -89,8 +89,8 @@ suspend fun getCompanyRowCount(
     // ✅ 여기서 HttpResponse 타입으로 받음
     val response: HttpResponse = http.get("$supabaseUrl/rest/v1/announcement") {
         url {
-            parameters.append("company_id", "eq.$companyId")
-            parameters.append("select", "company_id")
+            parameters.append("username", "eq.$username")
+            parameters.append("select", "id")
         }
         header("apikey", BuildConfig.SUPABASE_ANON_KEY)
         header("Authorization", "Bearer $token")
@@ -121,7 +121,7 @@ suspend fun getannounce24(
     // ✅ 여기서 HttpResponse 타입으로 받음
     val response: HttpResponse = http.get("$supabaseUrl/rest/v1/announcement_senior") {
         url {
-            parameters.append("company_id", "eq.$companyId")
+            parameters.append("username", "eq.$companyId")
             parameters.append("user_status", "eq.unread")
             parameters.append("created_at", "gte.$since24h")
             parameters.append("select", "company_id")
@@ -156,7 +156,7 @@ suspend fun getannounce(
     // ✅ 여기서 HttpResponse 타입으로 받음
     val response: HttpResponse = http.get("$supabaseUrl/rest/v1/announcement_senior") {
         url {
-            parameters.append("company_id", "eq.$companyId")
+            parameters.append("username", "eq.$companyId")
             parameters.append("user_status", "eq.unread")
             parameters.append("select", "company_id")
         }
