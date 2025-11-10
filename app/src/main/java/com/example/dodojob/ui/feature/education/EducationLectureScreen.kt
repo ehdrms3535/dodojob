@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/dodojob/ui/feature/education/EducationLectureScreen.kt
 package com.example.dodojob.ui.feature.education
 
 import android.app.Activity
@@ -45,6 +44,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.dodojob.session.CurrentUser
+import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 /* 색상 */
 private val ScreenBg = Color(0xFFF1F5F7)
@@ -214,8 +215,9 @@ fun EducationLectureScreen(
     var weeklySelectedIndex by remember { mutableStateOf(0) }
     val tasksSelected = remember { mutableStateListOf<Int>() }
 
-    // ViewModel에서 구매 여부 가져오기
+    // ViewModel에서 구매 여부 / 마지막 시청 위치 가져오기
     val isPurchased = viewModel.isPurchased(courseId)
+    val lastPositionMs = viewModel.getLastPosition(courseId)
 
     // 결제 안 한 상태에서만 자동 오픈
     var showEnroll by remember { mutableStateOf(showEnrollOnLaunch && !isPurchased) }
@@ -271,7 +273,11 @@ fun EducationLectureScreen(
                     },
                     isPurchased = isPurchased,
                     videoUrl = videoUrl,
-                    play = play
+                    play = play,
+                    startPositionMs = lastPositionMs,
+                    onPositionChange = { pos ->
+                        viewModel.updateLastPosition(courseId, username, pos)
+                    }
                 )
 
                 Column(Modifier.background(Color.White)) {
@@ -341,17 +347,46 @@ fun EducationLectureScreen(
 
 /* ===================== Video Player ===================== */
 @Composable
-private fun VideoPlayerBox(url: String, modifier: Modifier = Modifier) {
+private fun VideoPlayerBox(
+    url: String,
+    startPositionMs: Long,
+    onPositionChange: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val player = remember(url) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(url))
             prepare()
+            if (startPositionMs > 0L) {
+                seekTo(startPositionMs)
+            }
             playWhenReady = true
         }
     }
+
+    // startPositionMs 가 뒤늦게 로딩되는 경우 한 번 더 맞춰줌
+    LaunchedEffect(startPositionMs) {
+        if (startPositionMs > 0L &&
+            abs(player.currentPosition - startPositionMs) > 1_000
+        ) {
+            player.seekTo(startPositionMs)
+        }
+    }
+
+    // 일정 주기로 재생 위치 콜백 (Supabase 저장용)
+    LaunchedEffect(player) {
+        while (true) {
+            delay(5_000) // 5초마다
+            onPositionChange(player.currentPosition)
+        }
+    }
+
     DisposableEffect(Unit) {
-        onDispose { player.release() }
+        onDispose {
+            onPositionChange(player.currentPosition)
+            player.release()
+        }
     }
 
     Box(modifier.background(Color.Black)) {
@@ -404,7 +439,9 @@ private fun HeroBlock(
     thumbnailUrl: String? = null,
     isPurchased: Boolean,
     videoUrl: String?,
-    play: Boolean
+    play: Boolean,
+    startPositionMs: Long,
+    onPositionChange: (Long) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -425,6 +462,8 @@ private fun HeroBlock(
             if (play && isPurchased && !videoUrl.isNullOrBlank()) {
                 VideoPlayerBox(
                     url = videoUrl,
+                    startPositionMs = startPositionMs,
+                    onPositionChange = onPositionChange,
                     modifier = Modifier.matchParentSize()
                 )
             } else {
@@ -500,7 +539,7 @@ private fun HeroBlock(
 private fun UnderlineTab(text: String, selected: Boolean, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom,   // ✅ 여기!
+        verticalArrangement = Arrangement.Bottom,
         modifier = Modifier
             .height(35.dp)
             .clickable { onClick() }
@@ -520,7 +559,6 @@ private fun UnderlineTab(text: String, selected: Boolean, onClick: () -> Unit) {
         )
     }
 }
-
 
 @Composable
 private fun LessonList(
@@ -769,7 +807,7 @@ private fun EnrollBottomSheet(
 @Composable
 private fun PreviewEducationLectureScreen() {
     EducationLectureScreen(
-        courseId = "watercolor-begin",
+        courseId = "1", // 실제로는 lecture.id.toString() 같은 값
         showEnrollOnLaunch = true,
         showEnrollTrigger = true,
         videoUrl = null,
