@@ -18,6 +18,10 @@ class EducationViewModel : ViewModel() {
     var purchased by mutableStateOf<Set<String>>(emptySet())
         private set
 
+    // 이어보기: courseId -> 마지막 재생 위치(ms)
+    var lastPositions by mutableStateOf<Map<String, Long>>(emptyMap())
+        private set
+
     /** Supabase lecture_assign_user 상태 로딩 */
     fun loadAssigned(username: String?) {
         viewModelScope.launch {
@@ -31,6 +35,14 @@ class EducationViewModel : ViewModel() {
                 purchased = rows.mapNotNull { row ->
                     if (row.buy == true) row.lecture?.id?.toString() else null
                 }.toSet()
+
+                lastPositions = rows.mapNotNull { row ->
+                    val courseId = row.lecture?.id?.toString()
+                    val pos = row.lastPositionMs
+                    if (courseId != null && pos != null) {
+                        courseId to pos
+                    } else null
+                }.toMap()
             }.onFailure {
                 // TODO: 로그 처리 등
             }
@@ -39,6 +51,11 @@ class EducationViewModel : ViewModel() {
 
     fun isFavorite(courseId: String) = courseId in favorites
     fun isPurchased(courseId: String) = courseId in purchased
+
+    /** 해당 강의 마지막 재생 위치 가져오기 (없으면 0) */
+    fun getLastPosition(courseId: String): Long {
+        return lastPositions[courseId] ?: 0L
+    }
 
     /** 즐겨찾기 토글 + Supabase upsert */
     fun toggleFavorite(courseId: String, username: String) {
@@ -54,6 +71,7 @@ class EducationViewModel : ViewModel() {
                     lectureId = lectureId,
                     favorite = nowFav
                 )
+            }.onFailure {
             }
         }
     }
@@ -71,6 +89,27 @@ class EducationViewModel : ViewModel() {
                     lectureId = lectureId,
                     buy = true
                 )
+            }.onFailure {
+            }
+        }
+    }
+
+    /** 재생 위치 업데이트 + Supabase upsert (이어보기) */
+    fun updateLastPosition(courseId: String, username: String?, positionMs: Long) {
+        val lectureId = courseId.toLongOrNull() ?: return
+
+        // 로컬 상태 업데이트
+        lastPositions = lastPositions + (courseId to positionMs)
+
+        viewModelScope.launch {
+            runCatching {
+                upsertLectureAssignUser(
+                    username = username,
+                    lectureId = lectureId,
+                    lastPositionMs = positionMs
+                )
+            }.onFailure {
+                // TODO: 실패 시 로그만
             }
         }
     }
