@@ -6,11 +6,11 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-
 
 /* ─────────────────────────
  * 1) Lecture 단일 행(DTO)
@@ -42,6 +42,8 @@ data class LectureLiteDto(
 data class LectureAssignUserRow(
     val buy: Boolean? = null,
     val favorite: Boolean? = null,
+    @SerialName("last_position_ms")
+    val lastPositionMs: Long? = null,
     val lecture: LectureLiteDto? = null
 )
 
@@ -63,9 +65,7 @@ suspend fun fetchLectures(
 }
 
 /* ─────────────────────────
- * 4) 사용자별 배정 강의 + 상태 (buy/favorite) 조회
- *   - UI 레이어에서 사용하는 Course가 아님! (DTO)
- *   - 화면에서 map 해서 UI Course로 바꾸세요.
+ * 4) 사용자별 배정 강의 + 상태 (buy/favorite/last_position) 조회
  * ───────────────────────── */
 suspend fun fetchAssignedCourses(
     username: String?,
@@ -74,7 +74,11 @@ suspend fun fetchAssignedCourses(
 ): List<LectureAssignUserRow> {
     val url = "$supabaseUrl/rest/v1/lecture_assign_user"
     return http.get(url) {
-        parameter("select", "buy,favorite,lecture:lecture(id,title,explain,thumbnail,url)")
+        // last_position_ms 컬럼까지 함께 조회
+        parameter(
+            "select",
+            "buy,favorite,last_position_ms,lecture:lecture(id,title,explain,thumbnail,url)"
+        )
         parameter("user", "eq.$username")
         header("apikey", token)
         header("Authorization", "Bearer $token")
@@ -86,17 +90,21 @@ data class LectureAssignUserInsert(
     val user: String?,
     val lecture: Long,
     val buy: Boolean? = null,
-    val favorite: Boolean? = null
+    val favorite: Boolean? = null,
+    @SerialName("last_position_ms")
+    val lastPositionMs: Long? = null
 )
 
-/**
- * lecture_assign_user 에 (user, lecture) 기준 upsert
- */
+/* ─────────────────────────
+ * 5) 사용자별 배정 강의 + 상태 (buy/favorite/last_position) upsert
+ *    - 필요한 필드만 보내는 방식(기본값 null은 직렬화에서 빠지게 설정돼있다고 가정)
+ * ───────────────────────── */
 suspend fun upsertLectureAssignUser(
     username: String?,
     lectureId: Long,
     buy: Boolean? = null,
     favorite: Boolean? = null,
+    lastPositionMs: Long? = null,
     supabaseUrl: String = BuildConfig.SUPABASE_URL,
     token: String = BuildConfig.SUPABASE_ANON_KEY
 ) {
@@ -115,11 +123,9 @@ suspend fun upsertLectureAssignUser(
                 user = username,
                 lecture = lectureId,
                 buy = buy,
-                favorite = favorite
+                favorite = favorite,
+                lastPositionMs = lastPositionMs
             )
         )
     }
 }
-
-
-
