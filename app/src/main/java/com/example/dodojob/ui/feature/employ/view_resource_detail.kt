@@ -44,6 +44,7 @@ import com.example.dodojob.session.GreatUserView
 import com.example.dodojob.session.JobBits
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import com.example.dodojob.data.greatuser.existSGU
 
 /* ===== Colors / Fonts ===== */
 private val BrandBlue = Color(0xFF005FFF)
@@ -77,6 +78,9 @@ fun ViewResourceDetailScreen(navController: NavController) {
     var licenseExpanded  by remember { mutableStateOf(true) }
     var isFavorite       by remember { mutableStateOf(false) }
 
+
+
+
     val triplescareer = GreatUserView.careers.map { career ->
         Triple(career.title, career.startDate, career.endDate)
     }
@@ -84,17 +88,26 @@ fun ViewResourceDetailScreen(navController: NavController) {
         Triple(lisense.location, lisense.name,lisense.number)
     }
 
-    val jobtalent = JobBits.parse(JobBits.JobCategory.TALENT,GreatUserView.greatuser!!.job_talent)
-    val jobmanage = JobBits.parse(JobBits.JobCategory.TALENT,GreatUserView.greatuser!!.job_manage)
-    val jobservice = JobBits.parse(JobBits.JobCategory.TALENT,GreatUserView.greatuser!!.job_service)
-    val jobcare = JobBits.parse(JobBits.JobCategory.TALENT,GreatUserView.greatuser!!.job_care)
+    val gu = GreatUserView.greatuser
 
-    val allJobs = sequenceOf(
-        jobtalent,
-        jobmanage,
-        jobservice,
-        jobcare
-    ).flatten()
+    LaunchedEffect(gu?.username) {
+        val companyId = CurrentUser.companyid.toString()
+        val seniorId = gu?.username ?: return@LaunchedEffect   // username 없으면 아예 조회 안 함
+        runCatching {
+            isFavorite = existSGU(companyId, seniorId.toString())
+        }.onFailure {
+            Log.e("Scrap", "초기 조회 실패: ${it.message}")
+        }
+    }
+
+
+    val jobtalent = JobBits.parse(JobBits.JobCategory.TALENT, gu?.job_talent)
+    val jobmanage = JobBits.parse(JobBits.JobCategory.MANAGE,  gu?.job_manage)
+    val jobservice = JobBits.parse(JobBits.JobCategory.SERVICE, gu?.job_service)
+    val jobcare = JobBits.parse(JobBits.JobCategory.CARE,    gu?.job_care)
+
+    val allJobs = sequenceOf(jobtalent, jobmanage, jobservice, jobcare)
+        .flatten()
         .filter { it.isNotBlank() }
         .distinct()
         .toList()
@@ -157,11 +170,12 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         onToggle = { personalExpanded = !personalExpanded }
                     )
                     if (personalExpanded) {
-                        KeyValueRow("이름",     GreatUserView.greatuser!!.name.toString())
-                        KeyValueRow("생년월일", GreatUserView.greatuser!!.birthdate.toString())
-                        KeyValueRow("전화번호", GreatUserView.greatuser!!.phone.toString())
-                        KeyValueRow("주소",     GreatUserView.greatuser!!.region.toString())
-                        KeyValueRow("이메일",   GreatUserView.greatuser!!.email.toString())
+                        KeyValueRow("이름",     gu?.name ?: safeTalent.name)
+                        KeyValueRow("생년월일", gu?.birthdate ?: "-")
+                        KeyValueRow("전화번호", gu?.phone ?: "-")
+                        KeyValueRow("주소",     gu?.region ?: safeTalent.location)
+                        KeyValueRow("이메일",   gu?.email ?: "-")
+
                     }
                 }
 

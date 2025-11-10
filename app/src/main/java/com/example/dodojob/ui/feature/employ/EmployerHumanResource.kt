@@ -134,9 +134,9 @@ class GreatUserViewModel : ViewModel() {
                         "오래전"
                     }
                     val jobtalent = JobBits.parse(JobBits.JobCategory.TALENT,user.job_talent)
-                    val jobmanage = JobBits.parse(JobBits.JobCategory.TALENT,user.job_manage)
-                    val jobservice = JobBits.parse(JobBits.JobCategory.TALENT,user.job_service)
-                    val jobcare = JobBits.parse(JobBits.JobCategory.TALENT,user.job_care)
+                    val jobmanage = JobBits.parse(JobBits.JobCategory.MANAGE,user.job_manage)
+                    val jobservice = JobBits.parse(JobBits.JobCategory.SERVICE,user.job_service)
+                    val jobcare = JobBits.parse(JobBits.JobCategory.CARE,user.job_care)
 
                     val allJobs = sequenceOf(
                         jobtalent,
