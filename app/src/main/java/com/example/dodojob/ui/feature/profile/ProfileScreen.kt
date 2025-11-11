@@ -139,6 +139,9 @@ fun ProfileRoute(nav: NavController) {
         onClickChangePw = { nav.navigate("change_password") },
         onClickLogout = { showLogout = true },
         onClickLeave = { showLeave = true },
+        onClickApplyStatus = {
+            nav.navigate("support")
+        },
         onShortcut = { key ->
             when (key) {
                 "home" -> nav.navigate("main") { launchSingleTop = true }
@@ -207,6 +210,7 @@ fun ProfileScreen(
     onClickChangePw: () -> Unit,
     onClickLogout: () -> Unit,
     onClickLeave: () -> Unit,
+    onClickApplyStatus: () -> Unit,
     onShortcut: (String) -> Unit
 ) {
     val brandBlue = Color(0xFF005FFF)
@@ -330,6 +334,7 @@ fun ProfileScreen(
                     resumeViews = resumeViews,
                     onClickResumeCreate = onClickResumeCreate,
                     onClickResumeManage = onClickResumeManage,
+                    onClickApplyStatus = onClickApplyStatus,
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .offset(y = (-40).dp)
@@ -411,6 +416,7 @@ private fun ResumeCard(
     resumeViews: Long,
     onClickResumeCreate: () -> Unit,
     onClickResumeManage: () -> Unit,
+    onClickApplyStatus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -467,22 +473,30 @@ private fun ResumeCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StatCell("입사지원 현황", "${applyCount}건", Modifier.weight(1f))
+                StatCell("입사지원 현황", "${applyCount}건", Modifier.weight(1f),onClick = onClickApplyStatus)
                 VerticalDivider(
                     modifier = Modifier.height(40.dp),
                     color = Color(0xFFDDDDDD)
                 )
                 StatCell("이력서 열람", "${resumeViews}건", Modifier.weight(1f))
             }
+            Spacer(Modifier.height(6.dp))
         }
     }
 }
 
 @Composable
-private fun StatCell(title: String, value: String, modifier: Modifier = Modifier) {
+private fun StatCell(title: String, value: String, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     val brandBlue = Color(0xFF005FFF)
+
+    val clickableModifier = if (onClick != null) {
+        modifier.clickable { onClick() }
+    } else {
+        modifier
+    }
+
     Column(
-        modifier = modifier,
+        modifier = clickableModifier,
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -597,6 +611,7 @@ fun ProfileScreenPreview() {
         onClickChangePw = { },
         onClickLogout = { },
         onClickLeave = { },
+        onClickApplyStatus = { },
         onShortcut = { }
     )
 }
