@@ -1,7 +1,10 @@
 package com.example.dodojob.ui.feature.profile
 
+import com.example.dodojob.navigation.Route
 import android.os.Parcelable
+import android.util.Log
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -49,7 +52,6 @@ import com.example.dodojob.data.greatuser.GreatUser
 import com.example.dodojob.ui.feature.employ.TalentUi
 import kotlinx.parcelize.Parcelize
 import com.example.dodojob.data.announcement.fullannouncement.fetchAnnouncementFull
-import android.util.Log
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 
@@ -176,7 +178,10 @@ class RecentWatchViewModel : ViewModel() {
 }
 
 @Composable
-fun RecentViewedRoute(nav: NavController,viewModel: RecentWatchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+fun RecentViewedRoute(
+    nav: NavController,
+    viewModel: RecentWatchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
 
     //var all by remember { mutableStateOf(RecentFakeDb.items()) }
     var selectedTab by remember { mutableStateOf(0) }
@@ -184,7 +189,7 @@ fun RecentViewedRoute(nav: NavController,viewModel: RecentWatchViewModel = andro
     val client = LocalSupabase.current
     val repo = remember { RecentWatchSupabase(client) }
     LaunchedEffect(Unit) {
-        viewModel.loadUserData(CurrentUser.username,repo)
+        viewModel.loadUserData(CurrentUser.username, repo)
     }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -197,7 +202,7 @@ fun RecentViewedRoute(nav: NavController,viewModel: RecentWatchViewModel = andro
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(ScreenBg)   // 🔹 전체 배경: #F1F5F7
     ) {
         RecentTopSection(
             nav = nav,
@@ -212,7 +217,10 @@ fun RecentViewedRoute(nav: NavController,viewModel: RecentWatchViewModel = andro
             underlineWidth = 68.dp
         )
 
-        RecentList(visible)
+        RecentList(
+            items = visible,
+            nav = nav
+        )
     }
 }
 
@@ -236,43 +244,40 @@ private fun RecentTopSection(
                 .background(Color(0xFFEFEFEF))
         )
 
-        // 🔻 min 높이 제거 → wrap content 로
-        Column(
+        // 🔹 ChangePasswordScreen 과 동일한 패턴의 백버튼 위치
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(start = 16.dp, top = 14.dp)
+                .background(Color.White)
         ) {
-            // 아이콘
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(24.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 24.dp, start = 6.dp)
+                    .size(48.dp)
+                    .clickable { nav.popBackStack() },
+                contentAlignment = Alignment.Center
             ) {
-                IconButton(onClick = { nav.popBackStack() }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Outlined.ArrowBackIosNew, contentDescription = "뒤로", tint = Color.Black)
-                }
-            }
-            Spacer(Modifier.height(10.dp)) // chevron ↔ 타이틀
-
-            // 타이틀
-            Row(
-                modifier = Modifier.height(56.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "최근 본 공고",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.019).em,
-                    color = Color.Black
+                Image(
+                    painter = painterResource(R.drawable.back),
+                    contentDescription = "뒤로가기",
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
 
-        // 🔻 타이틀 아래 간격을 고정 6dp로만 부여 (더 줄였음)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(10.dp))
+
+        Text(
+            text = "최근 본 공고",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.019f).em,
+            color = Color.Black,
+            modifier = Modifier.padding(start = 16.dp, bottom = 2.dp)
+        )
+
+        // 타이틀 아래 간격
+        Spacer(Modifier.height(16.dp))
 
         // count + 마감공고 삭제
         Row(
@@ -292,8 +297,9 @@ private fun RecentTopSection(
             )
             Box(
                 modifier = Modifier
-                    .height(24.dp)
+                    .height(16.dp)
                     .width(1.dp)
+                    .offset(y = 1.dp)
                     .background(Color(0xFF828282))
             )
             Spacer(Modifier.width(8.dp))
@@ -311,14 +317,17 @@ private fun RecentTopSection(
                     color = Color(0xFF828282)
                 )
                 Spacer(Modifier.width(6.dp))
-                Icon(
-                    painter = painterResource(id = R.drawable.trash),
+
+                Image(
+                    painter = painterResource(id = R.drawable.delete),
                     contentDescription = "마감공고 삭제",
-                    tint = Color(0xFF828282),
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier
+                        .size(18.dp)
+                        .offset(y = 1.dp)
                 )
             }
         }
+        Spacer(Modifier.height(22.dp))
     }
 }
 
@@ -328,58 +337,65 @@ private fun RecentTabBar(
     tabs: List<String>,
     selectedIndex: Int,
     onSelected: (Int) -> Unit,
-    underlineWidth: Dp
+    underlineWidth: Dp = 68.dp,   // 파란선 길이 수치 조절
+    indicatorHeight: Dp = 2.dp,   // 파란선 두께 수치 조절
+    tabSpacing: Dp = 40.dp        // 전체 / 모집중 사이 간격 수치 조절
 ) {
-    BoxWithConstraints(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(45.dp)
             .background(Color.White)
     ) {
-        val tabWidth = maxWidth / tabs.size
-        val targetOffset = tabWidth * selectedIndex + (tabWidth - underlineWidth) / 2
-        val animatedOffset by animateDpAsState(targetValue = targetOffset, label = "tabIndicatorOffset")
-
+        // 탭 텍스트 + 파란선
         Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(45.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             tabs.forEachIndexed { i, label ->
                 val selected = i == selectedIndex
+
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .width(tabWidth)
+                        .padding(horizontal = 32.dp)
                         .clickable { onSelected(i) }
-                        .padding(vertical = 6.dp)
                 ) {
                     Text(
                         text = label,
                         fontSize = 18.sp,
                         lineHeight = 20.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        letterSpacing = (-0.2).sp,
+                        letterSpacing = (-0.5).sp,
                         color = if (selected) PrimaryBlue else Color(0xFF000000)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .width(underlineWidth)
+                            .height(if (selected) indicatorHeight else 0.dp)
+                            .background(
+                                color = if (selected) PrimaryBlue else Color.Transparent,
+                                shape = RoundedCornerShape(2.dp)
+                            )
                     )
                 }
             }
         }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .offset(x = animatedOffset)
-                .width(underlineWidth)
-                .height(4.dp)
-                .background(PrimaryBlue)
-        )
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
 /* ===================== 리스트 & 카드 ===================== */
 @Composable
-private fun RecentList(items: List<ViewedItem>) {
+private fun RecentList(
+    items: List<ViewedItem>,
+    nav: NavController
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -392,23 +408,40 @@ private fun RecentList(items: List<ViewedItem>) {
         ) {
             itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
                 if (index == 0) {
-                    RecentCard(item) // 첫 카드 위 회색 제거
+                    RecentCard(item = item, nav = nav)
                 } else {
-                    RecentCard(item)
+                    RecentCard(item = item, nav = nav)
                 }
             }
         }
     }
 }
 
+
 @Composable
-private fun RecentCard(item: ViewedItem) {
+private fun RecentCard(
+    item: ViewedItem,
+    nav: NavController
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
             .heightIn(min = 120.dp)
-            .padding(horizontal = 16.dp, vertical = 20.dp),
+            .clickable {
+                val idLong = item.id.toLongOrNull()
+                if (idLong != null) {
+                    nav.navigate(
+                        Route.JobDetail.path.replace("{id}", idLong.toString())
+                    )
+                }
+            }
+            .padding(
+                start = 24.dp,
+                end = 16.dp,
+                top = 20.dp,
+                bottom = 20.dp
+            ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
@@ -419,20 +452,32 @@ private fun RecentCard(item: ViewedItem) {
             val stateColor = if (item.isOpen) PrimaryBlue else TextGray
             Text(
                 text = stateLabel,
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.019).em,
                 color = stateColor
             )
             Spacer(Modifier.weight(1f))
+
             IconButton(onClick = { /* TODO */ }, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Outlined.MoreHoriz, contentDescription = "더보기", tint = Color(0xFF343330))
+                Image(
+                    painter = painterResource(id = R.drawable.three_dot),
+                    contentDescription = "더보기",
+                    modifier = Modifier
+                        .size(32.dp)
+                        .offset(x = -4.dp)
+                )
             }
         }
-        Text(item.company, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = TextGray)
+        Text(
+            item.company,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Medium,
+            color = TextGray
+        )
         Text(
             text = item.title,
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             color = Color(0xFF000000),
             maxLines = 3,
@@ -440,6 +485,7 @@ private fun RecentCard(item: ViewedItem) {
         )
     }
 }
+
 
 /* ===================== Util ===================== */
 private fun countText(count: Int): AnnotatedString = buildAnnotatedString {

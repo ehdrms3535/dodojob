@@ -1,6 +1,8 @@
 @file:OptIn(ExperimentalFoundationApi::class)
 package com.example.dodojob.ui.feature.education
 
+import java.time.DayOfWeek
+import java.time.LocalDate
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -572,44 +574,82 @@ private fun AttendanceCard(
     userName: String?,
     modifier: Modifier = Modifier,
     days: List<String> = listOf("일","월","화","수","목","금","토"),
-    dates: List<String> = listOf("1","2","3","4","5","6","7"),
     initiallySelected: Set<Int> = emptySet(),
     onMyCourseClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(10.dp)
     val selectedSet = remember { mutableStateOf(initiallySelected.toMutableSet()) }
 
+    val today = remember { LocalDate.now() }
+    val weekDates = remember(today) {
+        // DayOfWeek: MONDAY(1) ~ SUNDAY(7)
+        val offsetFromSunday = when (today.dayOfWeek) {
+            DayOfWeek.SUNDAY    -> 0
+            DayOfWeek.MONDAY    -> 1
+            DayOfWeek.TUESDAY   -> 2
+            DayOfWeek.WEDNESDAY -> 3
+            DayOfWeek.THURSDAY  -> 4
+            DayOfWeek.FRIDAY    -> 5
+            DayOfWeek.SATURDAY  -> 6
+        }
+        val sunday = today.minusDays(offsetFromSunday.toLong())
+        (0..6).map { idx ->
+            sunday.plusDays(idx.toLong()).dayOfMonth.toString()
+        }
+    }
+
     Card(
-        modifier = modifier.fillMaxWidth().heightIn(min = 276.dp),
-        shape = shape, elevation = cardElevation(6.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 276.dp),
+        shape = shape,
+        elevation = cardElevation(6.dp),
         colors = cardColors(containerColor = Color.White)
     ) {
-        Column(Modifier.fillMaxSize().padding(20.dp),
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            horizontalAlignment = Alignment.Start) {
+            horizontalAlignment = Alignment.Start
+        ) {
             Text(
                 text = "안녕하세요 ${userName}님\n매일 출석하고 성장해요!",
-                fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
-                lineHeight = 36.sp, letterSpacing = (-0.019).em, color = Color(0xFF000000),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                lineHeight = 36.sp,
+                letterSpacing = (-0.019).em,
+                color = Color(0xFF000000),
                 modifier = Modifier.fillMaxWidth()
             )
-            Column(Modifier.fillMaxWidth(),
+
+            Column(
+                Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(Modifier.fillMaxWidth(),
+                // 요일 줄 (일~토)
+                Row(
+                    Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     days.forEach { d ->
-                        Box(Modifier.size(40.dp, 41.62.dp), contentAlignment = Alignment.Center) {
+                        Box(
+                            Modifier.size(40.dp, 41.62.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(d, fontSize = 16.6.sp, color = Color(0xFF000000))
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth(),
+
+                Row(
+                    Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    dates.forEachIndexed { idx, d ->
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    weekDates.forEachIndexed { idx, d ->
                         val selected = idx in selectedSet.value
                         Box(
                             modifier = Modifier
@@ -624,7 +664,8 @@ private fun AttendanceCard(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                d, fontSize = 16.6.sp,
+                                d,
+                                fontSize = 16.6.sp,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (selected) Color.White else Color(0xFF000000)
                             )
@@ -632,11 +673,17 @@ private fun AttendanceCard(
                     }
                 }
             }
+
             Spacer(Modifier.height(2.dp))
-            MyCourseButton(onClick = onMyCourseClick, modifier = Modifier.fillMaxWidth(), height = 64.dp)
+            MyCourseButton(
+                onClick = onMyCourseClick,
+                modifier = Modifier.fillMaxWidth(),
+                height = 64.dp
+            )
         }
     }
 }
+
 
 @Composable
 private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
