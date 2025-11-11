@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.profile
 
+import android.os.Parcelable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,7 +31,27 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.dodojob.R
+import com.example.dodojob.data.career.CareerRepositoryImpl
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.session.CurrentUser
+import com.example.dodojob.session.JobBits
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import java.util.Calendar
+import kotlin.random.Random
+import com.example.dodojob.data.recentwatch.RecentWatchSupabase
+import com.example.dodojob.dao.getRecentWatchList
+import com.example.dodojob.data.greatuser.GreatUser
+import com.example.dodojob.ui.feature.employ.TalentUi
+import kotlinx.parcelize.Parcelize
+import com.example.dodojob.data.announcement.fullannouncement.fetchAnnouncementFull
+import android.util.Log
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 /* ===================== 색상 토큰 ===================== */
 private val PrimaryBlue = Color(0xFF005FFF)
@@ -38,13 +59,14 @@ private val TextGray    = Color(0xFF848484)
 private val ScreenBg    = Color(0xFFF1F5F7)
 
 /* ===================== 데이터 모델 ===================== */
+@Parcelize
 data class ViewedItem(
     val id: String,
     val company: String,
     val title: String,
     val isOpen: Boolean,
     val viewedAt: String
-)
+) : Parcelable
 
 /* ===================== Fake DB ===================== */
 private object RecentFakeDb {
@@ -56,11 +78,117 @@ private object RecentFakeDb {
     )
 }
 
-/* ===================== Route + Screen ===================== */
+data class RecentWatchUiState(
+    val isLoading: Boolean = false,
+    val Recentwatch: List<ViewedItem> = emptyList(),
+    val error: String? = null
+)
+
+class RecentWatchViewModel : ViewModel() {
+
+    private val _uiState = MutableStateFlow(RecentWatchUiState())
+    val uiState: StateFlow<RecentWatchUiState> = _uiState
+
+    fun loadUserData(username: String?, repo: RecentWatchSupabase) {
+        val TAG = "RecentWatchVM"
+
+        if (username.isNullOrBlank()) {
+            Log.d(TAG, "❌ username이 비어있습니다.")
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                error = "username이 비어있습니다."
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                // 1) 최근 본 공고 목록 가져오기
+                val users = getRecentWatchList(username)
+                Log.d(TAG, "🔥 getRecentWatchList($username) size = ${users.size}")
+
+                // 비어있으면 바로 반환
+                if (users.isEmpty()) {
+                    Log.d(TAG, "⚠ 최근 본 공고가 없습니다.")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        Recentwatch = emptyList(),
+                        error = "최근 본 공고가 없습니다."
+                    )
+                    return@launch
+                }
+
+                // 2) 공고 상세 매핑
+                val recents = users.mapNotNull { user ->
+                    val a = fetchAnnouncementFull(user.announceid)
+
+                    if (a == null) {
+                        Log.w(TAG, "⚠ fetchAnnouncementFull(${user.announceid}) == null, 스킵함")
+                        return@mapNotNull null
+                    }
+
+                    val company = a.company_name
+                    val title = a.major
+                    val viewAt = user.created_at
+                    val isPaid = a.is_paid ?: false
+
+                    val baseDuration = 7
+                    val extraDays = if (isPaid) {
+                        a.paid_days?.toInt() ?: 0
+                    } else 0
+                    val duration = baseDuration + extraDays
+
+                    val createdAt = OffsetDateTime.parse(a.created_at)   // "2025-11-11T12:34:56Z" 형식 가정
+                    val now = OffsetDateTime.now()
+
+                    val daysDiff = ChronoUnit.DAYS.between(createdAt, now)
+                    val isWithinDuration = daysDiff <= duration
+                    val isOpen = isWithinDuration
+
+                    Log.d(TAG, "✅ ${user.announceid} → company=$company, title=$title, isOpen=$isOpen, daysDiff=$daysDiff, duration=$duration")
+
+                    ViewedItem(
+                        id = user.announceid.toString(),
+                        company = company.toString(),
+                        title = "${title}에 적합한 분 구해요",
+                        isOpen = isOpen,
+                        viewedAt = viewAt
+                    )
+                }
+
+                Log.d(TAG, "🔥 recents 최종 size = ${recents.size}")
+
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    Recentwatch = recents,
+                    error = null
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ 데이터 로드 실패", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "데이터 로드 실패"
+                )
+            }
+        }
+    }
+}
+
 @Composable
-fun RecentViewedRoute(nav: NavController) {
-    var all by remember { mutableStateOf(RecentFakeDb.items()) }
+fun RecentViewedRoute(nav: NavController,viewModel: RecentWatchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+
+    //var all by remember { mutableStateOf(RecentFakeDb.items()) }
     var selectedTab by remember { mutableStateOf(0) }
+
+    val client = LocalSupabase.current
+    val repo = remember { RecentWatchSupabase(client) }
+    LaunchedEffect(Unit) {
+        viewModel.loadUserData(CurrentUser.username,repo)
+    }
+
+    val uiState by viewModel.uiState.collectAsState()
+    var all = uiState.Recentwatch
 
     val visible = remember(selectedTab, all) {
         if (selectedTab == 0) all else all.filter { it.isOpen }
