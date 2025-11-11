@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.support
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,9 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -21,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -30,16 +30,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.R
 import com.example.dodojob.ui.feature.support.MapCardData
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
-/* ===================== 색상 ===================== */
+/* ===================== 색상/타이포 공통 ===================== */
 private val PrimaryBlue = Color(0xFF005FFF)
 private val DangerRed   = Color(0xFFF24822)
 private val Bg          = Color(0xFFF1F5F7)
+private val Letter      = (-0.019f).em
 
 /* ===================== 상태 Enum ===================== */
 enum class ReadState { Read, Unread }
@@ -53,6 +55,7 @@ data class AppliedItem(
     val company: String,
     val title: String,
 )
+
 data class InterviewItem(
     val id: String,
     val date: LocalDate,
@@ -60,6 +63,7 @@ data class InterviewItem(
     val title: String,
     val address: String
 )
+
 data class ResultItem(
     val id: String,
     val appliedAt: String,
@@ -76,6 +80,7 @@ private object SupportFakeDb {
         AppliedItem("a3", ReadState.Unread, "2025.08.14", "수성구 체육센터", "회원 운동 지도 보조, 센터 관리 가능하신 분 지원 요망"),
         AppliedItem("a4", ReadState.Read,   "2025.08.10", "대구도시철도공사", "지하철 역사 안전 순찰, 이용객 안내, 분실물 관리"),
     )
+
     fun interviews(): List<InterviewItem> {
         val ws = weekStart(LocalDate.now())
         return listOf(
@@ -85,6 +90,7 @@ private object SupportFakeDb {
             InterviewItem("i4", ws.plusDays(5), "대구동구 어린이도서관", "독서 프로그램 도우미",     "대구 동구 ○○로 123"),
         )
     }
+
     fun results(): List<ResultItem> = listOf(
         ResultItem("r1", "2025.08.22", "모던하우스",        "매장운영 및 고객관리", ResultState.Pass),
         ResultItem("r2", "2025.08.18", "수성구 체육센터",  "회원 운동 지도 보조",   ResultState.Fail),
@@ -104,7 +110,7 @@ fun SupportRoute(nav: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Bg)
     ) {
         // 상단
         SupportTopSection(
@@ -128,7 +134,7 @@ fun SupportRoute(nav: NavController) {
             else resultAll.filter { it.company.contains(keyword, true) || it.title.contains(keyword, true) }
         }
 
-        // ★ map으로 보낼 때 MapCardData를 함께 저장
+        // 본문
         SupportBodySection(
             appliedItems   = appliedFiltered,
             interviewItems = interviewFiltered,
@@ -156,65 +162,79 @@ private fun SupportTopSection(
             .background(Color.White)
             .padding(bottom = 20.dp)
     ) {
+        // 상단 상태바 (24dp, 회색)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(24.dp)
                 .background(Color(0xFFEFEFEF))
         )
+
+        // 헤더 (ApplicationScreen 과 동일한 구조)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp)
-                .padding(start = 16.dp, top = 20.dp)
+                .padding(top = 0.dp)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(24.dp),
+                    .padding(horizontal = 6.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { nav.popBackStack() }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Outlined.ArrowBackIosNew, contentDescription = "뒤로", tint = Color.Black)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable { nav.popBackStack() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.back),
+                        contentDescription = "뒤로가기",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
+                Spacer(Modifier.weight(1f))
             }
-            Row(
+
+            Text(
+                text = countText,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = Letter,
+                color = Color.Black,
                 modifier = Modifier
-                    .height(68.dp)
-                    .padding(start = 4.dp, end = 10.dp, top = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = countText,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.019).em,
-                    color = Color(0xFF000000)
-                )
-            }
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, bottom = 16.dp)
+            )
         }
 
-        // 검색 박스
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 검색 박스 (Figma 스타일)
         val shape = RoundedCornerShape(10.dp)
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .height(57.dp)
                 .clip(shape)
                 .background(Bg)
-                .padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .border(1.dp, Color(0xFFC1D2ED), shape)
         ) {
             OutlinedTextField(
                 value = keyword,
                 onValueChange = onKeywordChange,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
                 singleLine = true,
                 trailingIcon = {
-                    Icon(Icons.Outlined.Search, contentDescription = "검색", tint = Color(0xFF62626D))
+                    Image(
+                        painter = painterResource(R.drawable.search),
+                        contentDescription = "검색",
+                        modifier = Modifier.size(24.dp)
+                    )
                 },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
@@ -239,7 +259,7 @@ private fun SupportBodySection(
     appliedItems: List<AppliedItem>,
     interviewItems: List<InterviewItem>,
     resultItems: List<ResultItem>,
-    onShowMap: (MapCardData) -> Unit // ★ MapCardData를 넘김
+    onShowMap: (MapCardData) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -248,22 +268,24 @@ private fun SupportBodySection(
             .fillMaxSize()
             .background(Bg)
     ) {
+        // 탭바
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(45.dp)
                 .background(Color.White)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                    .height(45.dp)
+                    .padding(horizontal = 28.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TabLabel("지원완료", isSelected = selectedTab == 0) { selectedTab = 0 }
                 TabLabel("면접예정", isSelected = selectedTab == 1) { selectedTab = 1 }
-                TabLabel("합격유무", isSelected = selectedTab == 2) { selectedTab = 2 }
+                TabLabel("합격결과", isSelected = selectedTab == 2) { selectedTab = 2 }
             }
         }
 
@@ -275,27 +297,28 @@ private fun SupportBodySection(
     }
 }
 
-/* 탭 라벨 + 밑줄 */
+/* 탭 라벨 + 밑줄 (Figma 스타일) */
 @Composable
 private fun TabLabel(text: String, isSelected: Boolean, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clickable(onClick = onClick)
-            .padding(vertical = 6.dp)
+            .padding(vertical = 4.dp)
     ) {
         Text(
             text = text,
-            fontSize = 16.sp,
+            fontSize = 18.sp,
             lineHeight = 20.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            letterSpacing = (-0.5f).sp,
             color = if (isSelected) PrimaryBlue else Color(0xFF000000)
         )
         Spacer(Modifier.height(6.dp))
         Box(
             modifier = Modifier
-                .width(60.dp)
-                .height(4.dp)
+                .width(70 .dp)
+                .height(2.5.dp)
                 .background(if (isSelected) PrimaryBlue else Color.Transparent)
         )
     }
@@ -305,9 +328,11 @@ private fun TabLabel(text: String, isSelected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun AppliedTab(items: List<AppliedItem>, onShowMap: (MapCardData) -> Unit) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Bg),
+        contentPadding = PaddingValues(bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(19.dp)
     ) {
         items(items, key = { it.id }) { item ->
             AppliedCard(item) { onShowMap(item.toMapCardData()) }
@@ -321,39 +346,61 @@ private fun AppliedCard(item: AppliedItem, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .heightIn(min = 120.dp)
-            .padding(horizontal = 16.dp, vertical = 20.dp)
-            .clickable { onClick() }, // ← 카드 클릭 시 지도 이동
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .clickable { onClick() }
+            .padding(horizontal = 0.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(all = 27.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = if (item.readState == ReadState.Read) "열람" else "미열람",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.019).em,
-                color = if (item.readState == ReadState.Read) PrimaryBlue else DangerRed
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(text = "${item.appliedAt} 지원", fontSize = 12.sp, color = Color(0xFF848484))
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { /* TODO */ }, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Outlined.MoreHoriz, contentDescription = "더보기", tint = Color(0xFF343330))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (item.readState == ReadState.Read) "열람" else "미열람",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = Letter,
+                    color = if (item.readState == ReadState.Read) PrimaryBlue else DangerRed
+                )
+                Spacer(Modifier.width(7.dp))
+                Text(
+                    text = "${item.appliedAt} 지원",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = Letter,
+                    color = Color(0xFF848484)
+                )
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { /* TODO */ }, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Outlined.MoreHoriz,
+                        contentDescription = "더보기",
+                        tint = Color(0xFF343330)
+                    )
+                }
             }
-        }
 
-        Text(item.company, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
-        Text(
-            text = item.title,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF000000),
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
+            Text(
+                text = item.company,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = Letter,
+                color = Color(0xFF848484)
+            )
+            Text(
+                text = item.title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = Letter,
+                color = Color(0xFF000000),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -412,7 +459,11 @@ private fun InterviewWeeklyTab(
                 weekDates.forEachIndexed { idx, date ->
                     val isSel = date == selectedDate
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(weekdays[idx], fontSize = 14.sp, color = Color.Black)
+                        Text(
+                            weekdays[idx],
+                            fontSize = 14.sp,
+                            color = Color.Black
+                        )
                         Spacer(Modifier.height(CAL_VERTICAL_GAP))
                         Box(
                             modifier = Modifier
@@ -436,10 +487,19 @@ private fun InterviewWeeklyTab(
             }
         }
 
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(20.dp)
+                .background(Color(0xFFF1F5F7))
+        )
+
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Bg),
+            contentPadding = PaddingValues(bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(19.dp)
         ) {
             items(itemsForSelectedDay, key = { it.id }) { item ->
                 InterviewCard(item) { onShowMap(item.toMapCardData()) }
@@ -466,17 +526,35 @@ private fun WeeklyHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        Text("‹", color = Color(0xFFBDBDBD), fontSize = 32.sp,
+        Image(
+            painter = painterResource(R.drawable.back),
+            contentDescription = "이전 주",
             modifier = Modifier
-                .padding(end = 12.dp)
-                .clickable { onPrevWeek() })
-        Text(label, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Color.Black)
-        Text("›", color = Color(0xFF000000), fontSize = 32.sp,
+                .size(24.dp)
+                .clickable { onPrevWeek() }
+        )
+
+        Spacer(Modifier.width(8.dp))
+
+        Text(
+            text = label,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black
+        )
+
+        Spacer(Modifier.width(8.dp))
+
+        Image(
+            painter = painterResource(R.drawable.black_right),
+            contentDescription = "다음 주",
             modifier = Modifier
-                .padding(start = 12.dp)
-                .clickable { onNextWeek() })
+                .size(24.dp)
+                .clickable { onNextWeek() }
+        )
     }
 }
+
 
 @Composable
 private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
@@ -484,82 +562,124 @@ private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .padding(horizontal = 16.dp, vertical = 20.dp)
-            .clickable { onClick() }, // ← 카드 클릭 시 지도 이동
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .clickable { onClick() }
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "${item.date}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.019).em,
-                color = PrimaryBlue
-            )
-            Text(
-                text = " 면접",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.019).em,
-                color = Color.Black
-            )
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { /* TODO */ }, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Outlined.MoreHoriz, contentDescription = "더보기", tint = Color(0xFF343330))
-            }
-        }
-
-        Text(item.company, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
-        Text(
-            text = item.title,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF000000),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Text(item.address, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
-
-        Box(
+        /* ───── 상단 정보 영역 (Frame 1707480138) ───── */
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFFEDEFF3))
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(7.dp)
+                .padding(all = 27.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Figma 에서 '열람' 자리 → 면접 날짜 + 텍스트
+                Text(
+                    text = "${item.date} 면접",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = Letter,
+                    color = PrimaryBlue
+                )
+
+                Spacer(Modifier.weight(1f))
+
+                // DotsThree 32 x 32
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clickable { /* TODO: 메뉴 */ },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.three_dot),
+                        contentDescription = "더보기",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = item.company,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = Letter,
+                color = Color(0xFF8E8E8E)   // Figma: #8E8E8E
+            )
+
+            Text(
+                text = item.title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = Letter,
+                color = Color(0xFF000000),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        /* ───── 하단 지도/주소/버튼 영역 (Frame 3469136) ───── */
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // 스크린샷 자리 (지도 썸네일)
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(44.dp)
-                    .background(PrimaryBlue, RoundedCornerShape(10.dp))
-                    .border(1.dp, PrimaryBlue, RoundedCornerShape(10.dp))
-                    .clickable { onClick() }, // ← 지도 보기
+                    .fillMaxWidth()
+                    .height(187.54.dp) // Figma height
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFEDEFF3))
+            )
+
+            // 주소 텍스트 (20sp, 30px line-height)
+            Text(
+                text = item.address,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = Letter,
+                lineHeight = 30.sp,
+                color = Color(0xFF000000),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp)
+            )
+
+            // 지도 보기 버튼 (327.47 x 54.48 근사)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PrimaryBlue)
+                    .clickable { onClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text("지도 보기", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                Text(
+                    text = "지도 보기",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = Letter,
+                    color = Color.White
+                )
             }
         }
     }
 }
 
-/* ===================== 합격유무 탭 ===================== */
+/* ===================== 합격결과 탭 ===================== */
 @Composable
 private fun ResultTab(items: List<ResultItem>, onShowMap: (MapCardData) -> Unit) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(Bg),
-        contentPadding = PaddingValues(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(19.dp)
     ) {
         items(items, key = { it.id }) { item ->
             ResultCard(item) { onShowMap(item.toMapCardData()) }
@@ -578,33 +698,65 @@ private fun ResultCard(item: ResultItem, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .heightIn(min = 120.dp)
-            .padding(horizontal = 16.dp, vertical = 20.dp)
-            .clickable { onClick() }, // ← 카드 클릭 시 지도 이동
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .clickable { onClick() }
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(all = 27.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(text = label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = color)
-            Spacer(Modifier.width(7.dp))
-            Text(text = "${item.appliedAt} 지원", fontSize = 13.sp, color = Color(0xFF848484))
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { /* TODO */ }, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Outlined.MoreHoriz, contentDescription = "더보기", tint = Color(0xFF343330))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = Letter,
+                    color = color
+                )
+                Spacer(Modifier.width(7.dp))
+                Text(
+                    text = "${item.appliedAt} 지원",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = Letter,
+                    color = Color(0xFF848484)
+                )
+                Spacer(Modifier.weight(1f))
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clickable { /* TODO */ },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.three_dot),
+                        contentDescription = "더보기",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
-        }
 
-        Text(item.company, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color(0xFF848484))
-        Text(
-            text = item.title,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF000000),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
+            Text(
+                item.company,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = Letter,
+                color = Color(0xFF848484)
+            )
+            Text(
+                text = item.title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = Letter,
+                color = Color(0xFF000000),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -623,10 +775,10 @@ private fun weekStart(date: LocalDate): LocalDate {
     return date.minusDays(shift.toLong())
 }
 
-/* ===================== ★ MapCardData 매퍼 ===================== */
+/* ===================== MapCardData 매퍼 ===================== */
 
 private fun AppliedItem.toMapCardData(): MapCardData {
-    val badge = "지원" // 배지는 '지원'으로
+    val badge = "지원"
     val highlight = if (readState == ReadState.Unread) "미열람" else "열람"
     return MapCardData(
         badgeText = badge,
