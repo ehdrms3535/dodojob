@@ -147,7 +147,6 @@ fun ProfileRoute(nav: NavController) {
                 "home" -> nav.navigate("main") { launchSingleTop = true }
                 "edu" -> nav.navigate("edu")
                 "welfare" -> nav.navigate("welfare")
-                "community" -> nav.navigate("community")
                 "my" -> Unit
             }
         }
