@@ -22,7 +22,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
@@ -31,6 +30,7 @@ import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.components.AppBottomBar
+import kotlinx.datetime.Month
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -42,7 +42,6 @@ fun ProfileRoute(nav: NavController) {
     var senior by remember { mutableStateOf<SeniorJoined?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
-
 
     var recentCount by remember { mutableStateOf(0L) }
     var recentError by remember { mutableStateOf<String?>(null) }
@@ -65,7 +64,7 @@ fun ProfileRoute(nav: NavController) {
         // 2) 최근 본 공고 개수 로드
         if (!username.isNullOrBlank()) {
             runCatching {
-                CountRecentView(username)   // 🔹 suspend 함수는 여기서 호출
+                CountRecentView(username)
             }.onSuccess { cnt ->
                 recentCount = cnt.toLong()
             }.onFailure { t ->
@@ -86,9 +85,6 @@ fun ProfileRoute(nav: NavController) {
             LoadingOrErrorBox("사용자 정보를 찾을 수 없습니다.", "프로필을 먼저 등록해 주세요."); return
         }
     }
-
-
-
 
     val s = senior!!
     val displayName = s.user?.name ?: s.username
@@ -238,7 +234,7 @@ fun ProfileScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // 상단 그라데이션 헤더
+                // 상단 그라데이션 헤더 (ActivityLevelScreen 과 위치 맞춤)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -260,11 +256,11 @@ fun ProfileScreen(
                 ) {
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp, vertical = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        // 로고 + 알림 아이콘
+                        Spacer(modifier = Modifier.height(3.dp))
+                        // 로고 + 알림 아이콘 (ActivityLevel 의 back 버튼 자리)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -285,13 +281,14 @@ fun ProfileScreen(
                                 contentScale = ContentScale.Fit
                             )
                         }
-                        Spacer(Modifier.height(4.dp))
 
-                        // 프로필 사진 + 이름 + 메달
+                        Spacer(Modifier.height(16.dp))
+
+                        // 프로필 사진 + 이름 + 메달 (ActivityLevel 과 동일한 레이아웃)
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(20.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Image(
                                 painter = painterResource(id = R.drawable.senior_id),
@@ -301,33 +298,35 @@ fun ProfileScreen(
                                     .clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "${name ?: "사용자"}님",
-                                    fontSize = 32.sp,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = (-0.019).em
-                                )
-                                Image(
-                                    painter = painterResource(id = medalRes),
-                                    contentDescription = "활동 레벨 메달",
-                                    modifier = Modifier
-                                        .height(36.dp)
-                                        .width(22.dp)
-                                        .offset(y = 4.dp),
-                                    contentScale = ContentScale.Fit
-                                )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = " ${name ?: "사용자"}님",
+                                        color = Color.White,
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Image(
+                                        painter = painterResource(id = medalRes),
+                                        contentDescription = "활동 레벨 메달",
+                                        modifier = Modifier
+                                            .width(22.dp)
+                                            .height(36.dp)
+                                            .align(Alignment.CenterVertically)
+                                            .offset(y = 3.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                // 헤더 위로 겹쳐 올라오는 이력서 카드
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 헤더 위로 겹쳐 올라오는 이력서 카드 (ActivityLevel 의 배너 카드 위치와 동일)
                 ResumeCard(
                     brandBlue = brandBlue,
                     applyCount = applyCount,
@@ -337,15 +336,15 @@ fun ProfileScreen(
                     onClickApplyStatus = onClickApplyStatus,
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
-                        .offset(y = (-40).dp)
+                        .offset(y = (-85).dp)
                 )
 
-                // 나머지 카드들
+                // 나머지 카드들 (ActivityLevel 의 "나의 활동" 카드와 유사 오프셋)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .offset(y = (-20).dp)
+                        .offset(y = (-70).dp)
                 ) {
                     // 알림 카드
                     Card(
@@ -473,7 +472,12 @@ private fun ResumeCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StatCell("입사지원 현황", "${applyCount}건", Modifier.weight(1f),onClick = onClickApplyStatus)
+                StatCell(
+                    "입사지원 현황",
+                    "${applyCount}건",
+                    Modifier.weight(1f),
+                    onClick = onClickApplyStatus
+                )
                 VerticalDivider(
                     modifier = Modifier.height(40.dp),
                     color = Color(0xFFDDDDDD)
@@ -486,7 +490,12 @@ private fun ResumeCard(
 }
 
 @Composable
-private fun StatCell(title: String, value: String, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+private fun StatCell(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
     val brandBlue = Color(0xFF005FFF)
 
     val clickableModifier = if (onClick != null) {

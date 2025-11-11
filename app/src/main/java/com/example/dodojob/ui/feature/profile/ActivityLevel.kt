@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
-import com.example.dodojob.ui.feature.main.BottomNavBar
+import com.example.dodojob.ui.components.AppBottomBar
 import kotlinx.parcelize.Parcelize
 
 /* ===================== 전달 페이로드 ===================== */
@@ -105,6 +105,15 @@ fun ActivityLevelRoute(
         joinedDate = payload.joinedDate
     )
 
+    val shortcut: (String) -> Unit = { key ->
+        when (key) {
+            "home"    -> nav.navigate("main") { launchSingleTop = true }
+            "edu"     -> nav.navigate("edu")
+            "welfare" -> nav.navigate("welfare")
+            "my"      -> nav.navigate(Route.My.path) { launchSingleTop = true }
+        }
+    }
+
     ActivityLevelScreen(
         data = data,
         onShortcut = { key ->
@@ -116,7 +125,12 @@ fun ActivityLevelRoute(
             }
         },
         onBackToProfile = { nav.navigate(Route.My.path) { launchSingleTop = true } },
-        bottomBar = { BottomNavBar(current = "my", onClick = { /* 라벨용, onShortcut 사용 */ }) }
+        bottomBar = {
+            AppBottomBar(
+            current = "my",          // 현재 탭
+            onClick = shortcut       // 탭 클릭 시 위에서 만든 네비게이션 로직 재사용
+           )
+        }
     )
 }
 
@@ -157,14 +171,21 @@ fun ActivityLevelScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    IconButton(onClick = onBackToProfile) {
-                        Icon(
-                            imageVector = Icons.Outlined.ChevronLeft,
+                    IconButton(
+                        onClick = onBackToProfile,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .offset(x = (-4).dp)
+                    ) {
+                        val backIconRes = if (levelInt == 2) R.drawable.back else R.drawable.white_back
+                        Image(
+                            painter = painterResource(backIconRes),
                             contentDescription = "뒤로가기",
-                            tint = Color.White
+                            modifier = Modifier.size(24.dp),
+                            contentScale = ContentScale.Fit
                         )
                     }
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(16.dp))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -192,7 +213,11 @@ fun ActivityLevelScreen(
                                 Image(
                                     painter = painterResource(id = badgeResFor(levelInt)),
                                     contentDescription = "레벨 뱃지",
-                                    modifier = Modifier.size(60.dp),
+                                    modifier = Modifier
+                                        .width(22.dp)
+                                        .height(36.dp)
+                                        .align(Alignment.CenterVertically)
+                                        .offset(y = 3.dp),
                                     contentScale = ContentScale.Fit
                                 )
                             }
@@ -200,6 +225,7 @@ fun ActivityLevelScreen(
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(12.dp))
 
             /* ----- 활동레벨 배너 카드 ----- */
             FloatingRoundedImageCard(
@@ -259,8 +285,6 @@ fun ActivityLevelScreen(
                     contentScale = ContentScale.FillWidth
                 )
             }
-
-            Spacer(Modifier.height(20.dp))
         }
     }
 }
