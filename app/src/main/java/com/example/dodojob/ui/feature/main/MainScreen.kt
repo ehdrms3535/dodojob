@@ -293,7 +293,6 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
         onSearch = vm::onSearchChange,
         onJobClick = { id->
             if (!username.isNullOrBlank()) {
-                // ✅ Composable 밖이니까 scope.launch 사용
                 scope.launch {
                     recentRepo.upsertRecentWatch(username, id)
                 }
@@ -302,7 +301,6 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
         },
         onTailoredClick = { id->
             if (!username.isNullOrBlank()) {
-                // ✅ Composable 밖이니까 scope.launch 사용
                 scope.launch {
                     recentRepo.upsertRecentWatch(username, id)
                 }
