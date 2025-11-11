@@ -1,3 +1,4 @@
+// app/src/main/java/com/example/dodojob/ui/feature/jobdetail/JobDetailMapper.kt
 package com.example.dodojob.ui.feature.jobdetail
 
 import com.example.dodojob.R
@@ -24,7 +25,7 @@ fun JobDetailDto.toUiState(): JobDetailUiState {
             .joinToString(" / ")
     }
 
-    // 칩 (아이콘은 drawable 리소스, 백엔드 건드리지 않음)
+    // 칩
     val chips = listOf(
         InfoChip(
             small = "급여",
@@ -52,7 +53,7 @@ fun JobDetailDto.toUiState(): JobDetailUiState {
         )
     )
 
-    // 5) 섹션: 모집조건  (⚠️ 네가 준 형태 '그대로' 유지)
+    // 모집조건 섹션
     val recruitment = listOf(
         LabelValue("모집기간", recruitmentPeriod ?: "상시모집"),
         LabelValue("자격요건", careerTextDisplay),
@@ -61,7 +62,7 @@ fun JobDetailDto.toUiState(): JobDetailUiState {
         LabelValue("기타조건", "없음")
     )
 
-    // 6) 섹션: 근무조건  (⚠️ 네가 준 형태 '그대로' 유지)
+    // 근무조건 섹션
     val working = listOf(
         LabelValue("급여", payText ?: "협의"),
         LabelValue("근무기간", "협의"),
@@ -69,20 +70,22 @@ fun JobDetailDto.toUiState(): JobDetailUiState {
         LabelValue("근무시간", workDurationText ?: timeText ?: "시간협의")
     )
 
-    // 7) 지도/주소 힌트  (⚠️ 네가 준 형태 '그대로' 유지)
+    // 지도/주소 힌트
     val mapHint = listOfNotNull(companyLocate, title)
         .filter { !it.isNullOrBlank() }
         .joinToString(" ")
 
     return JobDetailUiState(
-        title = title ?: "채용공고",
-        companyName = companyName ?: "회사명",
-        chips = chips,
-        recruitment = recruitment,
+        announcementId   = id,
+        companyId        = companyId,
+        title            = title ?: "채용공고",
+        companyName      = companyName ?: "회사명",
+        chips            = chips,
+        recruitment      = recruitment,
         workplaceMapHint = mapHint,
-        working = working,
-        duties = dutyList.ifEmpty { listOf("업무 내용 협의") },
-        isLiked = isLiked,
-        imageUrl = imageUrl
+        working          = working,
+        duties           = dutyList.ifEmpty { listOf("업무 내용 협의") },
+        isLiked          = isLiked,
+        imageUrl         = imageUrl
     )
 }
