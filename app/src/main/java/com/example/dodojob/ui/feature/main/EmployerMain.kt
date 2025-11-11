@@ -50,6 +50,8 @@ import com.example.dodojob.dao.getannounce24
 import com.example.dodojob.dao.getRecentApplicantsByCompany
 import com.example.dodojob.data.career.CareerRepositoryImpl
 import com.example.dodojob.dao.http
+import android.content.Context
+import java.time.LocalDate
 
 /* ================= Colors ================= */
 private val ScreenBg  = Color(0xFFF1F5F7)
@@ -99,8 +101,6 @@ object FakeEmployerRepo {
         )
     }
 }
-
-
 
 /* ================= Data for UI ================= */
 data class ApplicantUi(
@@ -220,15 +220,14 @@ fun EmployerAutoRotatingAd(
 /* ================= Route Entry ================= */
 @Composable
 fun EmployerHomeRoute(nav: NavController) {
-    // fakeDB 로드
     val stats = remember { FakeEmployerRepo.getDashboardStats() }
     var user by remember { mutableStateOf<String?>(null) }
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
 
     var newApplicantsToday by remember { mutableStateOf(0)}
-    var unreadResumes by remember { mutableStateOf(0)}        // 미열람 이력서 수
-    var activeNotices by remember { mutableStateOf(0) }         // 진행 중 공고 수
+    var unreadResumes by remember { mutableStateOf(0)}
+    var activeNotices by remember { mutableStateOf(0) }
 
     val currentuser = CurrentUser.username
     var applicantsUi by remember { mutableStateOf<List<ApplicantUi>>(emptyList()) }
@@ -237,7 +236,7 @@ fun EmployerHomeRoute(nav: NavController) {
 
     LaunchedEffect(currentuser)
     {
-        user = fetchDisplayNameByUsername(currentuser) // ✅ 안전하게 suspend 함수 호출
+        user = fetchDisplayNameByUsername(currentuser)
         val companyId = getCompanyIdByUsername(currentuser)
         activeNotices = getCompanyRowCount(currentuser)
         newApplicantsToday = getannounce24(currentuser)
@@ -249,28 +248,11 @@ fun EmployerHomeRoute(nav: NavController) {
         )
     }
 
-
-
-/*
-    val applicantsUi = remember {
-        FakeEmployerRepo.getRecentApplicants().map {
-            ApplicantUi(
-                name = it.name,
-                jobTitle = it.jobTitle,
-                experience = it.experience,
-                location = it.location,
-                appliedHoursAgo = it.appliedHoursAgo,
-                medalRes = it.medalRes,
-                age = it.age
-            )
-        }
-    }
-*/
-    // ★ 광고 배너들: employeradvertisement1/2/3 사용
+    // 광고 배너들
     val adBanners = remember {
         listOf(
             EmployerAdBanner(R.drawable.employeradvertisement1) {
-                nav.navigate("employer/ad/1")   // 또는 Route.EmployerAd1
+                nav.navigate("employer/ad/1")
             },
             EmployerAdBanner(R.drawable.employeradvertisement2) {
                 nav.navigate("employer/ad/2")
@@ -280,7 +262,12 @@ fun EmployerHomeRoute(nav: NavController) {
             },
         )
     }
-    var showPopup by remember { mutableStateOf(true) }
+
+    // 🔹 팝업 노출 여부: SharedPreferences 기반
+    val context = LocalContext.current
+    var showPopup by remember {
+        mutableStateOf(shouldShowEmployerPopup(context))
+    }
 
     Scaffold(
         containerColor = ScreenBg,
@@ -342,7 +329,7 @@ fun EmployerHomeRoute(nav: NavController) {
                 )
             }
 
-            /* 1) 카드 3개 — fakeDB 값으로 치환 */
+            /* 1) 카드 3개 */
             item {
                 StatCard(
                     leading = { SmallIconBox(resId = R.drawable.new_applicant, contentDescription = "신규 지원자") },
@@ -382,7 +369,7 @@ fun EmployerHomeRoute(nav: NavController) {
                 }
             }
 
-            /* 2.5) 광고 배너 (공고등록 바로 아래) */
+            /* 2.5) 광고 배너 */
             item {
                 EmployerAutoRotatingAd(banners = adBanners, autoIntervalMs = 5_000L)
             }
@@ -425,7 +412,7 @@ fun EmployerHomeRoute(nav: NavController) {
                                     color = BrandBlue
                                 )
                                 Image(
-                                    painter = painterResource(id = R.drawable.blue_right_back), // ✅ 파란 화살표
+                                    painter = painterResource(id = R.drawable.blue_right_back),
                                     contentDescription = "blue_arrow",
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -438,10 +425,14 @@ fun EmployerHomeRoute(nav: NavController) {
                 }
             }
         }
+
         if (showPopup) {
             EmployerMainPopupDialog(
                 onDismiss = { showPopup = false },
-                onCloseToday = { showPopup = false } // TODO: 하루 숨김 처리
+                onCloseToday = {
+                    hideEmployerPopupToday(context)   // 오늘 날짜까지 숨김 저장
+                    showPopup = false                // 즉시 닫기
+                }
             )
         }
     }
@@ -451,7 +442,7 @@ fun EmployerHomeRoute(nav: NavController) {
 data class EmployerNavItem(
     val key: String,
     val unselectedRes: Int,
-    val selectedRes: Int? = null, // 없으면 틴트 처리
+    val selectedRes: Int? = null,
     val size: Dp = 55.dp
 )
 
@@ -571,7 +562,7 @@ private fun StatCard(
                 color = BrandBlue,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = STATCARD_TEXT_START, top = 5.dp) // 상수 패딩
+                    .padding(start = STATCARD_TEXT_START, top = 5.dp)
             )
             Text(
                 text = subtitle,
@@ -580,7 +571,7 @@ private fun StatCard(
                 color = TextGray,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = STATCARD_TEXT_START, top = 2.dp) // 상수 패딩
+                    .padding(start = STATCARD_TEXT_START, top = 2.dp)
             )
         }
     }
@@ -647,10 +638,10 @@ fun EmployerMainPopupDialog(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter
         ) {
-            // ✅ 바깥을 한 번 더 감싸서 전체 모서리도 안전하게 자르기
+            // 바깥을 한 번 더 감싸서 전체 모서리도 안전하게 자르기
             Surface(
                 shape = RoundedCornerShape(15.dp),
-                color = Color.Transparent,         // ← 카드 바탕 투명
+                color = Color.Transparent,
                 shadowElevation = 0.dp
             ) {
                 Column(
@@ -658,7 +649,7 @@ fun EmployerMainPopupDialog(
                         .fillMaxWidth()
                         .wrapContentHeight()
                 ) {
-                    // 상단 이미지: 모서리를 "상단만" 잘라서 흰색 안 비치게
+                    // 상단 이미지
                     val painter = painterResource(R.drawable.employer_main_popup)
                     val ratio = remember(painter) {
                         val s = painter.intrinsicSize
@@ -671,7 +662,7 @@ fun EmployerMainPopupDialog(
                         contentDescription = "Employer main popup",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp)) // ✅ 핵심
+                            .clip(RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp))
                             .aspectRatio(ratio)
                             .clickable {
                                 val i = Intent(Intent.ACTION_VIEW, Uri.parse("https://shiftee.io/ko"))
@@ -680,13 +671,13 @@ fun EmployerMainPopupDialog(
                         contentScale = ContentScale.Fit
                     )
 
-                    // 하단 버튼 바: 여기만 흰 배경
+                    // 하단 버튼 바
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(63.dp)
-                            .background(Color.White) // ← 밑부분만 흰색
-                            .clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp)) // ✅ 하단 모서리
+                            .background(Color.White)
+                            .clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp))
                             .padding(horizontal = 25.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -716,9 +707,8 @@ private fun ApplicantRow(ap: ApplicantUi) {
             verticalArrangement = Arrangement.spacedBy(5.dp),
             modifier = Modifier.weight(1f)
         ) {
-            // ===== 이름 줄: 사람아이콘 → 이름 → 나이 → 메달 =====
+            // 이름 줄
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 사람 아이콘 (연한 파란 원)
                 Box(
                     modifier = Modifier
                         .offset(x = (-2).dp)
@@ -736,7 +726,6 @@ private fun ApplicantRow(ap: ApplicantUi) {
 
                 Spacer(Modifier.width(6.dp))
 
-                // 이름
                 Text(
                     ap.name,
                     fontSize = 15.sp,
@@ -746,12 +735,10 @@ private fun ApplicantRow(ap: ApplicantUi) {
 
                 Spacer(Modifier.width(6.dp))
 
-                // 나이
                 Text("(${ap.age}세)", fontSize = 13.sp, color = TextGray)
 
                 Spacer(Modifier.width(2.dp))
 
-                // 메달
                 Image(
                     painter = painterResource(id = ap.medalRes),
                     contentDescription = "medal_inline",
@@ -759,12 +746,9 @@ private fun ApplicantRow(ap: ApplicantUi) {
                 )
             }
 
-            // ===== 이름 밑에서 시작하는 부분 =====
-            // 이름의 시작 위치만큼 들여쓰기
             val indent = 24.dp + 6.dp   // 아이콘(24) + 간격(6)
 
             Column(modifier = Modifier.padding(start = indent)) {
-                // 직무
                 Text(
                     ap.jobTitle,
                     fontSize = 14.sp,
@@ -773,7 +757,6 @@ private fun ApplicantRow(ap: ApplicantUi) {
                     maxLines = 1
                 )
 
-                // 경력 · 위치 · 시간
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(ap.experience, fontSize = 12.sp, color = BrandBlue)
                     Spacer(Modifier.width(8.dp))
@@ -794,10 +777,10 @@ private fun ApplicantRow(ap: ApplicantUi) {
         }
 
         Image(
-            painter = painterResource(id = R.drawable.right_back), // 리소스 사용
+            painter = painterResource(id = R.drawable.right_back),
             contentDescription = "go_detail",
             modifier = Modifier.size(24.dp),
-            colorFilter = ColorFilter.tint(BrandBlue)              // 파란색
+            colorFilter = ColorFilter.tint(BrandBlue)
         )
     }
 }
@@ -805,7 +788,7 @@ private fun ApplicantRow(ap: ApplicantUi) {
 @Composable
 private fun Separator() {
     Divider(
-        color = LineGray,     // #DDDDDD
+        color = LineGray,
         thickness = 1.dp,
         modifier = Modifier.fillMaxWidth()
     )
@@ -834,7 +817,30 @@ private fun NavController.safeNavigate(
     }
 }
 
+/* ====== "오늘 그만보기" 상태 저장용 SharedPreferences ====== */
+
+private const val PREFS_EMPLOYER_POPUP = "employer_home_popup_prefs"
+private const val KEY_EMPLOYER_HIDE_UNTIL_EPOCH_DAY = "hide_until_epoch_day"
+
+private fun shouldShowEmployerPopup(context: Context): Boolean {
+    val prefs = context.getSharedPreferences(PREFS_EMPLOYER_POPUP, Context.MODE_PRIVATE)
+    val hideUntil = prefs.getLong(KEY_EMPLOYER_HIDE_UNTIL_EPOCH_DAY, -1L)
+    if (hideUntil == -1L) return true
+
+    val today = LocalDate.now().toEpochDay()
+    return today > hideUntil
+}
+
+private fun hideEmployerPopupToday(context: Context) {
+    val prefs = context.getSharedPreferences(PREFS_EMPLOYER_POPUP, Context.MODE_PRIVATE)
+    val today = LocalDate.now().toEpochDay()
+    prefs.edit()
+        .putLong(KEY_EMPLOYER_HIDE_UNTIL_EPOCH_DAY, today)
+        .apply()
+}
+
 /* ============ 리소스 체크 ============
+
 drawable/
 - logo1.png, bell.png
 - user_with_circle.png
@@ -845,4 +851,5 @@ drawable/
 - unselected_my.png, selected_my.png
 - ic_location.png
 - employeradvertisement1.png, employeradvertisement2.png, employeradvertisement3.png
+
 */
