@@ -36,7 +36,7 @@ class SeniorRepositorySupabase(
     }
 
     override suspend fun upsertSenior(username: String) {
-        client.from("Senior").upsert(
+        client.from("senior").upsert(
             SeniorRow(username = username)
         ) {
             onConflict = "username"

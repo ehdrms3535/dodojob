@@ -7,9 +7,11 @@ import com.example.dodojob.ui.feature.main.AdTwoScreen
 import com.example.dodojob.ui.feature.main.AdThreeScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.example.dodojob.dao.toggleJobLikeDao
 import androidx.compose.runtime.mutableStateOf
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.NavController
 import androidx.navigation.compose.composable
 import com.example.dodojob.ui.feature.account.ChangePasswordScreen
 import com.example.dodojob.session.SessionViewModel
@@ -75,11 +77,11 @@ import com.example.dodojob.ui.feature.jobdetail.JobDetailScreen
 import com.example.dodojob.ui.feature.jobdetail.toUiState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.*
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.example.dodojob.data.jobdetail.JobDetailDto
+
+
 
 
 @Composable
@@ -152,50 +154,46 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.My.path) { ProfileRoute(nav) } // 시니어 프로필
 
         composable(
-            route = Route.JobDetail.path, // "job_detail/{id}"
+            route = Route.JobDetail.path,
             arguments = listOf(navArgument("id") { type = NavType.LongType })
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getLong("id") ?: return@composable
+            val scope = rememberCoroutineScope()
 
             var ui by remember { mutableStateOf<JobDetailUiState?>(null) }
-            var loading by remember { mutableStateOf(true) }
 
             LaunchedEffect(id) {
-                try {
-                    val dto = fetchJobDetailDto(
-                        announcementId = id,
-                        username = CurrentUser.username
-                    )
-                    ui = dto?.toUiState()
-                } finally {
-                    loading = false
-                }
+                val dto: JobDetailDto? = fetchJobDetailDto(
+                    announcementId = id,
+                    username = CurrentUser.username
+                )
+                ui = dto?.toUiState()
             }
 
-            if (loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                ui?.let { state ->
-                    JobDetailScreen(
-                        ui = state,
-                        onBack = { nav.popBackStack() },
-                        onToggleLike = { /* TODO: 좋아요 토글 rpc 연결 */ },
-                        onCall = { /* TODO: 전화 액션 */ },
-                        onApply = { /* TODO: 지원 액션 */ },
-                        onSimpleApply = {
-                            nav.navigate(ApplyRoute.path)
+            ui?.let { state ->
+                JobDetailScreen(
+                    ui = state,
+                    onBack = { nav.popBackStack() },
+                    onToggleLike = { liked ->
+                        scope.launch {
+                            val username = CurrentUser.username ?: return@launch
+                            toggleJobLikeDao(
+                                seniorUsername = username,
+                                announcementId = state.announcementId,
+                                companyId = null,
+                                liked = liked
+                            )
                         }
-                    )
-                } ?: run {
-                    // 로드 실패/없음 처리
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("공고를 찾을 수 없습니다.")
-                    }
-                }
+                    },
+                    onCall = {  },
+                    onApply = {  },
+                    onSimpleApply = { nav.navigate(ApplyRoute.path) }
+                )
             }
         }
+
+
+
 
         composable(ApplyRoute.path) { ApplicationRoute(nav) } // 지원서 작성
         composable(Route.ApplicationCompleted.path) {          // 🔹 지원 완료
