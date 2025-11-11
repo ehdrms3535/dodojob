@@ -28,6 +28,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.layout.BoxWithConstraints
 import com.example.dodojob.R
+import com.example.dodojob.data.supabase.LocalSupabase
+import java.time.LocalDateTime
+import com.example.dodojob.session.CurrentUser
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 /* ===================== 색상 ===================== */
 private val PrimaryBlue = Color(0xFF005FFF)
@@ -35,32 +44,158 @@ private val TextGray    = Color(0xFF848484)
 private val ScreenBg    = Color(0xFFF1F5F7)
 private val DangerRed   = Color(0xFFFF2F00)
 
-/* ===================== 데이터 모델 ===================== */
+/* ===================== UI 데이터 모델 ===================== */
 data class LikedItem(
-    val id: String,
-    val company: String,
-    val title: String,
-    val isOpen: Boolean,
-    val likedAt: String // (표시는 안 하지만 유지)
+    val id: Long,          // announcement.id
+    val title: String,     // 공고 제목 = announcement.company_name
+    val company: String,   // 회사명 = 현재도 company_name 그대로 사용
+    val isOpen: Boolean,   // 모집 중 / 마감
+    val isLiked: Boolean   // 좋아요 여부
 )
 
-/* ===================== Fake DB ===================== */
-private object LikedFakeDb {
-    fun items(): List<LikedItem> = listOf(
-        LikedItem("l1", "모던하우스", "매장운영 및 고객관리 하는 일에 적합한 분 구해요", true,  "2025.08.25"),
-        LikedItem("l2", "대구동구 어린이도서관", "아이들 책 읽어주기, 독서 습관 형성 프로그램 지원", false, "2025.08.20"),
-        LikedItem("l3", "수성구 체육센터", "회원 운동 지도 보조, 센터 관리 가능하신 분 지원 요망", true,  "2025.08.14"),
-    )
+/* ===================== Supabase DTO ===================== */
+
+@Serializable
+private data class AnnouncementPricingRow(
+    val date: Long? = null,
+    val created_at: String? = null
+)
+
+@Serializable
+private data class AnnouncementNested(
+    val id: Long,
+    val company_name: String? = null,
+    val created_at: String,
+    val announcement_pricing: List<AnnouncementPricingRow>? = null   // ✅ 리스트로 변경
+)
+
+
+@Serializable
+private data class AnnouncementSeniorRow(
+    val announcement_id: Long,
+    val isliked: Boolean? = null,
+    val announcement: AnnouncementNested? = null
+)
+
+/* ===================== 모집기간 / 상태 계산 ===================== */
+
+private fun pickLatestPricing(pricings: List<AnnouncementPricingRow>?): AnnouncementPricingRow? {
+    if (pricings.isNullOrEmpty()) return null
+    // created_at 기준으로 가장 최근 것 하나 선택
+    return pricings.maxByOrNull { it.created_at ?: "" }
+}
+
+private fun computeTotalDays(pricings: List<AnnouncementPricingRow>?): Int {
+    val base = 7
+    val pricing = pickLatestPricing(pricings)
+    val extra = pricing?.date?.toInt() ?: 0
+    return base + extra
+}
+
+// 문자열을 Offset + Local 형식 둘 다 받아주는 유틸
+private fun parseDateTimeFlexible(str: String): LocalDateTime {
+    return try {
+        // 만약 "2025-11-11T12:31:38Z" 처럼 offset 있는 경우
+        OffsetDateTime.parse(str).toLocalDateTime()
+    } catch (e: Exception) {
+        // 지금처럼 "2025-11-11T12:31:38" 인 경우
+        LocalDateTime.parse(str)
+    }
+}
+
+private fun computeIsOpen(
+    announcementCreatedAt: String,
+    pricings: List<AnnouncementPricingRow>?
+): Boolean {
+    val totalDays = computeTotalDays(pricings)
+
+    val latest = pickLatestPricing(pricings)
+    val baseDateStr = latest?.created_at ?: announcementCreatedAt
+
+    val base = parseDateTimeFlexible(baseDateStr)
+    val now = LocalDateTime.now()
+
+    val passedDays = ChronoUnit.DAYS.between(base, now)
+    val leftDays = totalDays - passedDays
+
+    return leftDays >= 0
+}
+
+
+/* ===================== Supabase에서 좋아요 공고 가져오기 ===================== */
+
+suspend fun fetchLikedJobs(
+    client: SupabaseClient,
+    seniorUsername: String
+): List<LikedItem> {
+
+    val rows = client.from("announcement_senior")
+        .select(
+            Columns.raw(
+                """
+                announcement_id,
+                isliked,
+                announcement:announcement_id (
+                    id,
+                    company_name,
+                    created_at,
+                    announcement_pricing (
+                        date,
+                        created_at
+                    )
+                )
+                """.trimIndent()
+            )
+        ) {
+            // ❗ 최신 supabase-kt 문법: filter { eq(...) }
+            filter {
+                eq("senior_username", seniorUsername)
+                eq("isliked", true)
+            }
+        }
+        .decodeList<AnnouncementSeniorRow>()
+
+    return rows.mapNotNull { row ->
+        val ann = row.announcement ?: return@mapNotNull null
+
+        val isOpen = computeIsOpen(
+            announcementCreatedAt = ann.created_at,
+            pricings = ann.announcement_pricing
+        )
+
+        LikedItem(
+            id = ann.id,
+            title = ann.company_name ?: "-",
+            company = ann.company_name ?: "-",
+            isOpen = isOpen,
+            isLiked = row.isliked == true
+        )
+    }
 }
 
 /* ===================== Route ===================== */
+
 @Composable
-fun LikedJobsRoute(nav: NavController) {
-    var all by remember { mutableStateOf(LikedFakeDb.items()) }
+fun LikedJobsRoute(
+    nav: NavController
+) {
+
+    val client = LocalSupabase.current      // 예시: 네가 쓰는 헬퍼
+    val username = CurrentUser.username ?: return  // 로그인 유저
+
+    var all by remember { mutableStateOf<List<LikedItem>>(emptyList()) }
     var selectedTab by remember { mutableStateOf(0) } // 0: 전체, 1: 모집중
 
+    LaunchedEffect(username) {
+        all = fetchLikedJobs(client, username)
+    }
+
     val visible = remember(selectedTab, all) {
-        if (selectedTab == 0) all else all.filter { it.isOpen }
+        when (selectedTab) {
+            0 -> all
+            1 -> all.filter { it.isOpen }   // 모집 중만
+            else -> all
+        }
     }
 
     Column(
@@ -71,7 +206,11 @@ fun LikedJobsRoute(nav: NavController) {
         LikedTopSection(
             nav = nav,
             countText = countText(visible.size),
-            onDeleteClosed = { all = all.filter { it.isOpen } }
+            onDeleteClosed = {
+                // "마감공고 삭제" → UI에서 마감된 것 제거
+                all = all.filter { it.isOpen }
+                // TODO: 실제 DB에서도 마감 + isliked=false 로 바꾸고 싶으면 여기서 Supabase update 호출
+            }
         )
 
         LikedTabBar(
@@ -86,6 +225,7 @@ fun LikedJobsRoute(nav: NavController) {
 }
 
 /* ===================== 상단 섹션 ===================== */
+
 @Composable
 private fun LikedTopSection(
     nav: NavController,
@@ -97,7 +237,7 @@ private fun LikedTopSection(
             .fillMaxWidth()
             .background(Color.White)
     ) {
-        // 상태바
+        // 상태바 영역
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -105,7 +245,7 @@ private fun LikedTopSection(
                 .background(Color(0xFFEFEFEF))
         )
 
-        // 타이틀 (프로필/최근 본 과 동일 규격)
+        // 타이틀 영역
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -118,8 +258,15 @@ private fun LikedTopSection(
                     .height(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { nav.popBackStack() }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Outlined.ArrowBackIosNew, contentDescription = "뒤로", tint = Color.Black)
+                IconButton(
+                    onClick = { nav.popBackStack() },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        Icons.Outlined.ArrowBackIosNew,
+                        contentDescription = "뒤로",
+                        tint = Color.Black
+                    )
                 }
             }
             Spacer(Modifier.height(10.dp))
@@ -137,7 +284,6 @@ private fun LikedTopSection(
             }
         }
 
-        // 타이틀 아래 간격 축소
         Spacer(Modifier.height(6.dp))
 
         // 카운트 + 마감공고 삭제
@@ -179,6 +325,7 @@ private fun LikedTopSection(
 }
 
 /* ===================== 탭바 ===================== */
+
 @Composable
 private fun LikedTabBar(
     tabs: List<String>,
@@ -194,7 +341,10 @@ private fun LikedTabBar(
     ) {
         val tabWidth = maxWidth / tabs.size
         val targetOffset = tabWidth * selectedIndex + (tabWidth - underlineWidth) / 2
-        val animatedOffset by animateDpAsState(targetValue = targetOffset, label = "tabIndicatorOffset")
+        val animatedOffset by animateDpAsState(
+            targetValue = targetOffset,
+            label = "tabIndicatorOffset"
+        )
 
         Row(
             modifier = Modifier.fillMaxSize(),
@@ -234,6 +384,7 @@ private fun LikedTabBar(
 }
 
 /* ===================== 리스트 ===================== */
+
 @Composable
 private fun LikedList(items: List<LikedItem>) {
     Box(
@@ -243,13 +394,13 @@ private fun LikedList(items: List<LikedItem>) {
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 12.dp) // 👈 위쪽 패딩 제거
+            contentPadding = PaddingValues(bottom = 12.dp)
         ) {
             itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
                 Box(
                     modifier = Modifier
                         .padding(
-                            top = if (index == 0) 0.dp else 12.dp, // 첫 번째는 위 간격 0
+                            top = if (index == 0) 0.dp else 12.dp,
                             start = 0.dp,
                             end = 0.dp
                         )
@@ -261,11 +412,11 @@ private fun LikedList(items: List<LikedItem>) {
     }
 }
 
-
 /* ===================== 카드 ===================== */
+
 @Composable
 private fun LikedCard(item: LikedItem) {
-    var liked by remember { mutableStateOf(true) }
+    var liked by remember { mutableStateOf(item.isLiked) }
 
     Column(
         modifier = Modifier
@@ -273,13 +424,14 @@ private fun LikedCard(item: LikedItem) {
             .background(Color.White)
             .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
-        // 🔹 상단 Row
+        // 상단: 모집 상태 + 하트
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val stateLabel = if (item.isOpen) "모집중" else "마감"
+            val stateLabel = if (item.isOpen) "모집 중" else "마감"
             val stateColor = if (item.isOpen) PrimaryBlue else TextGray
+
             Text(
                 text = stateLabel,
                 fontSize = 14.sp,
@@ -289,7 +441,12 @@ private fun LikedCard(item: LikedItem) {
             )
             Spacer(Modifier.weight(1f))
 
-            IconButton(onClick = { liked = !liked }) {
+            IconButton(
+                onClick = {
+                    liked = !liked
+                    // TODO: 여기서 announcement_senior.isliked 업데이트 Supabase 호출
+                }
+            ) {
                 Icon(
                     painter = painterResource(id = R.drawable.heart),
                     contentDescription = if (liked) "좋아요 취소" else "좋아요",
@@ -299,7 +456,6 @@ private fun LikedCard(item: LikedItem) {
             }
         }
 
-        // 👇 Row와 회사명 사이만 좁게 (예: 6dp)
         Spacer(Modifier.height(2.dp))
 
         Text(
@@ -309,7 +465,7 @@ private fun LikedCard(item: LikedItem) {
             color = TextGray
         )
 
-        Spacer(Modifier.height(12.dp)) // 회사명 ↔ 제목 간격 유지
+        Spacer(Modifier.height(12.dp))
 
         Text(
             text = item.title,
@@ -320,16 +476,17 @@ private fun LikedCard(item: LikedItem) {
             overflow = TextOverflow.Ellipsis
         )
 
-        Spacer(Modifier.height(16.dp)) // 제목 ↔ 버튼 간격 유지
+        Spacer(Modifier.height(16.dp))
 
-        // 지원하기 버튼
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(PrimaryBlue)
-                .clickable { /* TODO */ },
+                .clickable {
+                    // TODO: 공고 상세 화면으로 이동
+                },
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -342,8 +499,8 @@ private fun LikedCard(item: LikedItem) {
     }
 }
 
-
 /* ===================== Util ===================== */
+
 private fun countText(count: Int): AnnotatedString = buildAnnotatedString {
     append("총 ")
     pushStyle(SpanStyle(color = PrimaryBlue))
