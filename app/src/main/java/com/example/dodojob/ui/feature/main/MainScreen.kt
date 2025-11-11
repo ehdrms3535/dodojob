@@ -62,7 +62,8 @@ import java.time.temporal.ChronoUnit
 import com.example.dodojob.data.recommend.fetchAiRecommendedJobs
 import com.example.dodojob.ui.components.AppBottomBar
 import android.content.Context
-
+import android.util.Log
+import com.example.dodojob.data.recentwatch.RecentWatchSupabase
 /* ===================== 데이터 모델 ===================== */
 
 data class JobCardUi(
@@ -84,7 +85,7 @@ fun RecoJob.toJobCardUi(): JobCardUi = JobCardUi(
 )
 
 data class JobSummary(
-    val id: String,
+    val id: Long,
     val org: String,
     val tag: String,
     val title: String,
@@ -130,12 +131,6 @@ private fun splitDdayParts(dday: String): Pair<String, String> {
 }
 
 object MainFakeRepository {
-    fun loadAiJobs(): List<JobSummary> = listOf(
-        JobSummary("j1","대구 전통시장 상인회","[시장형사업단]","채소·과일 포장 및 판매","상품 포장·진열 및 간단한 판매 보조","D-12 | 경력"),
-        JobSummary("j2","대구시립도서관","[도서관리 지원]","반납·대출 보조 업무","자료 정리·반납 정산·이용자 안내","D-4 | 경력,신입"),
-        JobSummary("j3","한국노인인력 개발원","[미디어 전문 서비스]","미디어컨텐츠 제작 및 교육","촬영·편집 보조 및 교육 진행","D-18 | 경력"),
-        JobSummary("j4","모던하우스 대구점","[매장운영·고객관리]","매장 정리, 고객 응대","매장 진열·청결 관리, 고객 안내","D-9 | 경력"),
-    )
 
     fun loadBanners(): List<AdBanner> = listOf(
         AdBanner("b1", Color(0xFFFF8C00), "두 번째 커리어, 이제 시작해볼까요?", "교육 ~ 일자리까지\n원스톱 케어", R.drawable.first_banner),
@@ -236,7 +231,7 @@ class MainViewModel : ViewModel() {
                         paidDays = job.paid_days
                     )
                     JobSummary(
-                        id = job.id.toString(),
+                        id = job.id,
                         org = job.company_name ?: "회사명 없음",
                         tag = "[${job.job_category ?: "일반"}]",
                         title = job.major ?: "-",
@@ -275,6 +270,8 @@ class MainViewModel : ViewModel() {
     fun refreshRecommendations() {
         _uiState.update { it.copy(aiJobs = it.aiJobs.shuffled(), tailoredJobs = it.tailoredJobs.shuffled()) }
     }
+
+
 }
 
 /* ===================== Route 진입점 ===================== */
@@ -286,15 +283,33 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
         vm.fetchRpcAiRecommendations()
         vm.fetchRpcRecommendations()
     }
+    val client = LocalSupabase.current
+    val username = CurrentUser.username
+    val recentRepo = remember(client) { RecentWatchSupabase(client) }
+    val scope = rememberCoroutineScope()
 
     MainScreen(
         state = state,
         onSearch = vm::onSearchChange,
         onJobClick = { id->
-            val idL = id.toLong()
-            nav.navigate(Route.JobDetail.of(idL))
+            if (!username.isNullOrBlank()) {
+                // ✅ Composable 밖이니까 scope.launch 사용
+                scope.launch {
+                    recentRepo.upsertRecentWatch(username, id)
+                }
+            }
+            nav.navigate(Route.JobDetail.of(id))
         },
-        onTailoredClick = { id-> nav.navigate(Route.JobDetail.of(id)) },
+        onTailoredClick = { id->
+            if (!username.isNullOrBlank()) {
+                // ✅ Composable 밖이니까 scope.launch 사용
+                scope.launch {
+                    recentRepo.upsertRecentWatch(username, id)
+                }
+            }
+            nav.navigate(Route.JobDetail.of(id))
+        },
+
         onOpenCalendar = { nav.navigate(Route.Map.path)  },
         onShortcut = { key ->
             when (key) {
@@ -321,7 +336,7 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
 fun MainScreen(
     state: MainUiState,
     onSearch: (String) -> Unit,
-    onJobClick: (String) -> Unit,
+    onJobClick: (Long) -> Unit,
     onTailoredClick: (Long) -> Unit,
     onOpenCalendar: () -> Unit,
     onShortcut: (String) -> Unit,
@@ -440,13 +455,19 @@ fun MainScreen(
                     ) {
                         JobSummaryCard(
                             job = row[0],
-                            onClick = { onJobClick(row[0].id) },
+                            onClick = {
+                                Log.d("MainScreen", "✅ AI Job 클릭됨 → id=${row[0].id}")
+                                onJobClick(row[0].id)
+                           },
+
                             modifier = Modifier.weight(1f)
                         )
                         if (row.size > 1) {
                             JobSummaryCard(
                                 job = row[1],
-                                onClick = { onJobClick(row[1].id) },
+                                onClick = {
+                                    Log.d("MainScreen", "✅ AI Job 클릭됨 → id=${row[1].id}")
+                                    onJobClick(row[1].id) },
                                 modifier = Modifier.weight(1f)
                             )
                         } else {
