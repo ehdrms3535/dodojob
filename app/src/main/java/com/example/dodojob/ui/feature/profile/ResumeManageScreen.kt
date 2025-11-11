@@ -13,24 +13,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.ArrowBackIosNew
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
@@ -122,7 +121,6 @@ private fun FilledMultilineInput(
     )
 }
 
-
 @Serializable
 private data class UserTmpRow(
     val name: String? = null,
@@ -154,9 +152,9 @@ private fun SectionCard(
     Column(
         modifier
             .fillMaxWidth()
-            .shadow(6.dp, shape = RoundedCornerShape(12.dp))
-            .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(vertical = 16.dp)
+            .shadow(10.dp, shape = RoundedCornerShape(10.dp))
+            .background(Color.White, RoundedCornerShape(10.dp))
+            .padding(vertical = 20.dp)
     ) { content() }
 }
 
@@ -170,39 +168,31 @@ private fun SectionTitle(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 20.dp, vertical = 2.dp)
             .clickable { onToggle() },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
             modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color(0xFFDEEAFF)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = BrandBlue,
-                modifier = Modifier.size(18.dp)
-            )
-        }
+                .size(24.dp)
+                .padding(top = 3.dp)
+        )
         Spacer(Modifier.width(8.dp))
         Text(
             text = title,
-            fontSize = 22.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color.Black,
             modifier = Modifier.weight(1f)
         )
-        Icon(
-            imageVector = Icons.Outlined.ExpandMore,
-            contentDescription = null,
-            tint = Color(0xFF9C9C9C),
-            modifier = Modifier
-                .size(18.dp)
-                .rotate(if (expanded) 0f else -90f)
+        Image(
+            painter = painterResource(
+                id = if (expanded) R.drawable.upper else R.drawable.down
+            ),
+            contentDescription = if (expanded) "접기" else "펼치기",
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -212,8 +202,8 @@ private fun KeyValueRow(
     label: String,
     value: String,
     valueColor: Color = Color.Black,
-    startPadding: Dp = 16.dp,
-    endPadding: Dp =  16.dp
+    startPadding: Dp = 24.dp,
+    endPadding: Dp = 24.dp
 ) {
     Row(
         Modifier
@@ -239,17 +229,27 @@ private fun KeyValueRow(
 }
 
 @Composable
-private fun BlueButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+private fun BlueButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit = {}
+) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
-            .padding(horizontal = 16.dp),
+            .height(54.dp),
         shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
+        colors = ButtonDefaults.buttonColors(
+            containerColor = BrandBlue,
+            contentColor = Color.White,
+            disabledContainerColor = Color(0xFFBFD4FF),
+            disabledContentColor = Color.White.copy(alpha = 0.7f)
+        )
     ) {
-        Text(text, fontSize = 22.sp, fontWeight = FontWeight.Medium, color = Color.White)
+        Text(text, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Color.White)
     }
 }
 
@@ -299,6 +299,7 @@ fun ResumeManageScreen(nav: NavController) {
     }
 
     /* -------- 경력 -------- */
+    var careerConsentChecked by remember { mutableStateOf(false) }
     val careerRepo = remember { CareerRepositoryImpl(client) }
     var careers by remember { mutableStateOf<List<CareerModels>>(emptyList()) }
     var careerLoading by remember { mutableStateOf(false) }
@@ -322,6 +323,7 @@ fun ResumeManageScreen(nav: NavController) {
     }
 
     /* -------- 자격증  -------- */
+    var licenseConsentChecked by remember { mutableStateOf(false) }
     val licenseRepo = remember { LicenseRepositoryImpl(client) }
     var licenses by remember { mutableStateOf<List<LicenseModels>>(emptyList()) }
     var licenseLoading by remember { mutableStateOf(false) }
@@ -345,8 +347,17 @@ fun ResumeManageScreen(nav: NavController) {
     Scaffold(
         containerColor = BgGray,
         topBar = {
-            Column(Modifier.fillMaxWidth().background(Color(0xFFEFEFEF))) {
-                Spacer(Modifier.fillMaxWidth().height(24.dp))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFEFEFEF))
+            ) {
+                // 상태바 영역
+                Spacer(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(24.dp)
+                )
             }
         }
     ) { inner ->
@@ -356,39 +367,71 @@ fun ResumeManageScreen(nav: NavController) {
                 .fillMaxSize()
                 .verticalScroll(scroll)
         ) {
-            Column(
-                Modifier
+            // 헤더 영역
+            Box(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                    .background(BgGray) // 🔹 전체 통일된 배경색
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.ArrowBackIosNew,
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.height(16.dp))
-                Text(" 이력서 관리", fontSize = 28.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp) // 살짝 여백만
+                ) {
+                    // 🔹 상단 뒤로가기 아이콘
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clickable { nav.popBackStack() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.back),
+                                contentDescription = "뒤로가기",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                    }
+
+                    // 🔹 타이틀
+                    Text(
+                        text = "이력서 관리",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black,
+                        letterSpacing = (-0.019f).em,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, bottom = 16.dp)
+                    )
+                }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(4.dp))
 
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp)
+                    .padding(horizontal = 16.dp)
             ) {
                 /* ===== 인적사항 ===== */
                 SectionCard {
                     SectionTitle(
-                        title = " 인적사항",
-                        iconRes = R.drawable.app_manage_personal,
+                        title = "인적사항",
+                        iconRes = R.drawable.resume_personal,
                         expanded = personalExpanded,
                         onToggle = { personalExpanded = !personalExpanded }
                     )
 
                     if (personalExpanded) {
-                        Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(24.dp))
 
                         if (userLoading) {
                             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -399,37 +442,55 @@ fun ResumeManageScreen(nav: NavController) {
                                 userError!!,
                                 color = Color(0xFFD32F2F),
                                 fontSize = 14.sp,
-                                modifier = Modifier.padding(horizontal = 16.dp)
+                                modifier = Modifier.padding(horizontal = 20.dp)
                             )
                         } else {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.senior_id),
-                                    contentDescription = "프로필",
-                                    modifier = Modifier
-                                        .size(150.dp)
-                                        .clip(RoundedCornerShape(20.dp))
-                                )
-                                Spacer(Modifier.width(20.dp))
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                ProfileImage()
                             }
 
-                            Spacer(Modifier.height(12.dp))
-                            KeyValueRow("이름", user?.name ?: "-",
-                                startPadding = 24.dp, endPadding = 24.dp)
+                            Spacer(Modifier.height(20.dp))
+                            KeyValueRow(
+                                "이름",
+                                user?.name ?: "-",
+                                startPadding = 24.dp,
+                                endPadding = 24.dp
+                            )
                             KeyValueRow(
                                 "생년월일",
                                 user?.birthdate?.let { formatBirthdateKR(it) } ?: "-",
-                                startPadding = 24.dp, endPadding = 24.dp
+                                startPadding = 24.dp,
+                                endPadding = 24.dp
                             )
-                            KeyValueRow("전화번호", user?.phone ?: "-",
-                                startPadding = 24.dp, endPadding = 24.dp)
-                            KeyValueRow("주소", user?.region ?: "-",
-                                startPadding = 24.dp, endPadding = 24.dp)
-                            KeyValueRow("이메일", user?.email ?: "-",
-                                startPadding = 24.dp, endPadding = 24.dp)
+                            KeyValueRow(
+                                "전화번호",
+                                user?.phone ?: "-",
+                                startPadding = 24.dp,
+                                endPadding = 24.dp
+                            )
+                            KeyValueRow(
+                                "주소",
+                                user?.region ?: "-",
+                                startPadding = 24.dp,
+                                endPadding = 24.dp
+                            )
+                            KeyValueRow(
+                                "이메일",
+                                user?.email ?: "-",
+                                startPadding = 24.dp,
+                                endPadding = 24.dp
+                            )
 
-                            Spacer(Modifier.height(16.dp))
-                            BlueButton("수정")
+                            Spacer(Modifier.height(24.dp))
+                            BlueButton(
+                                text = "수정",
+                                modifier = Modifier.padding(horizontal = 20.dp)
+                            )
                         }
                     }
                 }
@@ -439,30 +500,25 @@ fun ResumeManageScreen(nav: NavController) {
                 /* ===== 경력 ===== */
                 SectionCard {
                     SectionTitle(
-                        title = " 경력",
-                        iconRes = R.drawable.app_manage_career,
+                        title = "경력",
+                        iconRes = R.drawable.resume_experience,
                         expanded = careerExpanded,
                         onToggle = { careerExpanded = !careerExpanded }
                     )
 
                     if (careerExpanded) {
-                        Spacer(Modifier.height(20.dp))
-
                         if (careerLoading) {
-                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 CircularProgressIndicator()
                             }
                         } else {
-                            if (careers.isEmpty()) {
-                                Text(
-                                    "등록된 경력이 없어요.",
-                                    color = TextGray,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                                ThinDivider()
-                            } else {
-                                careers.forEachIndexed { idx, c ->
+                            if (!careers.isEmpty()) {
+                                careers.forEach { c ->
                                     Spacer(Modifier.height(20.dp))
                                     CareerItem(
                                         title = c.title ?: (c.company ?: "경력"),
@@ -475,7 +531,7 @@ fun ResumeManageScreen(nav: NavController) {
                                             c.description!!,
                                             fontSize = 14.sp,
                                             color = Color(0xFF616161),
-                                            modifier = Modifier.padding(horizontal = 16.dp)
+                                            modifier = Modifier.padding(horizontal = 20.dp)
                                         )
                                     }
                                     Spacer(Modifier.height(20.dp))
@@ -486,9 +542,9 @@ fun ResumeManageScreen(nav: NavController) {
                             Spacer(Modifier.height(24.dp))
 
                             // ---- 새 경력 추가 (캡슐형 입력) ----
-                            Column(Modifier.padding(horizontal = 16.dp)) {
-                                Text("새 경력 추가", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                Spacer(Modifier.height(10.dp))
+                            Column(Modifier.padding(horizontal = 20.dp)) {
+                                Text("새 경력 추가", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(14.dp))
 
                                 FilledInput(
                                     value = cTitle, onValueChange = { cTitle = it },
@@ -502,18 +558,30 @@ fun ResumeManageScreen(nav: NavController) {
                                 )
                                 Spacer(Modifier.height(8.dp))
 
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 2.dp), // 🔹 살짝 여유 줌
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     FilledInput(
-                                        value = cStart, onValueChange = { cStart = it },
+                                        value = cStart,
+                                        onValueChange = { cStart = it },
                                         placeholder = "시작 (예: 2008.03)",
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(end = 2.dp) // 🔹 오른쪽 약간 여백
                                     )
                                     FilledInput(
-                                        value = cEnd, onValueChange = { cEnd = it },
+                                        value = cEnd,
+                                        onValueChange = { cEnd = it },
                                         placeholder = "종료 (예: 2015.03)",
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(start = 2.dp) // 🔹 왼쪽 약간 여백
                                     )
                                 }
+
                                 Spacer(Modifier.height(8.dp))
 
                                 FilledMultilineInput(
@@ -530,11 +598,18 @@ fun ResumeManageScreen(nav: NavController) {
                                     Text("경력이 추가되었습니다.", color = BrandBlue, fontSize = 14.sp)
                                 }
 
-                                Spacer(Modifier.height(12.dp))
-                                ConsentRow(fontSize = 16.sp)
+                                Spacer(Modifier.height(8.dp))
+                                ConsentRow(
+                                    fontSize = 16.sp,
+                                    checked = careerConsentChecked,
+                                    onCheckedChange = { careerConsentChecked = it }
+                                )
 
-                                Spacer(Modifier.height(12.dp))
-                                BlueButton("추가하기") {
+                                Spacer(Modifier.height(8.dp))
+                                BlueButton(
+                                    text = "추가하기",
+                                    enabled = careerConsentChecked
+                                ) {
                                     if (cTitle.isBlank() && cCompany.isBlank()) {
                                         careerError = "직무 또는 회사 중 하나는 입력해주세요."
                                         careerAddedOnce = false
@@ -573,46 +648,40 @@ fun ResumeManageScreen(nav: NavController) {
                 /* ===== 자격증 ===== */
                 SectionCard {
                     SectionTitle(
-                        title = " 자격증",
-                        iconRes = R.drawable.app_manage_certi,
+                        title = "자격증",
+                        iconRes = R.drawable.resume_certi,
                         expanded = licenseExpanded,
                         onToggle = { licenseExpanded = !licenseExpanded }
                     )
 
                     if (licenseExpanded) {
-                        Spacer(Modifier.height(12.dp))
-
                         if (licenseLoading) {
-                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 CircularProgressIndicator()
                             }
                         } else {
-                            if (licenses.isEmpty()) {
-                                Text(
-                                    "등록된 자격증이 없어요.",
-                                    color = TextGray,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                                ThinDivider()
-                            } else {
-                                licenses.forEachIndexed { idx, lic ->
+                            if (!licenses.isEmpty()) {
+                                licenses.forEach { lic ->
                                     Spacer(Modifier.height(18.dp))
                                     LicenseItem(
                                         org = lic.location ?: "발급기관 미입력",
                                         title = lic.name ?: "자격증명 미입력",
                                         code = lic.number ?: "-"
                                     )
-                                    
                                 }
                             }
 
                             Spacer(Modifier.height(22.dp))
 
                             // ---- 새 자격증 추가 (캡슐형 입력) ----
-                            Column(Modifier.padding(horizontal = 16.dp)) {
-                                Text("새 자격증 추가", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                Spacer(Modifier.height(10.dp))
+                            Column(Modifier.padding(horizontal = 20.dp)) {
+                                Text("새 자격증 추가", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(14.dp))
 
                                 FilledInput(
                                     value = lName, onValueChange = { lName = it },
@@ -640,11 +709,18 @@ fun ResumeManageScreen(nav: NavController) {
                                     Text("추가되었습니다.", color = BrandBlue, fontSize = 14.sp)
                                 }
 
-                                Spacer(Modifier.height(12.dp))
-                                ConsentRow(fontSize = 16.sp)
+                                Spacer(Modifier.height(8.dp))
+                                ConsentRow(
+                                    fontSize = 16.sp,
+                                    checked = licenseConsentChecked,
+                                    onCheckedChange = { licenseConsentChecked = it }
+                                )
 
-                                Spacer(Modifier.height(12.dp))
-                                BlueButton("추가하기") {
+                                Spacer(Modifier.height(8.dp))
+                                BlueButton(
+                                    text = "추가하기",
+                                    enabled = licenseConsentChecked
+                                ) {
                                     if (lName.isBlank() && lLocation.isBlank() && lNumber.isBlank()) {
                                         licenseError = "한 가지 이상 입력해주세요."
                                         licenseAddedOnce = false
@@ -676,8 +752,8 @@ fun ResumeManageScreen(nav: NavController) {
                 /* ===== 희망직무 ===== */
                 SectionCard {
                     SectionTitle(
-                        title = " 희망직무",
-                        iconRes = R.drawable.app_manage_hope,
+                        title = "희망직무",
+                        iconRes = R.drawable.resume_hope,
                         expanded = hopeExpanded,
                         onToggle = { hopeExpanded = !hopeExpanded }
                     )
@@ -692,14 +768,14 @@ fun ResumeManageScreen(nav: NavController) {
                         ) {
                             JobChip(
                                 title = "서비스업",
-                                desc = "매장관리, 고객 응대",
+                                desc = "매장관리,고객 응대",
                                 selected = selectedJob == "서비스업",
                                 onClick = { selectedJob = "서비스업" },
                                 modifier = Modifier.weight(1f)
                             )
                             JobChip(
                                 title = "교육/강의",
-                                desc = "강사, 지도사",
+                                desc = "전문지식 전수",
                                 selected = selectedJob == "교육/강의",
                                 onClick = { selectedJob = "교육/강의" },
                                 modifier = Modifier.weight(1f)
@@ -714,14 +790,14 @@ fun ResumeManageScreen(nav: NavController) {
                         ) {
                             JobChip(
                                 title = "관리/운영",
-                                desc = "시설, 인력관리",
+                                desc = "시설,인력관리",
                                 selected = selectedJob == "관리/운영",
                                 onClick = { selectedJob = "관리/운영" },
                                 modifier = Modifier.weight(1f)
                             )
                             JobChip(
                                 title = "돌봄서비스",
-                                desc = "방문, 요양, 돌봄",
+                                desc = "아동,시니어돌봄",
                                 selected = selectedJob == "돌봄서비스",
                                 onClick = { selectedJob = "돌봄서비스" },
                                 modifier = Modifier.weight(1f)
@@ -729,7 +805,12 @@ fun ResumeManageScreen(nav: NavController) {
                         }
 
                         Spacer(Modifier.height(30.dp))
-                        BlueButton("자세히 보기") { showSheet = true }
+                        BlueButton(
+                            text = "자세히 보기",
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                        ) {
+                            showSheet = true
+                        }
                     }
                 }
 
@@ -740,20 +821,20 @@ fun ResumeManageScreen(nav: NavController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(BgGray)
-                        .padding(horizontal = 4.dp, vertical = 20.dp)
+                        .padding(vertical = 20.dp)
                 ) {
                     Button(
                         onClick = { /* TODO: 저장 로직 */ },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(15.dp),
+                            .height(60.dp),
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = BrandBlue,
                             contentColor = Color.White
                         )
                     ) {
-                        Text("이력서 저장", fontSize = 25.sp, fontWeight = FontWeight.Medium)
+                        Text("이력서 저장", fontSize = 24.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -782,7 +863,7 @@ private fun formatBirthdateKR(iso: String): String {
 /* ===== 경력/자격증/동의/칩 ===== */
 @Composable
 private fun CareerItem(title: String, start: String, end: String) {
-    Column(Modifier.padding(horizontal = 16.dp)) {
+    Column(Modifier.padding(horizontal = 20.dp)) {
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -795,7 +876,7 @@ private fun CareerItem(title: String, start: String, end: String) {
 
 @Composable
 private fun LicenseItem(org: String, title: String, code: String) {
-    Column(Modifier.padding(horizontal = 16.dp)) {
+    Column(Modifier.padding(horizontal = 20.dp)) {
         Text(org, fontSize = 14.sp, color = Color(0xFF616161))
         Spacer(Modifier.height(6.dp))
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
@@ -805,29 +886,32 @@ private fun LicenseItem(org: String, title: String, code: String) {
 }
 
 @Composable
-private fun ConsentRow(fontSize: androidx.compose.ui.unit.TextUnit) {
+private fun ConsentRow(
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(start = 4.dp, end = 20.dp, top = 10.dp, bottom = 10.dp) // 🔹 왼쪽 여백 줄임
+            .clickable { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier
-                .size(18.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFDEEAFF)),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(BrandBlue)
-            )
-        }
+        Image(
+            painter = painterResource(
+                id = if (checked) R.drawable.autologin_checked
+                else R.drawable.autologin_unchecked
+            ),
+            contentDescription = if (checked) "동의함" else "동의 안 함",
+            modifier = Modifier.size(24.dp)
+        )
         Spacer(Modifier.width(10.dp))
-        Text("(필수) 개인정보 제 3자 제공 동의", color = Color(0xFFFF2F00), fontSize = fontSize)
+        Text(
+            "(필수) 개인정보 제 3자 제공 동의",
+            color = Color(0xFFFF2F00),
+            fontSize = fontSize
+        )
     }
 }
 
@@ -846,15 +930,15 @@ private fun JobChip(
 
     Column(
         modifier = modifier
-            .height(70.dp)
+            .height(80.dp)
             .border(1.dp, borderColor, RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp))
             .background(bg)
             .clickable { onClick() }
-            .padding(12.dp),
+            .padding(start = 14.dp, top = 12.dp, end = 12.dp, bottom = 12.dp), // 🔹 왼쪽 패딩 증가
         verticalArrangement = Arrangement.Center
     ) {
-        Text(title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = titleColor)
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = titleColor)
         Spacer(Modifier.height(2.dp))
         Text(desc, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = descColor)
     }
@@ -868,11 +952,25 @@ private fun ExperiencePickerSheet(
     onApply: (Set<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val Primary = BrandBlue
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val maxSheetFraction = 0.88f
+    var showSheet by remember { mutableStateOf(true) }
+    if (!showSheet) return
+
+    val Brand = BrandBlue
+    val FieldBg = Color(0xFFEFEFEF)
+    val DividerColor = Color(0xFFCFCFCF)
+    val ChipBase = Color(0xFFF7F7F7)
+    val ChipSelBg = Color(0xFFDEEBFF)
+    val ChipUnselBorder = Color(0xFFE0E0E0)
+
     var query by remember { mutableStateOf("") }
-    val selected = remember { mutableStateListOf<String>().apply { addAll(preselected) } }
     var healthy by remember { mutableStateOf(false) }
 
+    // ✔️ 선택된 라벨들 (기존 preselected를 그대로 반영)
+    val selected = remember { mutableStateListOf<String>().apply { addAll(preselected) } }
+
+    // 기존 ExperiencePickerSheet에서 쓰던 카테고리/옵션 그대로 사용
     val categories: List<Pair<String, List<String>>> = listOf(
         "서비스업" to listOf("고객 응대","카운터/계산","상품 진열","청결 관리","안내 데스크","주차 관리"),
         "교육/강의" to listOf("영어 회화","악기 지도","요리 강사","역사 강의","공예 강의","예술 지도"),
@@ -880,145 +978,223 @@ private fun ExperiencePickerSheet(
         "돌봄" to listOf("등하원 도우미","가정 방문","보조 교사")
     )
 
+    fun filtered(list: List<String>) =
+        if (query.isBlank()) list else list.filter { it.contains(query.trim(), ignoreCase = true) }
+
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(topStart = 35.dp, topEnd = 35.dp),
-        dragHandle = null
+        onDismissRequest = {
+            showSheet = false
+            onDismiss()
+        },
+        sheetState = sheetState,
+        containerColor = Color.White,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+        dragHandle = { } // 상단 custom handle 그릴 거라 기본 핸들 제거
     ) {
-        Column(
-            Modifier
+        Box(
+            modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight(maxSheetFraction)
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp)
+                .imePadding()
         ) {
-            Spacer(Modifier.height(18.dp))
-            SheetDragHandle()
-            Spacer(Modifier.height(28.dp))
-
-            Text(
-                "경험을 살릴 일을 설정해주세요",
-                fontSize = 26.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.Black
-            )
-
-            Spacer(Modifier.height(18.dp))
-
-            TextField(
-                value = query,
-                onValueChange = { query = it },
-                singleLine = true,
-                placeholder = { Text("직종 키워드", fontSize = 18.sp, color = Color(0xFF959595)) },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = null,
-                        tint = Color(0xFF959595),
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                shape = RoundedCornerShape(10.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = TagGray,
-                    unfocusedContainerColor = TagGray,
-                    disabledContainerColor = TagGray,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                    cursorColor = Color.Black
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(57.dp)
-            )
-
-            Spacer(Modifier.height(20.dp))
-            Divider(color = Color(0xFFCFCFCF))
-            Spacer(Modifier.height(14.dp))
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize()
             ) {
-                categories.forEach { (title, list) ->
-                    val filtered = if (query.isBlank()) list
-                    else list.filter { it.contains(query.trim(), ignoreCase = true) }
+                val W = maxWidth
+                fun frac(h: Float) = (W * h)
+                val handleW = frac(122.89f / 360f)
+                val handleH = frac(4.16f / 360f)
+                val radius10 = (W * (10f / 360f))
+                val fieldH = frac(57f / 360f)
+                val chipH = 64.dp
+                val btnH = frac(54f / 360f)
+                val gap12 = frac(12f / 360f)
+                val gap16 = frac(16f / 360f)
+                val gap20 = frac(20f / 360f)
 
-                    item {
-                        Text(
-                            title,
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.Black,
-                            modifier = Modifier.padding(start = 6.dp)
+                val tightLS = (-0.019f).em
+
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .imePadding()
+                        .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 18.dp)
+                        .heightIn(min = 0.dp, max = 882.dp)
+                ) {
+                    // 상단 핸들 (PreferWorkSheetBottomSheet와 동일 스타일)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = gap12),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            Modifier
+                                .size(width = handleW, height = handleH)
+                                .clip(RoundedCornerShape(100.dp))
+                                .background(Color(0xFFB3B3B3))
                         )
-                        Spacer(Modifier.height(16.dp))
-                        TwoColumnChipsEqualWidth(
-                            options = filtered,
-                            isSelected = { it in selected },
-                            onToggle = { label ->
-                                if (label in selected) selected.remove(label) else selected.add(label)
+                    }
+
+                    // 타이틀
+                    Text(
+                        "경험을 살릴 일을 설정해주세요",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = tightLS,
+                        lineHeight = 39.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+                    Spacer(Modifier.height(8.dp))
+
+                    // 검색창
+                    TextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = {
+                            Text(
+                                "직종 키워드",
+                                color = Color(0xFFA6A6A6),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = (-0.019f).em
+                            )
+                        },
+                        trailingIcon = {
+                            Image(
+                                painter = painterResource(id = R.drawable.search),
+                                contentDescription = "검색",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = fieldH, max = fieldH),
+                        shape = RoundedCornerShape(radius10),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = FieldBg,
+                            unfocusedContainerColor = FieldBg,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = Brand
+                        )
+                    )
+
+                    Spacer(Modifier.height(22.dp))
+                    Divider(
+                        modifier = Modifier.fillMaxWidth(),
+                        thickness = 1.dp,
+                        color = DividerColor
+                    )
+                    Spacer(Modifier.height(20.dp))
+
+                    // 스크롤 영역
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(gap16)
+                    ) {
+                        categories.forEach { (title, list) ->
+                            val opts = filtered(list)
+                            if (opts.isNotEmpty()) {
+                                SectionHeader(text = title)
+                                TwoColumnChipsResponsive(
+                                    options = opts,
+                                    chipHeight = chipH,
+                                    radius = radius10,
+                                    baseBg = ChipBase,
+                                    selectedBg = ChipSelBg,
+                                    brand = Brand,
+                                    unselectedBorder = ChipUnselBorder,
+                                    isSelected = { it in selected },
+                                    onToggle = { label ->
+                                        if (label in selected) selected.remove(label)
+                                        else selected.add(label)
+                                    }
+                                )
+                                Spacer(Modifier.height(1.dp))
+                                Divider(color = DividerColor)
+                                Spacer(Modifier.height(0.dp))
                             }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+                    Text("＊ 필수", color = Color(0xFFF24822), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(gap12 / 2))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(
+                                id = if (healthy) R.drawable.autologin_checked else R.drawable.autologin_unchecked
+                            ),
+                            contentDescription = "체크박스",
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable { healthy = !healthy }
                         )
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.width(gap12))
+                        Text("건강해서 일하는 데 지장이 없어요.", fontSize = 22.sp)
+                    }
+
+                    Spacer(Modifier.height(gap20))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(gap12)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                selected.clear()
+                                selected.addAll(preselected) // 초기 상태로 되돌리기
+                                healthy = false
+                                query = ""
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = btnH, max = btnH),
+                            shape = RoundedCornerShape(radius10),
+                            border = ButtonDefaults.outlinedButtonBorder.copy(
+                                width = 1.dp,
+                                brush = SolidColor(Brand)
+                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color.White,
+                                contentColor = Brand
+                            )
+                        ) {
+                            Text("초기화", fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                        }
+
+                        val canApply = healthy
+                        Button(
+                            onClick = {
+                                showSheet = false
+                                onApply(selected.toSet())
+                            },
+                            enabled = canApply,
+                            modifier = Modifier
+                                .weight(2f)
+                                .heightIn(min = btnH, max = btnH),
+                            shape = RoundedCornerShape(radius10),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (canApply) Brand else Color(0xFFBFC6D2),
+                                disabledContainerColor = Color(0xFFBFC6D2)
+                            )
+                        ) {
+                            Text(
+                                "적용하기",
+                                color = Color.White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
-
-            Divider(color = Color(0xFFCFCFCF))
-            Spacer(Modifier.height(14.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("＊ 필수", color = Color(0xFFF24822), fontSize = 18.sp)
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OptionCheckBox(checked = healthy, onCheckedChange = { healthy = it })
-                Spacer(Modifier.width(10.dp))
-                Text("건강해서 일하는 데 지장이 없어요.", fontSize = 22.sp, color = Color.Black)
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = { selected.clear(); healthy = false; query = "" },
-                    modifier = Modifier.weight(1f).height(54.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = Primary
-                    ),
-                    border = BorderStroke(1.dp, Primary)
-                ) { Text("초기화", color = Color.Black, fontSize = 24.sp) }
-
-                Button(
-                    onClick = { onApply(selected.toSet()) },
-                    enabled = healthy,
-                    modifier = Modifier.weight(2f).height(54.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (healthy) Primary else Color(0xFFBFC6D2),
-                        disabledContainerColor = Color(0xFFBFC6D2)
-                    )
-                ) { Text("적용하기", color = Color.White, fontSize = 24.sp) }
-            }
-
-            Spacer(Modifier.height(12.dp))
         }
     }
 }
@@ -1087,28 +1263,43 @@ private fun SimpleChoiceChip(
     }
 }
 
+@Composable
+private fun ProfileImage() {
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val imageSize = screenWidth * (104.53f / 360f)  // 🔹 화면 비율 기반 크기 계산
+
+    Image(
+        painter = painterResource(id = R.drawable.senior_id),
+        contentDescription = "프로필",
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .size(imageSize)
+            .clip(RoundedCornerShape(10.dp))
+    )
+}
+
 /* ----- 체크박스 ----- */
 @Composable
 private fun OptionCheckBox(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    val badgeSize = 28.dp
-    val iconSize = 18.dp
-
     Box(
         modifier = Modifier
-            .size(badgeSize)
-            .clip(CircleShape)
-            .background(if (checked) Color(0xFF2A77FF) else Color(0xFFE6E6E6))
+            .size(28.dp)
             .clickable { onCheckedChange(!checked) },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Icons.Filled.Check,
-            contentDescription = null,
-            tint = if (checked) Color.White else Color(0xFFBDBDBD),
-            modifier = Modifier.size(iconSize)
+        Image(
+            painter = painterResource(
+                id = if (checked) {
+                    R.drawable.autologin_checked
+                } else {
+                    R.drawable.autologin_unchecked
+                }
+            ),
+            contentDescription = if (checked) "선택됨" else "선택 안 됨",
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
@@ -1126,16 +1317,87 @@ private fun SheetDragHandle() {
     }
 }
 
-/* ----- 미리보기 (네트워크 없음) ----- */
-@Preview(
-    device = Devices.PHONE,
-    showBackground = true,
-    backgroundColor = 0xFFF1F5F7,
-    widthDp = 360,
-    heightDp = 800
-)
+/* ---------- 섹션 헤더 (모달용) ---------- */
 @Composable
-private fun PreviewResumeManageScreen() {
-    // Preview에서는 실제 호출 생략
-    // ResumeManageScreen(nav = rememberNavController())
+private fun SectionHeader(text: String) {
+    Text(
+        text,
+        fontSize = 26.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color.Black,
+        letterSpacing = (-0.019f).em,
+        lineHeight = 33.sp
+    )
+}
+
+/* ---------- 칩 2열 레이아웃 (모달용) ---------- */
+@Composable
+private fun TwoColumnChipsResponsive(
+    options: List<String>,
+    chipHeight: Dp,
+    radius: Dp,
+    baseBg: Color,
+    selectedBg: Color,
+    brand: Color,
+    unselectedBorder: Color,
+    isSelected: (String) -> Boolean,
+    onToggle: (String) -> Unit
+) {
+    val rows = remember(options) { options.chunked(2) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        rows.forEach { row ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { label ->
+                    ChoiceChipResponsive(
+                        text = label,
+                        selected = isSelected(label),
+                        onClick = { onToggle(label) },
+                        height = chipHeight,
+                        radius = radius,
+                        baseBg = baseBg,
+                        selectedBg = selectedBg,
+                        brand = brand,
+                        unselectedBorder = unselectedBorder,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/* ---------- 칩 하나 (모달용) ---------- */
+@Composable
+private fun ChoiceChipResponsive(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    height: Dp,
+    radius: Dp,
+    baseBg: Color,
+    selectedBg: Color,
+    brand: Color,
+    unselectedBorder: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .heightIn(min = height, max = height)
+            .clip(RoundedCornerShape(radius))
+            .background(if (selected) selectedBg else baseBg)
+            .border(1.dp, if (selected) brand else unselectedBorder, RoundedCornerShape(radius))
+            .clickable { onClick() }
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (selected) brand else Color.Black,
+            letterSpacing = (-0.019f).em,
+            maxLines = 1
+        )
+    }
 }
