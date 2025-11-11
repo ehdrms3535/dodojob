@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
+import com.example.dodojob.dao.CountRecentView
 import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
@@ -42,17 +43,36 @@ fun ProfileRoute(nav: NavController) {
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
 
+
+    var recentCount by remember { mutableStateOf(0L) }
+    var recentError by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(username) {
         loading = true
         error = null
         senior = null
-        runCatching {
+        recentError = null
+
+        // 1) 시니어 기본 정보 로드
+        val s = runCatching {
             if (!username.isNullOrBlank()) getSeniorInformation(username) else null
-        }.onSuccess { s ->
-            senior = s
         }.onFailure { t ->
             error = t.message ?: "알 수 없는 오류"
+        }.getOrNull()
+
+        senior = s
+
+        // 2) 최근 본 공고 개수 로드
+        if (!username.isNullOrBlank()) {
+            runCatching {
+                CountRecentView(username)   // 🔹 suspend 함수는 여기서 호출
+            }.onSuccess { cnt ->
+                recentCount = cnt.toLong()
+            }.onFailure { t ->
+                recentError = t.message
+            }
         }
+
         loading = false
     }
 
@@ -67,11 +87,13 @@ fun ProfileRoute(nav: NavController) {
         }
     }
 
+
+
+
     val s = senior!!
     val displayName = s.user?.name ?: s.username
     val applyCount = s.applyCount
     val resumeViews = s.resumeViews
-    val recentCount = s.recentCount
     val likedCount = s.likedCount
     val activityLevel = s.activityLevel
     val applyWithinYear = s.applyWithinYear
