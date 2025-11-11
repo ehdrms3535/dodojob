@@ -40,6 +40,8 @@ import kotlinx.coroutines.launch
 
 /* ======== 모델 ======== */
 data class JobDetailUiState(
+    val announcementId: Long,
+    val companyId: String?,
     val title: String,
     val companyName: String,
     val chips: List<InfoChip>,
@@ -88,7 +90,7 @@ fun JobDetailRoute(
         onBack = onBack,
         onToggleLike = onToggleLike,
         onCall = onCall,
-        onApply = { /* bottom sheet 열기만 담당 (상위에 굳이 알릴 필요 없으면 비워둬도 됨) */ },
+        onApply = { /* bottom sheet 열기만 담당 */ },
         onSimpleApply = { nav.navigate(ApplyRoute.path) }
     )
 }
@@ -117,7 +119,7 @@ fun JobDetailScreen(
     val workingRequester = remember { BringIntoViewRequester() }
     val dutiesRequester = remember { BringIntoViewRequester() }
 
-    // 🔹 비율: 버튼/칩 "크기"에만 적용, 나머지는 dp 고정
+    // 비율: 버튼/칩 "크기"에만 적용, 나머지는 dp 고정
     val config = LocalConfiguration.current
     val scale = (config.screenWidthDp / 360f).coerceIn(0.85f, 1.35f)
 
@@ -380,8 +382,8 @@ fun JobDetailScreen(
             onClose = { showApplySheet = false },
             onMessageApply = { /* 문자지원 로직 */ },
             onSimpleApply = {
-                showApplySheet = false   // ✅ 변수 이름 수정 (showBottomSheet -> showApplySheet)
-                onSimpleApply()          // Application 화면으로 이동
+                showApplySheet = false
+                onSimpleApply()
             }
         )
     }
@@ -529,8 +531,8 @@ private fun ApplyBottomSheet(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(Color(0x80000000)) // 반투명 검정
-                    .clickable { onClose() }       // 바깥 클릭하면 닫힘
+                    .background(Color(0x80000000))
+                    .clickable { onClose() }
             )
 
             // ✅ 하단 시트
@@ -777,6 +779,8 @@ private fun SectionSpacer() {
 @Composable
 private fun PreviewJobDetail() {
     val sample = JobDetailUiState(
+        announcementId = 1L,
+        companyId = "COMPANY_001",
         title = "매장운영 및 고객관리 하는 일에 적합한 분 구해요",
         companyName = "모던하우스",
         chips = listOf(
@@ -807,7 +811,6 @@ private fun PreviewJobDetail() {
         isLiked = false
     )
 
-    // ✅ 프리뷰에서는 NavController 없으니까 Screen만 직접 호출
     JobDetailScreen(
         ui = sample,
         onBack = {},

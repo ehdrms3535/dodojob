@@ -8,6 +8,7 @@ data class JobDetailDto(
     val id: Long,
     val title: String? = null,
 
+    @SerialName("company_id")     val companyId: String? = null,
     @SerialName("company_name")   val companyName: String? = null,
     @SerialName("company_locate") val companyLocate: String? = null,
 
