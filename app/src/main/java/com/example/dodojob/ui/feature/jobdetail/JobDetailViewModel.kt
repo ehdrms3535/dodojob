@@ -54,7 +54,6 @@ class JobDetailViewModel(
                 toggleJobLikeDao(
                     seniorUsername = seniorUsername,
                     announcementId = current.announcementId,
-                    companyId = current.companyId,
                     liked = liked
                 )
                 // likedCount는 서버에서 재계산
