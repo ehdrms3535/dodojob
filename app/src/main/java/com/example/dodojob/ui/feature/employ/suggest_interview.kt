@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
 /* =========================
  *  Fonts
@@ -48,6 +50,7 @@ private val LineGray   = Color(0xFFE5E7EB)
 /* =========================
  *  모델
  * ========================= */
+@Parcelize
 data class ApplicantUi(
     val id: Long,
     val name: String,
@@ -61,7 +64,8 @@ data class ApplicantUi(
     val status: ApplicantStatus,
     val activityLevel: Int,
     val profileRes: Int = R.drawable.basic_profile
-)
+) : Parcelable
+
 enum class ApplicantStatus { UNREAD, READ, SUGGESTING }
 fun medalRes(level: Int): Int = when (level) {
     1 -> R.drawable.red_medal
@@ -88,20 +92,16 @@ data class SuggestInterviewFormState(
  * ====================================================================== */
 @Composable
 fun SuggestInterviewScreen(navController: NavController) {
-    val applicant = remember {
-        ApplicantUi(
-            id = 1,
-            name = "김알바",
-            gender = "여",
-            age = 62,
-            headline = "열정 넘치는 인재입니다!",
-            address = "대구광역시 서구",
-            careerYears = 5,
-            method = "온라인지원",
-            postingTitle = "[현대백화점 대구점] 주간 미화원 모집",
-            status = ApplicantStatus.SUGGESTING,
-            activityLevel = 3
-        )
+    val applicant = navController
+        .previousBackStackEntry
+        ?.savedStateHandle
+        ?.get<ApplicantUi>("applicant")
+
+    if (applicant == null) {
+        LaunchedEffect(Unit) {
+            navController.popBackStack()
+        }
+        return
     }
 
     var method by remember { mutableStateOf(InterviewMethod.InPerson) }
