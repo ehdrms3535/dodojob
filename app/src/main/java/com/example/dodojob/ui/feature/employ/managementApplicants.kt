@@ -276,7 +276,7 @@ fun ApplicantManagementRoute(
                     }
                 }
                 else -> {
-                    items(state.items, key = { it.id }) { ap ->
+                    items(state.items) { ap ->
                         ApplicantCard(
                             data = ap,
                             modifier = Modifier
