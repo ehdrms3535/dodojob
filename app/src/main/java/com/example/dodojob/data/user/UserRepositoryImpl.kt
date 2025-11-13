@@ -38,6 +38,7 @@ class UserRepositorySupabase(
     private val client: io.github.jan.supabase.SupabaseClient
 ) : UserRepository {
 
+
     override suspend fun insertUser(user: UserDto) {
         val birth = rrnToBirthDate(user.rrnFront, user.rrnBackFirst).toString() // "YYYY-MM-DD"
         client.from("users_tmp").upsert(
@@ -101,6 +102,23 @@ class UserRepositorySupabase(
         }
 
         CurrentUser.setLogin(username, newPassword)
+    }
+
+    override suspend fun verifyPassword(
+        inputPassword: String
+    ): Boolean {
+        val username = CurrentUser.username ?: return false
+
+        val users = client.from("users_tmp").select {
+            filter {
+                eq("username", username)
+                eq("password", inputPassword)
+            }
+            limit(1)
+        }.decodeList<JsonObject>()
+
+        // 한 건이라도 있으면 현재 비밀번호 일치
+        return users.isNotEmpty()
     }
 }
 /*

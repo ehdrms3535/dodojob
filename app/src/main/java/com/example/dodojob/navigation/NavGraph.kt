@@ -11,7 +11,6 @@ import com.example.dodojob.dao.toggleJobLikeDao
 import androidx.compose.runtime.mutableStateOf
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.NavController
 import androidx.navigation.compose.composable
 import com.example.dodojob.ui.feature.account.ChangePasswordScreen
 import com.example.dodojob.session.SessionViewModel
@@ -80,8 +79,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.example.dodojob.data.jobdetail.JobDetailDto
-
-
 
 
 @Composable
@@ -180,22 +177,36 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                             toggleJobLikeDao(
                                 seniorUsername = username,
                                 announcementId = state.announcementId,
-                                companyId = null,
                                 liked = liked
                             )
                         }
                     },
                     onCall = {  },
                     onApply = {  },
-                    onSimpleApply = { nav.navigate(ApplyRoute.path) }
+                    onSimpleApply = { nav.navigate(Route.Application.of(state.announcementId)) }
                 )
             }
         }
 
+        composable(
+            route = Route.Application.path,
+            arguments = listOf(
+                navArgument("announcementId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val announcementId = backStackEntry.arguments?.getLong("announcementId") ?: return@composable
+            val username = CurrentUser.username
+            val client = LocalSupabase.current
 
+            ApplicationRoute(
+                nav = nav,
+                announcementId = announcementId,
+                username = username,
+                client = client
+            )
+        }
+// 지원서 작성
 
-
-        composable(ApplyRoute.path) { ApplicationRoute(nav) } // 지원서 작성
         composable(Route.ApplicationCompleted.path) {          // 🔹 지원 완료
             ApplyCompletedScreen(
                 onAnyClick = {

@@ -42,5 +42,5 @@ data class JobDetailDto(
     @SerialName("image") val imageUrl: String? = null,
 
     // 좋아요
-    @SerialName("is_liked") val isLiked: Boolean = false
+    @SerialName("isliked") val isLiked: Boolean = false
 )
