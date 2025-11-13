@@ -169,7 +169,9 @@ fun ApplicantManagementRoute(
                             "interview"   -> ApplicantStatus.SUGGESTING
                             else          -> ApplicantStatus.UNREAD
                         },
-                        activityLevel = r.activityLevel ?: 1
+                        activityLevel = r.activityLevel ?: 1,
+                        announcementId = r.announcementId,
+                        username       = r.seniorUserName
                     )
                 }
             }
@@ -286,11 +288,18 @@ fun ApplicantManagementRoute(
                             onViewPostingClick = { /* TODO: 공고 상세 이동 */ },
                             onAction = { key ->
                                 when (key) {
-                                    "suggest_interview" -> nav.navigate(Route.SuggestInterview.path)
+                                    "suggest_interview" -> {
+                                        nav.currentBackStackEntry
+                                            ?.savedStateHandle
+                                            ?.set("applicant", ap)
+
+                                        nav.safeNavigate(Route.SuggestInterview.path)
+                                    }
                                 }
                             }
                         )
                     }
+
                 }
             }
 

@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.employ
 
+import android.os.Parcelable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,6 +28,11 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.data.suggestinterview.SuggestInterviewInsert
+import com.example.dodojob.data.suggestinterview.SuggestInterviewRepository
+import kotlinx.coroutines.launch
+import kotlinx.parcelize.Parcelize
 
 /* =========================
  *  Fonts
@@ -48,6 +54,7 @@ private val LineGray   = Color(0xFFE5E7EB)
 /* =========================
  *  모델
  * ========================= */
+@Parcelize
 data class ApplicantUi(
     val id: Long,
     val name: String,
@@ -60,8 +67,11 @@ data class ApplicantUi(
     val postingTitle: String,
     val status: ApplicantStatus,
     val activityLevel: Int,
-    val profileRes: Int = R.drawable.basic_profile
-)
+    val profileRes: Int = R.drawable.basic_profile,
+    val announcementId: Long? = null,
+    val username: String? = null
+) : Parcelable
+
 enum class ApplicantStatus { UNREAD, READ, SUGGESTING }
 fun medalRes(level: Int): Int = when (level) {
     1 -> R.drawable.red_medal
@@ -88,21 +98,22 @@ data class SuggestInterviewFormState(
  * ====================================================================== */
 @Composable
 fun SuggestInterviewScreen(navController: NavController) {
-    val applicant = remember {
-        ApplicantUi(
-            id = 1,
-            name = "김알바",
-            gender = "여",
-            age = 62,
-            headline = "열정 넘치는 인재입니다!",
-            address = "대구광역시 서구",
-            careerYears = 5,
-            method = "온라인지원",
-            postingTitle = "[현대백화점 대구점] 주간 미화원 모집",
-            status = ApplicantStatus.SUGGESTING,
-            activityLevel = 3
-        )
+    val applicant = navController
+        .previousBackStackEntry
+        ?.savedStateHandle
+        ?.get<ApplicantUi>("applicant")
+
+    if (applicant == null) {
+        LaunchedEffect(Unit) {
+            navController.popBackStack()
+        }
+        return
     }
+
+    // Supabase / Repository / CoroutineScope
+    val supabase = LocalSupabase.current
+    val suggestRepo = remember { SuggestInterviewRepository(supabase) }
+    val scope = rememberCoroutineScope()
 
     var method by remember { mutableStateOf(InterviewMethod.InPerson) }
     var date by remember { mutableStateOf("") }
@@ -110,6 +121,9 @@ fun SuggestInterviewScreen(navController: NavController) {
     var address by remember { mutableStateOf("") }
     var addressDetail by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -175,7 +189,7 @@ fun SuggestInterviewScreen(navController: NavController) {
                 ApplicantInfoBox(
                     data = applicant,
                     modifier = Modifier.fillMaxWidth(),
-                    onViewPostingClick = { /* TODO */ }
+                    onViewPostingClick = { /* TODO: 공고 상세 */ }
                 )
             }
 
@@ -341,6 +355,18 @@ fun SuggestInterviewScreen(navController: NavController) {
                 }
             }
 
+            // 에러 메시지 (있으면 표시)
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = SIDE, vertical = 4.dp)
+                )
+            }
+
             // ===== CTA =====
             Row(
                 modifier = Modifier
@@ -352,16 +378,47 @@ fun SuggestInterviewScreen(navController: NavController) {
             ) {
                 Button(
                     onClick = {
-                        val form = SuggestInterviewFormState(
-                            method = method,
-                            date = date.trim(),
-                            time = time.trim(),
-                            address = address.trim(),
-                            addressDetail = addressDetail.trim(),
-                            note = note.trim()
-                        )
-                        // TODO: 서버 전송
-                        navController.popBackStack()
+                        if (isLoading) return@Button
+
+                        scope.launch {
+                            try {
+                                isLoading = true
+                                errorMessage = null
+
+                                val form = SuggestInterviewFormState(
+                                    method = method,
+                                    date = date.trim(),
+                                    time = time.trim(),
+                                    address = address.trim(),
+                                    addressDetail = addressDetail.trim(),
+                                    note = note.trim()
+                                )
+
+                                val methodCode = when (form.method) {
+                                    InterviewMethod.InPerson -> "in_person"
+                                    InterviewMethod.Remote   -> "phone"
+                                }
+
+                                val row = SuggestInterviewInsert(
+                                    announcement_id = applicant.announcementId,
+                                    username        = applicant.username,
+                                    interview_date  = form.date.ifBlank { null },
+                                    interview_time  = form.time.ifBlank { null },
+                                    method          = methodCode,
+                                    address         = form.address.ifBlank { null },
+                                    address_detail  = form.addressDetail.ifBlank { null },
+                                    note            = form.note.ifBlank { null }
+                                )
+
+                                suggestRepo.insert(row)
+
+                                navController.popBackStack()
+                            } catch (e: Exception) {
+                                errorMessage = e.message ?: "면접 제안 저장 중 오류가 발생했습니다."
+                            } finally {
+                                isLoading = false
+                            }
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -373,14 +430,22 @@ fun SuggestInterviewScreen(navController: NavController) {
                         contentColor = White
                     )
                 ) {
-                    Text(
-                        text = "면접 제안 보내기",
-                        fontFamily = PretendardSemiBold,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        lineHeight = 27.sp,
-                        letterSpacing = (-0.019).em
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "면접 제안 보내기",
+                            fontFamily = PretendardSemiBold,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            lineHeight = 27.sp,
+                            letterSpacing = (-0.019).em
+                        )
+                    }
                 }
             }
 
@@ -477,7 +542,7 @@ private fun MethodButton(
         Text(
             text = label,
             color = textColor,
-            fontFamily = PretendardBold,  // Bold
+            fontFamily = PretendardBold,
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
             lineHeight = 22.sp,
@@ -521,7 +586,7 @@ private fun InputBlock(
                     text = placeholder,
                     color = TextGray,
                     fontSize = 15.sp,
-                    fontFamily = PretendardMedium,   // placeholder: Medium
+                    fontFamily = PretendardMedium,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = (-0.019).em
                 )
@@ -535,7 +600,7 @@ private fun InputBlock(
             ),
             textStyle = LocalTextStyle.current.copy(
                 fontSize = 15.sp,
-                fontFamily = PretendardSemiBold,   // 입력 텍스트: SemiBold
+                fontFamily = PretendardSemiBold,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.019).em
             )
