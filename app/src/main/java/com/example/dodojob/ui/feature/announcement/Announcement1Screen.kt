@@ -390,6 +390,7 @@ fun Announcement1Screen(
                         enabled = !isPublicOrg, // 체크되면 false → 회색/disabled
                         onClick = {
                             Toast.makeText(context, "사업자번호 인증이 완료되었습니다.", Toast.LENGTH_SHORT).show()
+                            CurrentUser.setCompanyid(bizNo)
                         }
                     )
                 }
@@ -1230,6 +1231,8 @@ private fun PhotoGridRow(
 서울특별시 종로구 세종대로 175 (정부서울청사)
 
 서울특별시 영등포구 국제금융로 10 (여의도파이낸스빌딩)
+
+
 
 🏢 경기도
 
