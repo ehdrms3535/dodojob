@@ -14,4 +14,8 @@ interface UserRepository {
         newPassword: String
     )
 
+    suspend fun verifyPassword(
+        inputPassword: String
+    ): Boolean
+
 }

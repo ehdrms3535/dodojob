@@ -1,36 +1,34 @@
 package com.example.dodojob.ui.feature.account
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.material.icons.filled.ChevronLeft
-import com.example.dodojob.data.user.UserRepository
+import com.example.dodojob.R
 import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.data.user.UserRepository
 import com.example.dodojob.data.user.UserRepositorySupabase
-
+import com.example.dodojob.navigation.Route
+import com.example.dodojob.ui.components.CheckState
+import com.example.dodojob.ui.components.UnderlineFieldRow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -38,263 +36,333 @@ fun ChangePasswordScreen(nav: NavController) {
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
 
-    var currPw by remember { mutableStateOf("") }
-    var newPw by remember { mutableStateOf("") }
-    var newPw2 by remember { mutableStateOf("") }
+    var currPw by rememberSaveable { mutableStateOf("") }
+    var newPw by rememberSaveable { mutableStateOf("") }
+    var newPw2 by rememberSaveable { mutableStateOf("") }
+
+    var currPwValid by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     var loading by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var done by rememberSaveable { mutableStateOf(false) }
 
+    var showComplete by rememberSaveable { mutableStateOf(false) }
+
     // 유효성
-    val currPwOk = currPw.isNotEmpty()
     val newPwOk = newPw.length >= 3 && newPw.any { it.isDigit() } && newPw.any { it.isLetter() }
     val newPw2Ok = newPw2.isNotEmpty() && newPw2 == newPw
     val notSameAsOld = currPw.isNotEmpty() && newPw.isNotEmpty() && currPw != newPw
-    val canSubmit = currPwOk && newPwOk && newPw2Ok && notSameAsOld
+    val canSubmit = currPwValid && newPwOk && newPw2Ok && notSameAsOld
 
     val Bg = Color(0xFFF1F5F7)
     val Primary = Color(0xFF005FFF)
 
+    LaunchedEffect(currPw) {
+        if (currPw.isBlank()) {
+            currPwValid = false
+            return@LaunchedEffect
+        }
+
+        runCatching {
+            repo.verifyPassword(currPw)
+        }.onSuccess { result ->
+            currPwValid = result
+        }.onFailure {
+            currPwValid = false
+        }
+    }
+
     Scaffold(
         containerColor = Bg,
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Bg)
-                    .padding(horizontal = 18.dp, vertical = 50.dp)
-            ) {
-                Button(
-                    onClick = {
-                        if (!canSubmit || loading) return@Button
-                        error = null
-                        loading = true
-                        scope.launch {
-                            runCatching {
-                                // 현재 로그인 사용자 기준으로 비밀번호 변경
-                                repo.changePassword(currPw, newPw)
-                            }.onSuccess {
-                                currPw = ""; newPw = ""; newPw2 = ""
-                                done = true
-                                nav.popBackStack() // 성공 후 뒤로가기
-                            }.onFailure { e ->
-                                error = e.message ?: "비밀번호 변경 실패"
-                            }
-                            loading = false
-                        }
-                    },
-                    enabled = canSubmit && !loading,
+        contentWindowInsets = WindowInsets.safeDrawing,
+        topBar = {
+            Column {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (canSubmit) Primary else Color(0xFFBFC6D2),
-                        contentColor = Color.White,
-                        disabledContainerColor = Color(0xFFBFC6D2),
-                        disabledContentColor = Color.White
-                    )
+                        .height(24.dp)
+                        .background(Color(0xFFEFEFEF))
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Bg)
                 ) {
-                    Text(if (loading) "처리 중…" else "변경하기", fontSize = 25.sp, fontWeight = FontWeight.Medium)
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 24.dp, start = 6.dp)
+                            .size(48.dp)
+                            .clickable { nav.popBackStack() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.back),
+                            contentDescription = "뒤로가기",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "비밀번호 변경",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.019f).em,
+                    color = Color.Black,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 2.dp)
+                )
+            }
+        },
+        bottomBar = {
+            if (!showComplete) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .background(Bg)
+                ) {
+                    Button(
+                        onClick = {
+                            if (!canSubmit || loading) return@Button
+                            error = null
+                            done = false
+                            loading = true
+                            scope.launch {
+                                runCatching {
+                                    repo.changePassword(currPw, newPw)
+                                }.onSuccess {
+                                    currPw = ""; newPw = ""; newPw2 = ""
+                                    done = true
+                                    showComplete = true
+                                }.onFailure { e ->
+                                    error = e.message ?: "비밀번호 변경 실패"
+                                }
+                                loading = false
+                            }
+                        },
+                        enabled = canSubmit && !loading,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .fillMaxWidth()
+                            .height(54.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (canSubmit) Primary else Color(0xFFBFC6D2),
+                            contentColor = Color.White,
+                            disabledContainerColor = Color(0xFFBFC6D2),
+                            disabledContentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = if (loading) "처리 중…" else "변경하기",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = (-0.019f).em
+                        )
+                    }
                 }
             }
         }
     ) { inner ->
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(inner)
+                .fillMaxSize()
         ) {
-            val W = maxWidth
-            val H = maxHeight
-
-            val hPad = (W * 0.045f)
-            val titleTop = (H * 0.03f)
-            val titleSp = (W.value * 0.09f).sp
-            val backSp = (W.value * 0.065f).sp
-            val subTop = (H * 0.008f)
-            val subSp = (W.value * 0.055f).sp
-            val labelTop = (H * 0.019f)
-            val labelSp = (W.value * 0.055f).sp
-            val fieldTop = 2.dp
-            val placeSp = (W.value * 0.042f).sp
-            val lineGap = 8.dp
-            val gapAfterSubtitle = (H * 0.035f)
-
+            // 🔹 기존 폼
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .matchParentSize()
+                    .imePadding()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = hPad)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Spacer(Modifier.height(titleTop))
+                Text(
+                    "새 비밀번호로 변경하시겠습니까?",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color(0xFF636363),
+                    lineHeight = 30.sp,
+                    letterSpacing = (-0.019f).em,
+                    modifier = Modifier.padding(top = 0.dp, bottom = 20.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.ChevronLeft,
-                        contentDescription = "뒤로가기",
-                        tint = Color.Black,
-                        modifier = Modifier
-                            .size(28.dp) // 원하는 크기로 조정
-                            .clickable { nav.popBackStack() }
-                    )
-                }
-
-
-                Spacer(Modifier.height(8.dp))
-                Text("비밀번호 변경", fontSize = titleSp, fontWeight = FontWeight.SemiBold, color = Color.Black)
-
-                Spacer(Modifier.height(subTop))
-                Text("새 비밀번호로 변경하시겠습니까?", fontSize = subSp, color = Color(0xFF636363))
-
-                // 현재 비밀번호
-                Spacer(Modifier.height(gapAfterSubtitle))
-                Text("현재 비밀번호", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
+                SectionLabel20("현재 비밀번호")
+                UnderlineFieldRowOverlayCheck(
                     value = currPw,
                     onValueChange = { currPw = it },
                     placeholder = "",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    placeholderSp = 18.sp,
+                    keyboardType = KeyboardType.Password,
                     isPassword = true,
-                    checkState = if (currPwOk) CheckState.ValidBlue else CheckState.NeutralGrey
+                    checkState = if (currPwValid) CheckState.ValidBlue else CheckState.NeutralGrey
                 )
-                Spacer(Modifier.height(lineGap))
 
-                // 새 비밀번호
-                Spacer(Modifier.height(labelTop))
-                Text("새 비밀번호", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
+                Spacer(Modifier.height(24.dp))
+                SectionLabel20("새 비밀번호")
+                UnderlineFieldRowOverlayCheck(
                     value = newPw,
                     onValueChange = { newPw = it },
-                    placeholder = "숫자, 영문 포함 3자리 이상",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    placeholder = "숫자,영문 포함 3자리 이상",
+                    placeholderSp = 18.sp,
+                    keyboardType = KeyboardType.Password,
                     isPassword = true,
                     checkState = if (newPwOk && notSameAsOld) CheckState.ValidBlue else CheckState.NeutralGrey
                 )
-                Spacer(Modifier.height(lineGap))
 
-                // 새 비밀번호 재입력
-                Spacer(Modifier.height(labelTop))
-                Text("새 비밀번호 확인", fontSize = labelSp, fontWeight = FontWeight.Medium, color = Color.Black)
-                Spacer(Modifier.height(fieldTop))
-                UnderlineFieldRow(
+                Spacer(Modifier.height(24.dp))
+                SectionLabel20("새 비밀번호 확인")
+                UnderlineFieldRowOverlayCheck(
                     value = newPw2,
                     onValueChange = { newPw2 = it },
                     placeholder = "숫자, 영문 포함 3자리 이상",
-                    placeholderSize = placeSp,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    placeholderSp = 18.sp,
+                    keyboardType = KeyboardType.Password,
                     isPassword = true,
                     checkState = if (newPw2Ok) CheckState.ValidBlue else CheckState.NeutralGrey
                 )
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
 
-                // 안내/에러
-                if (done) {
-                    Text("비밀번호가 변경되었습니다.", color = Color(0xFF2E7D32), fontSize = 14.sp)
-                } else {
-                    if (!notSameAsOld && currPw.isNotEmpty() && newPw.isNotEmpty()) {
-                        Text("현재 비밀번호와 다른 값이어야 합니다.", color = Color(0xFFD32F2F), fontSize = 14.sp)
-                    }
-                    error?.let { Text(it, color = Color(0xFFD32F2F), fontSize = 14.sp) }
+                if (!notSameAsOld && currPw.isNotEmpty() && newPw.isNotEmpty()) {
+                    Text(
+                        "현재 비밀번호와 다른 값이어야 합니다.",
+                        color = Color(0xFFD32F2F),
+                        fontSize = 14.sp,
+                        letterSpacing = (-0.019f).em
+                    )
+                    Spacer(Modifier.height(4.dp))
                 }
+                error?.let {
+                    Text(
+                        it,
+                        color = Color(0xFFD32F2F),
+                        fontSize = 14.sp,
+                        letterSpacing = (-0.019f).em
+                    )
+                }
+            }
 
-                Spacer(Modifier.height(lineGap))
+            // 🔹 비밀번호 변경 완료 오버레이
+            if (showComplete) {
+                PasswordChangeCompleteOverlay(
+                    onClickedAnywhere = {
+                        nav.navigate(Route.My.path) {
+                            popUpTo(Route.ChangePassword.path) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
         }
     }
 }
 
-/* -------------------------------
-   밑줄형 입력 + 오른쪽 체크 (회원가입 화면 동일)
--------------------------------- */
 @Composable
-private fun UnderlineFieldRow(
+private fun PasswordChangeCompleteOverlay(
+    onClickedAnywhere: () -> Unit
+) {
+    val Bg = Color(0xFFF1F5F7)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Bg)
+            .clickable(onClick = onClickedAnywhere),
+        contentAlignment = Alignment.Center
+    ) {
+        // 가운데 체크 아이콘 + 텍스트
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.complete_image),
+                contentDescription = "변경 완료",
+                modifier = Modifier.size(69.dp)
+            )
+            Text(
+                text = "변경 완료!",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.019f).em,
+                color = Color.Black
+            )
+        }
+
+        // 하단 홈 인디케이터(선)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 10.dp)
+                .width(80.dp)
+                .height(4.dp)
+                .background(
+                    color = Color(0xFF6A7685),
+                    shape = RoundedCornerShape(2.dp)
+                )
+        )
+    }
+}
+
+/* =================== 보조 컴포넌트 =================== */
+
+@Composable
+private fun SectionLabel20(text: String) {
+    Text(
+        text = text,
+        fontSize = 20.sp,               // 라벨 20
+        fontWeight = FontWeight.Medium, // 500
+        letterSpacing = (-0.019f).em,
+        color = Color.Black
+    )
+    Spacer(Modifier.height(2.dp))      // 라벨-필드 gap: 12
+}
+
+@Composable
+private fun UnderlineFieldRowOverlayCheck(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    placeholderSize: androidx.compose.ui.unit.TextUnit,
-    keyboardOptions: KeyboardOptions,
+    placeholderSp: androidx.compose.ui.unit.TextUnit,
+    keyboardType: KeyboardType,
     isPassword: Boolean,
     checkState: CheckState?
 ) {
-    val hint = Color(0xFFA6A6A6)
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        TextField(
+    val iconRes = when (checkState) {
+        CheckState.ValidBlue -> R.drawable.autologin_checked
+        CheckState.NeutralGrey, null -> R.drawable.autologin_unchecked
+        else -> R.drawable.autologin_unchecked
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp) // 필드 컨테이너 높이
+    ) {
+        UnderlineFieldRow(
             value = value,
             onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = TextStyle(fontSize = placeholderSize, color = Color.Black),
-            placeholder = { Text(placeholder, color = hint, fontSize = placeholderSize) },
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 40.dp),
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-            keyboardOptions = keyboardOptions,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                errorContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Black,
-                unfocusedIndicatorColor = Color(0xFFA2A2A2),
-                disabledIndicatorColor = Color(0xFFC0C0C0),
-                cursorColor = Color.Black,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                focusedPlaceholderColor = hint,
-                unfocusedPlaceholderColor = hint
-            )
+            placeholder = placeholder,
+            placeholderSize = placeholderSp,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            isPassword = isPassword,
+            checkState = null, // 내부 체크는 끄고, 오버레이만 사용
         )
-        if (checkState != null) {
-            Spacer(Modifier.width(10.dp))
-            CheckDot(state = checkState)
-        }
-    }
-}
 
-private enum class CheckState { NeutralGrey, ValidBlue }
-
-@Composable
-private fun CheckDot(state: CheckState) {
-    when (state) {
-        CheckState.NeutralGrey -> {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE6E6E6)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = Color(0xFFBDBDBD),
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-        }
-        CheckState.ValidBlue -> {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF2A77FF)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-        }
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = "체크 상태",
+            modifier = Modifier
+                .size(24.dp)
+                .align(Alignment.CenterEnd)
+                .offset(y = (-2).dp)
+                .padding(end = 2.dp)
+        )
     }
 }
