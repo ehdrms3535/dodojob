@@ -40,8 +40,8 @@ import androidx.compose.runtime.setValue
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-
+import com.example.dodojob.session.AnnouncementSession
+import com.example.dodojob.session.AnnouncementSession.ApplyMethod
 /* -------- Colors -------- */
 private val Blue = Color(0xFF005FFF)
 private val TextGray = Color(0xFF828282)
@@ -169,8 +169,8 @@ fun Announcement4Screen(
     val companyName = row?.company_name ?: "-"
     val companyLocation = listOfNotNull(row?.company_locate, row?.detail_locate?.takeIf { it.isNotBlank() })
         .joinToString(" ")
-    val contactName = "-"        // 이전 단계 상태 연결 전까지 placeholder
-    val contactPhone = "-"       // 이전 단계 상태 연결 전까지 placeholder
+    val contactName = AnnouncementSession.sirname ?:"-"        // 이전 단계 상태 연결 전까지 placeholder
+    val contactPhone = AnnouncementSession.sirphone ?: "-"       // 이전 단계 상태 연결 전까지 placeholder
 
     val majorJob = row?.work_category ?: "-"
     val headCount = "-"                                 // (뷰에 없음) 추후 02~03 단계 상태와 연결
@@ -319,7 +319,10 @@ fun Announcement4Screen(
                 Spacer(Modifier.height(10.dp))
                 ApplyMethodSection(
                     selected = applyMethod,
-                    onSelect = { applyMethod = it }
+                    onSelect = { method ->
+                        applyMethod = method
+                        AnnouncementSession.setApplyMethod(method)   // ⬅⬅ 여기!
+                    }
                 )
             }
             SectionSpacer()
