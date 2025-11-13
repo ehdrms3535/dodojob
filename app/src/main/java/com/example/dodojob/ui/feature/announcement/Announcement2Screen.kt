@@ -1163,7 +1163,7 @@ private fun TimeDropdownRow(
             fontWeight = FontWeight.SemiBold,
             letterSpacing = (-0.019).em()
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(10.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
