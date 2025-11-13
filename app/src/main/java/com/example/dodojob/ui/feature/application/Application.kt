@@ -10,18 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,14 +25,29 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
+import com.example.dodojob.data.application.ApplicationData
+import com.example.dodojob.data.application.ApplyRepository
 import com.example.dodojob.navigation.Route
+import io.github.jan.supabase.SupabaseClient
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
-/* ================= 공통 색 ================ */
+/* ================= 공통 색/타이포 ================= */
 private val ScreenBg = Color(0xFFF1F5F7)
 private val BrandBlue = Color(0xFF005FFF)
 private val Letter = (-0.019f).em
 
-/* =============== 가라 DB =============== */
+/* =============== Route 정의 =============== */
+object ApplyRoute {
+    const val path = "application"
+    const val withId = "application/{announcementId}"
+
+    fun createRoute(announcementId: Long): String = "$path/$announcementId"
+}
+
+/* =============== UI용 모델 =============== */
+
 data class ApplicantProfile(
     val name: String,
     val tel: String,
@@ -56,69 +61,135 @@ data class HealthFlag(
     val checked: Boolean
 )
 
-object ApplicantFakeDb {
-    fun getApplicant(): ApplicantProfile = ApplicantProfile(
-        name = "홍길동",
-        tel = "010-1234-5678",
-        experienceSummary = "고객대응 업무 경험",
-        healthFlags = listOf(
-            HealthFlag("오래 서 있기 어려움", false),
-            HealthFlag("무거운 짐 들기 어려움", false),
-            HealthFlag("시력 보조 필요", false),
-        ),
-        healthEtcPlaceholder = "기타"
-    )
-}
-
 data class CompanyPosting(
     val orgName: String,
     val task: String
 )
 
-object PostingFakeDb {
-    fun getPosting(): CompanyPosting = CompanyPosting(
-        orgName = "모던하우스",
-        task = "매장운영 및 관리"
-    )
-}
+data class ApplicationUiState(
+    val applicant: ApplicantProfile,
+    val posting: CompanyPosting
+)
 
-/* =============== Route =============== */
-object ApplyRoute { const val path = "application" }
+/* ============ Route ============ */
 
-/* ============ Entry ============ */
 @Composable
-fun ApplicationRoute(nav: NavController) {
-    val applicant = remember { ApplicantFakeDb.getApplicant() }
-    val posting = remember { PostingFakeDb.getPosting() }
+fun ApplicationRoute(
+    nav: NavController,
+    announcementId: Long,
+    username: String?,
+    client: SupabaseClient
+) {
+    val repo = remember(client) { ApplyRepository(client) }
 
-    ApplicationScreen(
-        applicant = applicant,
-        posting = posting,
-        onBackClick = { nav.popBackStack() },
-        onSubmit = {
-            nav.navigate(Route.ApplicationCompleted.path)
+    var uiState by remember { mutableStateOf<ApplicationUiState?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(announcementId, username) {
+        isLoading = true
+        error = null
+        try {
+            val data: ApplicationData = repo.loadApplicationData(
+                announcementId = announcementId,
+                username = username
+            )
+
+            val posting = CompanyPosting(
+                orgName = data.orgName ?: "회사명 없음",
+                task = data.taskMajor ?: "업무내용 없음"
+            )
+
+            val applicant = ApplicantProfile(
+                name = data.userName ?: "이름 없음",
+                tel = formatPhoneNumber(data.userPhone),
+                experienceSummary = data.careerTitle?.trim() ?: "경력 없음",
+                healthFlags = listOf(
+                    HealthFlag("오래 서 있기 어려움", false),
+                    HealthFlag("무거운 짐 들기 어려움", false),
+                    HealthFlag("시력 보조 필요", false),
+                ),
+                healthEtcPlaceholder = "기타"
+            )
+
+            uiState = ApplicationUiState(
+                applicant = applicant,
+                posting = posting
+            )
+        } catch (e: Exception) {
+            error = e.message
+        } finally {
+            isLoading = false
         }
-    )
+    }
+
+    when {
+        isLoading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(ScreenBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("불러오는 중…")
+            }
+        }
+
+        error != null -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(ScreenBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("데이터를 불러오지 못했습니다.\n$error")
+            }
+        }
+
+        uiState != null -> {
+            ApplicationScreen(
+                applicant = uiState!!.applicant,
+                posting = uiState!!.posting,
+                onBackClick = { nav.popBackStack() },
+                onSubmit = { healthCondition ->
+                    scope.launch {
+                        try {
+                            repo.submitApplication(
+                                announcementId = announcementId,
+                                username = username,
+                                healthCondition = healthCondition
+                            )
+                            nav.navigate(Route.ApplicationCompleted.path)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            nav.navigate(Route.ApplicationCompleted.path)
+                        }
+                    }
+                }
+            )
+        }
+    }
 }
 
 /* ============ Screen ============ */
+
 @Composable
 fun ApplicationScreen(
     applicant: ApplicantProfile,
     posting: CompanyPosting,
     onBackClick: () -> Unit,
-    onSubmit: () -> Unit = {}
+    onSubmit: (String) -> Unit
 ) {
-    // 건강사항 상태
-    val healthFlags = remember { mutableStateListOf<HealthFlag>().apply { addAll(applicant.healthFlags) } }
+    val healthFlags = remember {
+        mutableStateListOf<HealthFlag>().apply { addAll(applicant.healthFlags) }
+    }
     var etcChecked by remember { mutableStateOf(false) }
     var etcText by remember { mutableStateOf("") }
 
-    // 경력 추가 상태
-    var showExpInput by remember { mutableStateOf(false) } // 지금은 minLines용이었지만 경력 추가 버튼 클릭 상태로만 사용
     var extraExperience by remember { mutableStateOf("") }
 
-    // 동의 체크
     var consentChecked by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -132,7 +203,14 @@ fun ApplicationScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Button(
-                    onClick = onSubmit,
+                    onClick = {
+                        val healthCondition = buildHealthCondition(
+                            flags = healthFlags,
+                            etcChecked = etcChecked,
+                            etcText = etcText
+                        )
+                        onSubmit(healthCondition)
+                    },
                     enabled = consentChecked,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -163,7 +241,7 @@ fun ApplicationScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            /* 상단 헤더 (JobDetail 과 동일한 구조) */
+            /* 상단 헤더 */
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(Color.White),
@@ -207,7 +285,7 @@ fun ApplicationScreen(
                 }
             }
 
-            /* 지원내용 섹션 (상단 정보 카드) */
+            /* 지원내용 섹션 */
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(Color.White),
@@ -235,10 +313,10 @@ fun ApplicationScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            /* 기본정보 – 제목 아래 여백만 늘리고 싶으면 여기 titleBottomSpacing 조절 */
+            /* 기본정보 */
             SectionCard(
                 title = "기본정보",
-                titleBottomSpacing = 20.dp    // 🔹 기본정보 ↔ 이름 사이만 20dp
+                titleBottomSpacing = 20.dp
             ) {
                 InfoRow("이름", applicant.name, Color(0xFF848484), Color.Black)
                 InfoRow("연락처", applicant.tel, Color(0xFF848484), Color.Black)
@@ -247,7 +325,7 @@ fun ApplicationScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            /* 건강사항 – 기존 간격 그대로 (titleBottomSpacing 기본값 사용) */
+            /* 건강사항 */
             SectionCard(
                 title = "건강사항",
                 titleBottomSpacing = 20.dp
@@ -260,7 +338,7 @@ fun ApplicationScreen(
                     )
                 }
                 CheckItemWithText(
-                    label = applicant.healthEtcPlaceholder, // placeholder 텍스트
+                    label = applicant.healthEtcPlaceholder,
                     checked = etcChecked,
                     text = etcText,
                     onToggle = { etcChecked = !etcChecked },
@@ -301,7 +379,7 @@ fun ApplicationScreen(
                         Row(
                             modifier = Modifier
                                 .background(Color(0x2B005FFF), RoundedCornerShape(31.dp))
-                                .clickable { showExpInput = true }
+                                .clickable { /* +추가 눌렀을 때 확장 로직 필요하면 추가 */ }
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -320,7 +398,6 @@ fun ApplicationScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                     ) {
-                        // 🔹 OutlinedTextField → 커스텀 얇은 텍스트박스로 교체
                         GraySingleLineInput(
                             value = extraExperience,
                             onValueChange = { extraExperience = it },
@@ -361,7 +438,7 @@ fun ApplicationScreen(
     }
 }
 
-/* ============ 재사용 컴포넌트 (최상위) ============ */
+/* ============ 공통 컴포넌트 ============ */
 
 @Composable
 fun SectionCard(
@@ -391,9 +468,7 @@ fun SectionCard(
                 letterSpacing = Letter,
                 color = Color.Black
             )
-            // 🔹 제목 바로 아래 간격만 따로 조절
             Spacer(Modifier.height(titleBottomSpacing))
-            // 🔹 내용끼리 간격은 기존처럼 12dp 유지
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -415,7 +490,6 @@ fun InfoRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 왼쪽 라벨 고정 폭
         Box(modifier = Modifier.width(120.dp)) {
             Text(
                 text = label,
@@ -425,7 +499,6 @@ fun InfoRow(
                 color = labelColor
             )
         }
-        // 오른쪽 값
         Text(
             text = value,
             fontSize = 20.sp,
@@ -436,7 +509,6 @@ fun InfoRow(
         )
     }
 }
-
 
 @Composable
 fun CheckItem(
@@ -481,23 +553,21 @@ fun CheckItem(
     }
 }
 
-/* 체크 점: autologin_checked / autologin_unchecked 사용 */
 @Composable
-private fun CheckDot(checked: Boolean) {
+fun CheckDot(checked: Boolean) {
     Image(
         painter = painterResource(
             if (checked) R.drawable.autologin_checked
             else R.drawable.autologin_unchecked
         ),
         contentDescription = null,
-        modifier = Modifier.size(24.dp) // 텍스트와 수평 정렬 잘 맞도록
+        modifier = Modifier.size(24.dp)
     )
 }
 
-/** 기타: 체크 오른쪽 즉시 입력창 */
 @Composable
 fun CheckItemWithText(
-    label: String, // placeholder 용
+    label: String,
     checked: Boolean,
     text: String,
     onToggle: () -> Unit,
@@ -507,7 +577,6 @@ fun CheckItemWithText(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 체크
         Row(
             modifier = Modifier
                 .clickable(onClick = onToggle)
@@ -537,7 +606,6 @@ fun CheckItemWithText(
 
         Spacer(Modifier.width(11.dp))
 
-        // 🔹 기타 입력칸도 커스텀 텍스트박스로 교체 (높이 41dp 고정)
         GraySingleLineInput(
             value = text,
             onValueChange = onTextChange,
@@ -548,9 +616,8 @@ fun CheckItemWithText(
     }
 }
 
-/* ===== 커스텀 얇은 텍스트박스 (41dp, Figma 스타일) ===== */
 @Composable
-private fun GraySingleLineInput(
+fun GraySingleLineInput(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
@@ -559,7 +626,7 @@ private fun GraySingleLineInput(
 ) {
     Box(
         modifier = modifier
-            .height(41.dp) // Figma 높이 그대로
+            .height(41.dp)
             .background(Color(0xFFEFEFEF), RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart
@@ -589,4 +656,35 @@ private fun GraySingleLineInput(
             modifier = Modifier.fillMaxWidth()
         )
     }
+}
+
+private fun formatPhoneNumber(raw: String?): String {
+    val digits = raw
+        ?.filter { it.isDigit() }
+        .orEmpty()
+    return if (digits.length == 11 && digits.startsWith("010")) {
+        "010-${digits.substring(3, 7)}-${digits.substring(7, 11)}"
+    } else {
+        raw.orEmpty()
+    }
+}
+
+private fun buildHealthCondition(
+    flags: List<HealthFlag>,
+    etcChecked: Boolean,
+    etcText: String
+): String {
+    val selected = flags
+        .filter { it.checked }
+        .map { it.label.trim() }
+
+    val etc = if (etcChecked && etcText.isNotBlank()) {
+        etcText.trim()
+    } else {
+        null
+    }
+
+    return (selected + listOfNotNull(etc))
+        .joinToString(separator = ", ")
+        .ifBlank { "특이사항 없음" }
 }
