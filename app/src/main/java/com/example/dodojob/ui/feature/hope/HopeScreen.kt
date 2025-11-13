@@ -32,6 +32,8 @@ import com.example.dodojob.data.supabase.LocalSupabase
 import com.example.dodojob.data.jobtype.JobTypeRepository
 import com.example.dodojob.data.jobtype.JobTypeRepositorySupabase
 import com.example.dodojob.data.jobtype.JobtypeDto
+import com.example.dodojob.data.senior.SeniorRepository
+import com.example.dodojob.data.senior.SeniorRepositorySupabase
 import com.example.dodojob.ui.feature.prefer.PreferWorkSheetBottomSheet
 import com.example.dodojob.ui.feature.prefer.RegionPickerBottomSheet
 import kotlinx.coroutines.launch
@@ -61,6 +63,8 @@ private fun maskToString(mask: Int): String =
 fun HopeWorkFilterScreen(nav: NavController) {
     val client = LocalSupabase.current
     val repo: JobTypeRepository = remember(client) { JobTypeRepositorySupabase(client) }
+    val seniorrepo = remember(client) {SeniorRepositorySupabase(client)}
+
     val scope = rememberCoroutineScope()
 
     val prev = nav.previousBackStackEntry?.savedStateHandle
@@ -107,6 +111,9 @@ fun HopeWorkFilterScreen(nav: NavController) {
     val Bg = Color(0xFFF1F5F7)
     val BrandBlue = Color(0xFF005FFF)
     val letter = (-0.019f).em
+
+
+
 
     Scaffold(
         containerColor = Bg,
@@ -194,6 +201,8 @@ fun HopeWorkFilterScreen(nav: NavController) {
                                 )
                                 repo.insertJobtype(dto)
                                 dto
+                                seniorrepo.upsertSenior(username.toString())
+
                             }.onSuccess {
                                 nav.navigate(Route.Experience.path)
                             }.onFailure {

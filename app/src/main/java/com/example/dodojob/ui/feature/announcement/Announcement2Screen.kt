@@ -43,6 +43,7 @@ import android.util.Log
 import com.example.dodojob.data.announcement.skillsorexprience2.SkillDto
 import com.example.dodojob.data.announcement.skillsorexprience2.SkillRepo
 import com.example.dodojob.data.announcement.skillsorexprience2.SkillRepoImtlSupabase
+import androidx.compose.material.icons.outlined.ExpandMore
 
 /* -------- Palette -------- */
 private val Blue       = Color(0xFF005FFF) // 프라이머리
@@ -114,6 +115,11 @@ fun Announcement2Route(
     Announcement2Screen(onNext, onBack, onTabClick)
 }
 
+enum class AmPm(val label: String) {
+    AM("오전"),
+    PM("오후")
+}
+
 /* ====== Screen: 공고등록 / 02 ====== */
 @Composable
 fun Announcement2Screen(
@@ -160,6 +166,18 @@ fun Announcement2Screen(
     var saving by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() } // 필요 시 Scaffold로 감싸서 표시
     val scope = rememberCoroutineScope()
+
+    //시간
+    var startAmPm by remember { mutableStateOf(AmPm.PM) }
+    var startHour by remember { mutableStateOf(0) }   // 12시
+    var startMinute by remember { mutableStateOf(0) } // 30분
+
+    var endAmPm by remember { mutableStateOf(AmPm.PM) }
+    var endHour by remember { mutableStateOf(0) }
+    var endMinute by remember { mutableStateOf(0) }
+
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -385,32 +403,30 @@ fun Announcement2Screen(
             SectionCard {
                 LabelText("근무 시간")
                 Spacer(Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "시작시간",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = (-0.019).em()
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        TimeBox(startTime) { /* TODO: TimePicker */ }
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "종료시간",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = (-0.019).em()
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        TimeBox(endTime) { /* TODO: TimePicker */ }
-                    }
-                }
+
+                TimeDropdownRow(
+                    label = "시작시간",
+                    amPm = startAmPm,
+                    onAmPmChange = { startAmPm = it },
+                    hour = startHour,
+                    onHourChange = { startHour = it },
+                    minute = startMinute,
+                    onMinuteChange = { startMinute = it }
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                TimeDropdownRow(
+                    label = "종료시간",
+                    amPm = endAmPm,
+                    onAmPmChange = { endAmPm = it },
+                    hour = endHour,
+                    onHourChange = { endHour = it },
+                    minute = endMinute,
+                    onMinuteChange = { endMinute = it }
+                )
             }
+
             SectionSpacer()
 
             // --- 업무 강도 (리스트 카드 3개) ---
@@ -480,6 +496,8 @@ fun Announcement2Screen(
 
                                     Log.d("Announcement2", "week=$weekBits, talent=$talentBits")
                                     val skills = contactOrLink
+                                    val startMinuteText = startMinute.toString().padStart(2, '0')
+                                    val endMinuteText = endMinute.toString().padStart(2, '0')
                                     val dto = WorkConditionDto(
                                         id = announceId,
                                         category = mapCategory(majorCategory),
@@ -487,8 +505,8 @@ fun Announcement2Screen(
                                         major = desc,
                                         form = mapForm(workType),
                                         week = weekBits,
-                                        starttime = startTime,
-                                        endtime = endTime,
+                                        starttime = "${startAmPm.label} ${startHour}:${startMinuteText}", // 예: "오후 12:30"
+                                        endtime   = "${endAmPm.label} ${endHour}:${endMinuteText}",
                                         intensity = mapIntensity(intensity),
                                     )
 
@@ -988,6 +1006,186 @@ private fun BottomNavPlaceholder() {
             .height(43.dp)
             .background(Color(0xFFF4F5F7))
     )
+}
+
+/* 공통 드롭다운 박스: 파란 테두리 + 둥근 모서리 + 가운데 정렬 (Figma TimeBox 스타일) */
+@Composable
+private fun DropdownFieldBox(
+    text: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(CARD_CORNER)
+    Box(
+        modifier = modifier
+            .height(TIME_BOX_HEIGHT)
+            .clip(shape)
+            .border(1.dp, Blue, shape)
+            .background(Color.White, shape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black,
+                letterSpacing = (-0.019).em()
+            )
+            Icon(
+                imageVector = Icons.Outlined.ExpandMore,
+                contentDescription = null,
+                tint = TextGray,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/* 오전/오후 드롭다운 */
+@Composable
+private fun AmPmDropdownField(
+    selected: AmPm,
+    onSelectedChange: (AmPm) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        DropdownFieldBox(
+            text = selected.label,
+            modifier = Modifier.fillMaxWidth()
+        ) { expanded = true }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            AmPm.values().forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item.label) },
+                    onClick = {
+                        onSelectedChange(item)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+/* 시(hour) 드롭다운: 1~12 */
+@Composable
+private fun HourDropdownField(
+    hour: Int,
+    onHourChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val hours = (0..11).toList()
+
+    Box(modifier = modifier) {
+        DropdownFieldBox(
+            text = "${hour}시",
+            modifier = Modifier.fillMaxWidth()
+        ) { expanded = true }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            hours.forEach { h ->
+                DropdownMenuItem(
+                    text = { Text("${h}시") },
+                    onClick = {
+                        onHourChange(h)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+/* 분(minute) 드롭다운: 0/15/30/45 */
+@Composable
+private fun MinuteDropdownField(
+    minute: Int,
+    onMinuteChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val minutes = listOf(0, 15, 30, 45)
+    val minuteText = minute.toString().padStart(2, '0')
+
+    Box(modifier = modifier) {
+        DropdownFieldBox(
+            text = "${minuteText}분",
+            modifier = Modifier.fillMaxWidth()
+        ) { expanded = true }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            minutes.forEach { m ->
+                DropdownMenuItem(
+                    text = { Text("${m.toString().padStart(2, '0')}분") },
+                    onClick = {
+                        onMinuteChange(m)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+/* 한 줄: label + [오전/오후] [시] [분] */
+@Composable
+private fun TimeDropdownRow(
+    label: String,
+    amPm: AmPm,
+    onAmPmChange: (AmPm) -> Unit,
+    hour: Int,
+    onHourChange: (Int) -> Unit,
+    minute: Int,
+    onMinuteChange: (Int) -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            label,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.019).em()
+        )
+        Spacer(Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AmPmDropdownField(
+                selected = amPm,
+                onSelectedChange = onAmPmChange,
+                modifier = Modifier.weight(1f)
+            )
+            HourDropdownField(
+                hour = hour,
+                onHourChange = onHourChange,
+                modifier = Modifier.weight(1f)
+            )
+            MinuteDropdownField(
+                minute = minute,
+                onMinuteChange = onMinuteChange,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
 }
 
 /* ====== Models ====== */
