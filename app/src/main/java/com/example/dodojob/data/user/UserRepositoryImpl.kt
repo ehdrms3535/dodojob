@@ -103,3 +103,8 @@ class UserRepositorySupabase(
         CurrentUser.setLogin(username, newPassword)
     }
 }
+/*
+카카오 주식회사
+디지털 콘텐츠
+2013.01.01 ~ 2025.09.26
+ */

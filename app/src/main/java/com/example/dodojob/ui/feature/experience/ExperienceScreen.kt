@@ -43,6 +43,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.dodojob.App
 import com.example.dodojob.R
+import com.example.dodojob.data.announcement.needlicense3.NeedlisenceRepoSupabase
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.data.userimage.UserimageDto
 import com.example.dodojob.data.userimage.UserimageRepository
@@ -56,12 +57,50 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 import com.example.dodojob.session.CurrentUser
+import com.example.dodojob.data.career.CareerRepositoryImpl
+import com.example.dodojob.data.career.CareerModels
+import com.example.dodojob.data.license.LicenseModels
+import com.example.dodojob.data.license.LicenseRepositoryImpl
+import java.time.YearMonth
 
 /* ===============================
    업로드 헬퍼
    =============================== */
+//
+
 
 data class UploadedImage(val url: String, val path: String)
+
+
+data class YearMonthRange(
+    val start: YearMonth?,
+    val end: YearMonth?
+)
+
+fun parseYearMonthRange(input: String): YearMonthRange {
+    // 연도 4자리 + (중간에 아무 문자 0~3개) + 월 1~2자리
+    val ymRegex = Regex("(\\d{4})[^0-9]{0,3}(\\d{1,2})")
+
+    val matches = ymRegex.findAll(input)
+        .take(2) // 최대 2개 (start, end)
+        .toList()
+
+    if (matches.isEmpty()) {
+        return YearMonthRange(null, null)
+    }
+
+    fun toYearMonth(match: MatchResult): YearMonth? {
+        val year = match.groupValues[1].toIntOrNull() ?: return null
+        val month = match.groupValues[2].toIntOrNull() ?: return null
+        if (month !in 1..12) return null
+        return YearMonth.of(year, month)
+    }
+
+    val startYM = toYearMonth(matches[0])
+    val endYM = if (matches.size > 1) toYearMonth(matches[1]) else startYM
+
+    return YearMonthRange(startYM, endYM)
+}
 
 private suspend fun uploadProfileImage(
     client: io.github.jan.supabase.SupabaseClient,
@@ -114,6 +153,27 @@ fun ExperienceScreen(nav: NavController) {
     val app = LocalContext.current.applicationContext as App
     val client = app.supabase
     val repo: UserimageRepository = remember(client) { UserimageSupabase(client) }
+    val liRepo = remember { LicenseRepositoryImpl(client) }
+    val caRepo = remember { CareerRepositoryImpl(client) }
+//경력 career_senior username , company, career_title, start_date, end_date, description
+//자격증 license_senior username, license_name, license_location, license_number
+
+
+    //경력
+    val username = CurrentUser.username
+    var companyname by remember { mutableStateOf("") }
+    var careertitle by remember { mutableStateOf("")}
+    var startdate by remember { mutableStateOf("")}
+    var enddate by remember { mutableStateOf("")}
+    var des by remember { mutableStateOf("")}
+
+    //자격증
+    var licensename by remember { mutableStateOf("")}
+    var liceselocation by remember { mutableStateOf("")}
+    var licensenumber by remember { mutableStateOf("")}
+
+
+
 
     var description by remember { mutableStateOf("") }
     var showPhotoSheet by remember { mutableStateOf(false) }
@@ -351,7 +411,12 @@ fun ExperienceScreen(nav: NavController) {
                 Spacer(Modifier.height(20.dp))
 
                 PrimaryFullButton(text = "추가하기") {
-                    // TODO: 항목 추가 핸들러
+                    scope.launch {
+                        val range = parseYearMonthRange(period)
+                        startdate = range.start?.toString() ?: ""
+                        enddate = range.end?.toString() ?: ""
+                        caRepo.add(username.toString(),mainTasks,workplace,startdate,enddate,"")
+                    }
                 }
             }
 
@@ -367,7 +432,9 @@ fun ExperienceScreen(nav: NavController) {
                 )
                 Spacer(Modifier.height(20.dp))
                 PrimaryFullButton(text = "추가하기") {
-                    // TODO: 공고등록 액션
+                    scope.launch {
+                        liRepo.add(username.toString(), description, "", "")
+                    }
                 }
             }
 
