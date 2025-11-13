@@ -169,7 +169,9 @@ fun ApplicantManagementRoute(
                             "interview"   -> ApplicantStatus.SUGGESTING
                             else          -> ApplicantStatus.UNREAD
                         },
-                        activityLevel = r.activityLevel ?: 1
+                        activityLevel = r.activityLevel ?: 1,
+                        announcementId = r.announcementId,
+                        username       = r.seniorUserName
                     )
                 }
             }
