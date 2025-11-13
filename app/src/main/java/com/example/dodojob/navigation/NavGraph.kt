@@ -177,7 +177,6 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                             toggleJobLikeDao(
                                 seniorUsername = username,
                                 announcementId = state.announcementId,
-                                companyId = null,
                                 liked = liked
                             )
                         }
@@ -185,7 +184,6 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                     onCall = {  },
                     onApply = {  },
                     onSimpleApply = { nav.navigate(Route.Application.of(state.announcementId)) }
-
                 )
             }
         }
