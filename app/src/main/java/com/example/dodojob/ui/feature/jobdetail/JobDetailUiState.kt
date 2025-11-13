@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.dodojob.R
-import com.example.dodojob.ui.feature.application.ApplyRoute
+import com.example.dodojob.navigation.Route
 import kotlinx.coroutines.launch
 
 /* ======== 모델 ======== */
@@ -91,7 +91,8 @@ fun JobDetailRoute(
         onToggleLike = onToggleLike,
         onCall = onCall,
         onApply = { /* bottom sheet 열기만 담당 */ },
-        onSimpleApply = { nav.navigate(ApplyRoute.path) }
+        onSimpleApply = { nav.navigate(Route.Application.of(ui.announcementId)) }
+
     )
 }
 
@@ -376,7 +377,7 @@ fun JobDetailScreen(
             }
         }
 
-        // ✅ 하단에 딱 붙는 지원하기 바텀시트
+        // 하단에 딱 붙는 지원하기 바텀시트
         ApplyBottomSheet(
             visible = showApplySheet,
             onClose = { showApplySheet = false },
@@ -527,7 +528,7 @@ private fun ApplyBottomSheet(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            // ✅ 딤드 배경 레이어
+            // 딤드 배경 레이어
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -535,7 +536,7 @@ private fun ApplyBottomSheet(
                     .clickable { onClose() }
             )
 
-            // ✅ 하단 시트
+            // 하단 시트
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
