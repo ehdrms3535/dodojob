@@ -63,12 +63,6 @@ import com.example.dodojob.data.license.LicenseModels
 import com.example.dodojob.data.license.LicenseRepositoryImpl
 import java.time.YearMonth
 
-/* ===============================
-   업로드 헬퍼
-   =============================== */
-//
-
-
 data class UploadedImage(val url: String, val path: String)
 
 
@@ -715,42 +709,39 @@ private fun OutlinedBoxField(
     onValueChange: (String) -> Unit,
     placeholder: String,
 ) {
-    Box(
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
         modifier = Modifier
             .fillMaxWidth()
-            .height(47.dp)
+            .height(56.dp)
             .border(1.dp, BorderGray, RoundedCornerShape(10.dp))
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color.White)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        if (value.isEmpty()) {
-            Text(placeholder, color = PlaceholderGray, fontSize = 18.sp)
-        }
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(27.dp),
-            singleLine = true,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                errorContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                cursorColor = Color.Black,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black
-            ),
-            textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
-        )
-    }
+            .clip(RoundedCornerShape(10.dp)),
+        singleLine = true,
+        placeholder = {
+            Text(
+                text = placeholder,
+                color = PlaceholderGray,
+                fontSize = 18.sp,
+                modifier = Modifier.offset(y = (-2).dp)
+            )
+        },
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            disabledContainerColor = Color.White,
+            errorContainerColor = Color.White,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            cursorColor = Color.Black,
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black
+        ),
+        textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
+    )
 }
+
 
 /* ===============================
    촬영용 임시 파일/Uri
