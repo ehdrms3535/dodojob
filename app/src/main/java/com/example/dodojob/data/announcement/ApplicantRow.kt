@@ -1,7 +1,14 @@
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class ApplicantRow(
+    @SerialName("announcement_id")
+    val announcementId: Long?,
+
+    @SerialName("senior_username")
+    val seniorUserName: String?,
+
     val id: Long,
     val name: String? = null,
     val gender: String? = null,
