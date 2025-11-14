@@ -543,20 +543,12 @@ private fun ApplicantCard(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                // 프로필
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(25.dp))
-                        .background(Color(0xFFEAEFFB)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = data.profileRes),
-                        contentDescription = "프로필",
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+
+                Image(
+                    painter = painterResource(id = data.profileRes),
+                    contentDescription = "프로필",
+                    modifier = Modifier.size(28.dp)
+                )
 
                 Column(
                     modifier = Modifier.weight(1f),
