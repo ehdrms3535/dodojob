@@ -527,7 +527,7 @@ private fun StatCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 15.dp, bottom = 15.dp),
+                .padding(top = 15.dp, bottom = 2.dp),
             horizontalAlignment = Alignment.Start
         ) {
             Row(
@@ -562,7 +562,7 @@ private fun StatCard(
                 color = BrandBlue,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = STATCARD_TEXT_START, top = 5.dp)
+                    .padding(start = STATCARD_TEXT_START, top = 7.dp)
             )
             Text(
                 text = subtitle,
@@ -571,7 +571,7 @@ private fun StatCard(
                 color = TextGray,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = STATCARD_TEXT_START, top = 2.dp)
+                    .padding(start = STATCARD_TEXT_START, top = 4.dp)
             )
         }
     }
@@ -608,9 +608,9 @@ fun ApplicantList(applicants: List<ApplicantUi>) {
         Separator() // 맨 위 선
 
         applicants.forEachIndexed { idx, ap ->
-            Spacer(Modifier.height(8.dp))   // 행 위 여백
+            Spacer(Modifier.height(6.dp))   // 행 위 여백
             ApplicantRow(ap)
-            Spacer(Modifier.height(8.dp))   // 행 아래 여백
+            Spacer(Modifier.height(6.dp))   // 행 아래 여백
 
             if (idx != applicants.lastIndex) {
                 Separator()                 // 사이사이 선
@@ -697,84 +697,84 @@ fun EmployerMainPopupDialog(
 
 @Composable
 private fun ApplicantRow(ap: ApplicantUi) {
+
+    val lineSpacing = 2.dp   // 이름 / 직무 / 경력 줄 간격 통일
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 12.dp),          // 높이는 패딩으로
+        verticalAlignment = Alignment.CenterVertically // 기본은 가운데
     ) {
+        // 🔹 프로필 (맨 위 정렬)
+        Image(
+            painter = painterResource(id = R.drawable.basic_profile),
+            contentDescription = "user",
+            modifier = Modifier
+                .size(28.dp)
+                .align(Alignment.Top)
+        )
+
+        Spacer(Modifier.width(12.dp))
+
         Column(
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(lineSpacing)
         ) {
-            // 이름 줄
+            // 1줄: 이름 + 나이 + 메달
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .offset(x = (-2).dp)
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFDEEAFF)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.user_with_circle),
-                        contentDescription = "user",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Spacer(Modifier.width(6.dp))
-
                 Text(
                     ap.name,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black
                 )
-
-                Spacer(Modifier.width(6.dp))
-
+                Spacer(Modifier.width(4.dp))
                 Text("(${ap.age}세)", fontSize = 13.sp, color = TextGray)
-
                 Spacer(Modifier.width(2.dp))
-
                 Image(
                     painter = painterResource(id = ap.medalRes),
-                    contentDescription = "medal_inline",
-                    modifier = Modifier.size(20.dp)
+                    contentDescription = "medal",
+                    modifier = Modifier
+                        .size(18.dp)
+                        .offset(y = 1.dp)
                 )
             }
 
-            val indent = 24.dp + 6.dp   // 아이콘(24) + 간격(6)
+            // 2줄: 직무
+            Text(
+                ap.jobTitle,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextGray,
+                maxLines = 1
+            )
 
-            Column(modifier = Modifier.padding(start = indent)) {
-                Text(
-                    ap.jobTitle,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextGray,
-                    maxLines = 1
+            // 3줄: 경력 / 위치 / 시간
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(ap.experience, fontSize = 12.sp, color = BrandBlue)
+
+                Spacer(Modifier.width(8.dp))
+                Text("·", fontSize = 12.sp, color = TextGray)
+                Spacer(Modifier.width(8.dp))
+
+                Image(
+                    painter = painterResource(id = R.drawable.location),
+                    contentDescription = "location",
+                    modifier = Modifier.size(12.dp),
+                    colorFilter = ColorFilter.tint(TextGray)
                 )
+                Spacer(Modifier.width(4.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(ap.experience, fontSize = 12.sp, color = BrandBlue)
-                    Spacer(Modifier.width(8.dp))
-                    Text("·", fontSize = 12.sp, color = TextGray)
-                    Spacer(Modifier.width(8.dp))
-                    Image(
-                        painter = painterResource(id = R.drawable.location),
-                        contentDescription = "location",
-                        modifier = Modifier.size(12.dp),
-                        colorFilter = ColorFilter.tint(TextGray)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(ap.location, fontSize = 12.sp, color = TextGray)
-                    Spacer(Modifier.width(8.dp))
-                    Text("· ${ap.appliedHoursAgo}시간 전", fontSize = 12.sp, color = TextGray)
-                }
+                Text(ap.location, fontSize = 12.sp, color = TextGray)
+
+                Spacer(Modifier.width(8.dp))
+
+                Text("${ap.appliedHoursAgo}시간 전", fontSize = 12.sp, color = TextGray)
             }
         }
+
+        Spacer(Modifier.width(12.dp))
 
         Image(
             painter = painterResource(id = R.drawable.right_back),
@@ -837,6 +837,11 @@ private fun hideEmployerPopupToday(context: Context) {
     prefs.edit()
         .putLong(KEY_EMPLOYER_HIDE_UNTIL_EPOCH_DAY, today)
         .apply()
+}
+
+fun formatExperienceYearsOnly(totalMonths: Int): String {
+    val years = totalMonths / 12
+    return if (years == 0) "신입" else "경력 ${years}년"
 }
 
 /* ============ 리소스 체크 ============

@@ -164,7 +164,12 @@ suspend fun getRecentApplicantsByCompany(
     val result = applicantRows.map { row ->
         // 3-1) 총 경력(년/개월) 계산
         val (years, months) = careerRepo.totalCareerPeriod(row.username)
-        val experienceText = careerRepo.formatCareerPeriod(years, months)
+        val experienceText = if (years <= 0) {
+            "신입"
+        } else {
+            "경력 ${years}년"
+        }
+
         Log.d(
             TAG,
             "[매핑] username=${row.username} 경력 years=$years, months=$months, text=$experienceText"
