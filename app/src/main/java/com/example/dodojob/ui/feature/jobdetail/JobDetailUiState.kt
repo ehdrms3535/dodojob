@@ -37,6 +37,12 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import kotlinx.coroutines.launch
+import com.naver.maps.geometry.LatLng
+import com.naver.maps.map.CameraPosition
+import com.example.dodojob.data.naver.rememberGeocodedLatLng
+import com.example.dodojob.ui.components.DodoNaverMap // 공통 지도 컴포넌트 만들어뒀다고 가정
+import com.naver.maps.map.NaverMap
+import com.naver.maps.map.overlay.Marker
 
 /* ======== 모델 ======== */
 data class JobDetailUiState(
@@ -106,6 +112,8 @@ fun JobDetailScreen(
     onApply: () -> Unit,
     onSimpleApply: () -> Unit
 ) {
+    val mapCenter = rememberGeocodedLatLng(ui.workplaceMapHint)
+
     var liked by remember(ui.isLiked) { mutableStateOf(ui.isLiked) }
     var selectedTab by remember { mutableStateOf(0) }
     var showApplySheet by remember { mutableStateOf(false) }
@@ -302,14 +310,33 @@ fun JobDetailScreen(
                         ) {
                             SectionHeader("근무지 장소")
                             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(188.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFFE9EDF2)),
-                                    contentAlignment = Alignment.Center
-                                ) { Text("지도 영역 (API 연동 예정)", color = TextDim, fontSize = 13.sp) }
+                                val mapHeight = 188.dp
+
+                                if (mapCenter != null) {
+                                    // 🔵 지도 표시
+                                    DodoNaverMap(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(mapHeight)
+                                            .clip(RoundedCornerShape(10.dp)),
+                                        initialCameraPosition = CameraPosition(mapCenter!!, 16.0),
+                                        enableMyLocation = false,
+                                        markerPosition = mapCenter,
+                                        markerCaption = ui.companyName
+                                    )
+                                } else {
+                                    // ⚪ 주소 지오코딩 되기 전 → 플레이스홀더
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(mapHeight)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFFE9EDF2)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("지도 영역 (주소 지오코딩 대기)", color = TextDim, fontSize = 13.sp)
+                                    }
+                                }
                                 Spacer(Modifier.height(16.dp))
                                 Text(
                                     text = ui.workplaceMapHint,
