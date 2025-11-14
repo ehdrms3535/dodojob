@@ -10,7 +10,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
@@ -44,7 +43,7 @@ private val PretendardBold     = FontFamily(Font(R.font.pretendard_bold))
 /* =========================
  *  Spacing / Colors
  * ========================= */
-private val SIDE       = 12.dp   // 좌우 패딩 축소
+private val SIDE       = 4.dp   // 상단 앱바 정도에서만 사용
 private val ScreenBg   = Color(0xFFF1F5F7)
 private val White      = Color(0xFFFFFFFF)
 private val BrandBlue  = Color(0xFF005FFF)
@@ -138,7 +137,7 @@ fun SuggestInterviewScreen(navController: NavController) {
                 .background(Color(0xFFEFEFEF))
         )
 
-        // 앱바
+        // 앱바 (상단만 좌우 패딩 유지)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -146,19 +145,17 @@ fun SuggestInterviewScreen(navController: NavController) {
                 .background(White)
                 .padding(horizontal = SIDE)
         ) {
-            // 왼쪽: 뒤로가기 버튼
             IconButton(
                 onClick = { navController.popBackStack() },
                 modifier = Modifier.align(Alignment.CenterStart)
             ) {
-                Icon(
-                    Icons.Default.ChevronLeft,
+                Image(
+                    painter = painterResource(id = R.drawable.back),
                     contentDescription = "뒤로가기",
-                    tint = Color.Black
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            // 가운데: 제목
             Text(
                 text = "면접 제안",
                 fontFamily = PretendardSemiBold,
@@ -170,7 +167,6 @@ fun SuggestInterviewScreen(navController: NavController) {
                 modifier = Modifier.align(Alignment.Center)
             )
         }
-
 
         // 본문
         Column(
@@ -185,7 +181,7 @@ fun SuggestInterviewScreen(navController: NavController) {
                     iconRes = R.drawable.information_of_applicants,
                     title = "지원자 정보"
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(15.dp))
                 ApplicantInfoBox(
                     data = applicant,
                     modifier = Modifier.fillMaxWidth(),
@@ -201,14 +197,14 @@ fun SuggestInterviewScreen(navController: NavController) {
                     iconRes = R.drawable.schedule_of_interview,
                     title = "면접 일정"
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(15.dp))
                 InputBlock(
                     label = "면접 날짜",
                     value = date,
                     onValueChange = { date = it },
                     placeholder = "2025.01.01"
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(16.dp))
                 InputBlock(
                     label = "면접 시간",
                     value = time,
@@ -225,26 +221,23 @@ fun SuggestInterviewScreen(navController: NavController) {
                     iconRes = R.drawable.location_of_interview,
                     title = "면접 장소"
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(15.dp))
 
                 Text(
                     text = "면접 방식",
                     fontFamily = PretendardSemiBold,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
+                    lineHeight = 22.sp,
                     letterSpacing = (-0.019).em,
                     color = Color.Black,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = SIDE)
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(10.dp))
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = SIDE),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     MethodButton(
                         label = "대면 면접",
@@ -266,13 +259,22 @@ fun SuggestInterviewScreen(navController: NavController) {
 
                 Spacer(Modifier.height(15.dp))
 
+                // 면접 장소 인풋
                 InputBlock(
                     label = "면접 장소",
                     value = address,
                     onValueChange = { address = it },
                     placeholder = "주소를 검색해주세요"
                 )
-                Spacer(Modifier.height(10.dp))
+
+                Spacer(Modifier.height(8.dp))
+                AddressSearchButton(
+                    onClick = {
+                        // TODO: 주소 검색 화면/바텀시트 열기
+                    }
+                )
+
+                Spacer(Modifier.height(16.dp))
                 InputBlock(
                     label = "상세주소",
                     value = addressDetail,
@@ -289,12 +291,10 @@ fun SuggestInterviewScreen(navController: NavController) {
                     iconRes = R.drawable.more_about,
                     title = "안내사항"
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(15.dp))
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = SIDE),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
                 ) {
                     Text(
@@ -302,17 +302,19 @@ fun SuggestInterviewScreen(navController: NavController) {
                         fontFamily = PretendardSemiBold,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
+                        lineHeight = 22.sp,
                         letterSpacing = (-0.019).em,
                         color = Color.Black
                     )
                     Spacer(Modifier.height(10.dp))
+
                     Box(
                         modifier = Modifier
-                            .height(112.dp)
                             .fillMaxWidth()
+                            .height(120.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .border(1.dp, BrandBlue, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 20.dp, vertical = 10.dp)
+                            .padding(horizontal = 6.dp)
                     ) {
                         TextField(
                             value = note,
@@ -322,9 +324,9 @@ fun SuggestInterviewScreen(navController: NavController) {
                                 Text(
                                     text =
                                         "예시 :\n" +
-                                                "• 신분증을 지참해주세요\n" +
-                                                "• 편안한 복장으로 오셔도 됩니다\n" +
-                                                "• 건물 1층 로비에서 면접 안내를 받으실 수 있어요",
+                                                "  • 신분증을 지참해주세요\n" +
+                                                "  • 편안한 복장으로 오셔도 됩니다\n" +
+                                                "  • 건물 1층 로비에서 면접 안내를 받으실 수 있어요",
                                     color = TextGray,
                                     fontSize = 15.sp,
                                     fontFamily = PretendardMedium,
@@ -355,7 +357,7 @@ fun SuggestInterviewScreen(navController: NavController) {
                 }
             }
 
-            // 에러 메시지 (있으면 표시)
+            // 에러 메시지
             if (errorMessage != null) {
                 Text(
                     text = errorMessage!!,
@@ -363,16 +365,16 @@ fun SuggestInterviewScreen(navController: NavController) {
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = SIDE, vertical = 4.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
                 )
             }
-
+            SectionDivider()
             // ===== CTA =====
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(White)
-                    .padding(horizontal = SIDE, vertical = 20.dp),
+                    .padding(vertical = 20.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -422,6 +424,7 @@ fun SuggestInterviewScreen(navController: NavController) {
                     },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
                         .height(47.dp)
                         .clip(RoundedCornerShape(10.dp)),
                     shape = RoundedCornerShape(10.dp),
@@ -448,14 +451,6 @@ fun SuggestInterviewScreen(navController: NavController) {
                     }
                 }
             }
-
-            // 하단 네비게이션바 placeholder
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(43.dp)
-                    .background(Color(0xFFF4F5F7))
-            )
         }
     }
 }
@@ -469,11 +464,14 @@ private fun SectionDivider() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(12.dp)
+            .height(20.dp)
             .background(ScreenBg)
     )
 }
 
+/**
+ * 섹션 컨테이너
+ */
 @Composable
 private fun SectionContainer(content: @Composable ColumnScope.() -> Unit) {
     Column(
@@ -484,19 +482,23 @@ private fun SectionContainer(content: @Composable ColumnScope.() -> Unit) {
     ) {
         Spacer(Modifier.height(20.dp))
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             content = content
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(30.dp))
     }
 }
 
+/**
+ * 섹션 헤더
+ */
 @Composable
 private fun SectionHeader(iconRes: Int, title: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = SIDE)
             .height(27.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -519,7 +521,7 @@ private fun SectionHeader(iconRes: Int, title: String) {
     }
 }
 
-/* 면접 방식 버튼 (modifier 지원) */
+/* 면접 방식 버튼 */
 @Composable
 private fun MethodButton(
     label: String,
@@ -527,7 +529,7 @@ private fun MethodButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bg = if (selected) BrandBlue.copy(alpha = 0.06f) else White
+    val bg = White
     val stroke = if (selected) BrandBlue else TextGray
     val textColor = if (selected) BrandBlue else TextGray
 
@@ -551,7 +553,34 @@ private fun MethodButton(
     }
 }
 
-/* 라벨 + OutlinedTextField (placeholder 확실) */
+/* 🔹 주소찾기 버튼 */
+@Composable
+private fun AddressSearchButton(
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(43.dp),
+        shape = RoundedCornerShape(10.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = BrandBlue,
+            contentColor = White
+        )
+    ) {
+        Text(
+            text = "주소찾기",
+            fontFamily = PretendardSemiBold,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            lineHeight = 22.sp,
+            letterSpacing = (-0.019).em
+        )
+    }
+}
+
+/* 라벨 + OutlinedTextField */
 @Composable
 private fun InputBlock(
     label: String,
@@ -561,8 +590,7 @@ private fun InputBlock(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = SIDE),
+            .fillMaxWidth(),
         horizontalAlignment = Alignment.Start
     ) {
         Text(
@@ -574,11 +602,12 @@ private fun InputBlock(
             letterSpacing = (-0.019).em,
             color = Color.Black
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth(),
             singleLine = true,
             shape = RoundedCornerShape(10.dp),
             placeholder = {
@@ -588,7 +617,7 @@ private fun InputBlock(
                     fontSize = 15.sp,
                     fontFamily = PretendardMedium,
                     fontWeight = FontWeight.Medium,
-                    letterSpacing = (-0.019).em
+                    letterSpacing = (-0.019).em,
                 )
             },
             colors = OutlinedTextFieldDefaults.colors(
@@ -609,7 +638,7 @@ private fun InputBlock(
 }
 
 /* =========================
- *  Outlined 지원자 정보 박스
+ *  지원자 정보 박스
  * ========================= */
 @Composable
 fun ApplicantInfoBox(
@@ -619,7 +648,6 @@ fun ApplicantInfoBox(
 ) {
     Column(
         modifier = modifier
-            .padding(horizontal = SIDE)
             .clip(RoundedCornerShape(10.dp))
             .background(Color.White)
             .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(10.dp))
@@ -633,33 +661,26 @@ fun ApplicantInfoBox(
             horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.Top
         ) {
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(25.dp))
-                    .background(Color(0xFFEAEFFB)),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = data.profileRes),
-                    contentDescription = "프로필",
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+            Image(
+                painter = painterResource(id = data.profileRes),
+                contentDescription = "프로필",
+                modifier = Modifier.size(50.dp)
+            )
+
 
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.weight(1f)
             ) {
+                // 이름 + (성별, 나이) + 메달
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Text(
                         text = data.name,
                         fontFamily = PretendardSemiBold,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         color = Color.Black
                     )
                     Text(
@@ -672,69 +693,79 @@ fun ApplicantInfoBox(
                     Image(
                         painter = painterResource(id = medalRes(data.activityLevel)),
                         contentDescription = "활동레벨 메달",
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(width = 11.dp, height = 18.dp)
                     )
                 }
 
+                Spacer(Modifier.height(4.dp))
+
+                // 한줄 소개
                 Text(
                     text = "“${data.headline}”",
                     fontFamily = PretendardSemiBold,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    color = Color(0xFF5C5C5C)
+                    color = Color(0xFF000000)
                 )
 
+                Spacer(Modifier.height(4.dp))
+
+                // 위치
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.LocationOn,
-                        contentDescription = null,
-                        tint = TextGray,
-                        modifier = Modifier.size(16.dp)
+                    Image(
+                        painter = painterResource(R.drawable.location),
+                        contentDescription = "위치 아이콘",
+                        modifier = Modifier.size(12.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
                         text = data.address,
                         fontFamily = PretendardSemiBold,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         color = TextGray
                     )
                 }
 
                 Row {
-                    MetaLabel("경력"); Spacer(Modifier.width(8.dp)); MetaValue("${data.careerYears}년")
+                    MetaLabel("경력")
+                    Spacer(Modifier.width(8.dp))
+                    MetaValue("${data.careerYears}년")
                 }
+
                 Row {
-                    MetaLabel("지원"); Spacer(Modifier.width(8.dp)); MetaValue(data.method)
+                    MetaLabel("지원")
+                    Spacer(Modifier.width(8.dp))
+                    MetaValue(data.method)
                 }
             }
+
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(5.dp))
                 .background(Color.White)
-                .border(1.dp, LineGray, RoundedCornerShape(10.dp))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .border(1.dp, LineGray, RoundedCornerShape(5.dp))
+                .padding(horizontal = 10.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(4.dp))
                     .background(Color.White)
-                    .border(1.dp, LineGray, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
                 Text(
                     text = "지원공고",
                     fontFamily = PretendardSemiBold,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp,
-                    color = Color(0xFF6B7280)
+                    fontSize = 13.sp,
+                    color = Color(0xFF848484)
                 )
             }
             Spacer(Modifier.width(8.dp))
@@ -745,36 +776,38 @@ fun ApplicantInfoBox(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = " ${data.postingTitle} ",
+                    text = " [ ${data.postingTitle} ] ",
                     fontFamily = PretendardSemiBold,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    color = Color(0xFF111827),
+                    fontSize = 12.sp,
+                    color = Color(0xFF000000),
                     maxLines = 1
                 )
                 Spacer(Modifier.weight(1f))
-                Icon(
-                    imageVector = Icons.Filled.ChevronRight,
-                    contentDescription = null,
-                    tint = Color(0xFF9CA3AF),
+                Image(
+                    painter = painterResource(R.drawable.right_back),
+                    contentDescription = "지원공고 열기",
                     modifier = Modifier.size(18.dp)
                 )
             }
         }
+        Spacer(modifier = Modifier.height(2.dp))
     }
 }
 
-/* 텍스트 스타일 유틸 */
-@Composable private fun MetaLabel(text: String) = Text(
+@Composable
+private fun MetaLabel(text: String) = Text(
     text = text,
-    fontSize = 13.sp,
+    fontSize = 12.sp,
     fontFamily = PretendardSemiBold,
     fontWeight = FontWeight.SemiBold,
     color = TextGray
 )
-@Composable private fun MetaValue(text: String) = Text(
+
+@Composable
+private fun MetaValue(text: String) = Text(
     text = text,
-    fontSize = 13.sp,
+    fontSize = 12.sp,
     fontFamily = PretendardSemiBold,
     fontWeight = FontWeight.SemiBold,
     color = Color(0xFF111827)
