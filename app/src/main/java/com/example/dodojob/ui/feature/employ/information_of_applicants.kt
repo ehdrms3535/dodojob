@@ -2,11 +2,11 @@
 
 package com.example.dodojob.ui.feature.employ
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -24,17 +24,25 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
-import com.example.dodojob.data.greatuser.GreatUser
-import com.example.dodojob.session.CareerModels
-import com.example.dodojob.session.GreatUserView
-import kotlinx.serialization.SerialName
+import com.example.dodojob.data.career.CareerModels
+import com.example.dodojob.data.license.LicenseModels
+import com.example.dodojob.data.supabase.LocalSupabase
+import com.example.dodojob.session.JobBits
+import kotlinx.serialization.Serializable
+import com.example.dodojob.dao.*
+import com.example.dodojob.ui.feature.application.formatPhoneNumber
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+
 
 /* ===== 컬러 ===== */
 private val BrandBlue = Color(0xFF005FFF)
@@ -47,29 +55,22 @@ private val BgGray    = Color(0xFFF1F5F7)
 private val PretendardSemi = FontFamily(Font(R.font.pretendard_semibold, FontWeight.SemiBold))
 private val PretendardMed  = FontFamily(Font(R.font.pretendard_medium,  FontWeight.Medium))
 
+/* ===== 기본값 ===== */
 object ApplicantFakeDB {
-    val name = "김알바"
-    val birth = "1964년 3월 15일"
-    val phone = "010-1234-1234"
-    val address = "경북 경산시"
-    val email = "hong_11@naver.com"
-
-    val careers = listOf(
-        Triple("프랜차이즈 카페 점장", "2008.03", "2010.01"),
-        Triple("기업체 인사/총무 담당 과장", "2010.01", "2020.06")
-    )
-
-    val licenses = listOf(
-        Triple("한국서비스산업진흥원", "고객 서비스 매니저 1급 자격증", "CSM-2018-1103-1023"),
-        Triple("대구문화센터", "문화·여가 프로그램 지도사 자격증", "CPC-2021-0420-0789"),
-        Triple("대한시니어평생교육원", "시니어 케어 코디네이터 2급 자격증", "SCC-2020-0612-0457")
-    )
-
-    // ✅ 기본 희망직무 값 추가
     val defaultJob = "서비스업"
 }
 
-
+/* ===== Supabase 매핑용 데이터 클래스 ===== */
+@Serializable
+data class UserTmpRow(
+    val username: String,
+    val name: String? = null,
+    val gender: String? = null,
+    val birthdate: String? = null,
+    val region: String? = null,
+    val phone: String? = null,
+    val email: String? = null
+)
 
 /* ===== 공통 컴포넌트 ===== */
 @Composable
@@ -96,6 +97,7 @@ private fun SectionTitle(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp, vertical = 2.dp)
+            .clickable { onToggle() }
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -116,10 +118,9 @@ private fun SectionTitle(
             )
         }
         Spacer(Modifier.height(16.dp))
-        ThinDivider(insetStart = 4.dp, insetEnd = 4.dp) // ⬅️ 타이틀 밑에 선
+        ThinDivider(insetStart = 4.dp, insetEnd = 4.dp)
     }
 }
-
 
 @Composable
 private fun KeyValueRow(
@@ -167,7 +168,7 @@ private fun ThinDivider(insetStart: Dp = 4.dp, insetEnd: Dp = 4.dp) {
     Spacer(Modifier.height(6.dp))
 }
 
-/* ===== 스크롤되는 헤더(흰 배경, 중앙 정렬 제목, 좌측 뒤로가기) ===== */
+/* ===== 스크롤되는 헤더 ===== */
 @Composable
 private fun ScrollHeader(
     title: String,
@@ -181,7 +182,6 @@ private fun ScrollHeader(
                 .height(70.dp)
                 .padding(horizontal = 12.dp)
         ) {
-            // 왼쪽: 뒤로가기
             Icon(
                 imageVector = Icons.Outlined.ArrowBackIosNew,
                 contentDescription = "뒤로가기",
@@ -191,7 +191,6 @@ private fun ScrollHeader(
                     .size(20.dp)
                     .clickable { onBack() }
             )
-            // 가운데: 제목 (정중앙)
             Text(
                 text = title,
                 fontSize = 28.sp,
@@ -207,185 +206,375 @@ private fun ScrollHeader(
 
 /* ===== 메인 진입점 ===== */
 @Composable
-fun ApplicantInformationScreen(navController: NavController) {
+fun ApplicantInformationScreen(
+    navController: NavController,
+    username: String
+) {
+    Log.d("ApplicantInfo", "[SCREEN] start, username param = $username")
+
+    val client = LocalSupabase.current
     val scroll = rememberScrollState()
+    val context = LocalContext.current
+
+
 
     var personalExpanded by remember { mutableStateOf(true) }
     var careerExpanded   by remember { mutableStateOf(true) }
     var licenseExpanded  by remember { mutableStateOf(true) }
     var hopeExpanded     by remember { mutableStateOf(true) }
+    var userImageUrl by remember { mutableStateOf<String?>(null) }
+
 
     var selectedJob by remember { mutableStateOf(ApplicantFakeDB.defaultJob) }
 
-    val triplescareer = GreatUserView.careers.map { career ->
-        Triple(career.title, career.startDate, career.endDate)
+    var userInfo by remember { mutableStateOf<UserTmpRow?>(null) }
+    var careers by remember { mutableStateOf<List<CareerModels>>(emptyList()) }
+    var licenses by remember { mutableStateOf<List<LicenseModels>>(emptyList()) }
+    var hopeJobs by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    var loading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(username) {
+        loading = true
+        errorMessage = null
+
+        Log.d("ApplicantInfo", "[LOAD] start (REST), username = $username")
+
+        runCatching {
+            // 1) 인적사항
+            val u = fetchUserTmp(username)
+            userInfo = u
+
+            // 1-1) 프로필 이미지
+            val imgRow = fetchUserImage(username)
+            userImageUrl = imgRow?.imgUrl
+
+            // 2) 경력
+            val cList = fetchCareers(username)
+            careers = cList
+
+            // 3) 자격증
+            val lList = fetchLicenses(username)
+            licenses = lList
+
+            // 4) 희망직무
+            val jobRow = fetchJobtype(username)
+
+            if (jobRow != null) {
+                val jobtalent  = JobBits.parse(JobBits.JobCategory.TALENT,  jobRow.job_talent)
+                val jobmanage  = JobBits.parse(JobBits.JobCategory.MANAGE,  jobRow.job_manage)
+                val jobservice = JobBits.parse(JobBits.JobCategory.SERVICE, jobRow.job_service)
+                val jobcare    = JobBits.parse(JobBits.JobCategory.CARE,    jobRow.job_care)
+
+                val allJobs = sequenceOf(
+                    jobtalent,
+                    jobmanage,
+                    jobservice,
+                    jobcare
+                ).flatten()
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .toList()
+
+                hopeJobs = allJobs
+                    .shuffled()
+                    .take(minOf(4, allJobs.size))
+            } else {
+                hopeJobs = emptyList()
+            }
+
+        }.onFailure { e ->
+            Log.e("ApplicantInfo", "[ERROR] REST load applicant failed", e)
+            errorMessage = e.message ?: e.toString()
+        }
+
+        loading = false
     }
-    val triplelicense = GreatUserView.licenses.map {lisense ->
-        Triple(lisense.location, lisense.name,lisense.number)
-    }
+
+
+
+    val triplescareer: List<Triple<String?, String?, String?>> =
+        careers.map { career ->
+            Triple(career.title, career.startDate, career.endDate)
+        }
+
+    val triplelicense: List<Triple<String?, String?, String?>> =
+        licenses.map { lic ->
+            Triple(lic.location, lic.name, lic.number)
+        }
+
 
     Scaffold(
         containerColor = BgGray,
-        topBar = { } // ← 고정 AppBar 비움(헤더는 본문 첫 줄에 배치하여 스크롤과 함께 이동)
+        topBar = { }
     ) { inner ->
         Column(
             Modifier
                 .padding(inner)
                 .fillMaxSize()
-                .verticalScroll(scroll)
         ) {
-            // 스크롤되는 헤더
+            // 스크롤 헤더
             ScrollHeader(
                 title = "지원자 정보",
                 onBack = { navController.popBackStack() }
             )
 
-            Spacer(Modifier.height(12.dp))
-
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-            ) {
-                /* ===== 인적사항 ===== */
-                SectionCard {
-                    SectionTitle(
-                        title = " 인적사항",
-                        iconRes = R.drawable.identification,
-                        expanded = personalExpanded,
-                        onToggle = { personalExpanded = !personalExpanded }
-                    )
-                    if (personalExpanded) {
-                        Spacer(Modifier.height(16.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                            Box(
-                                modifier = Modifier
-                                    .size(96.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Color(0xFFE0E0E0))
-                            )
-                            Spacer(Modifier.width(18.dp))
-                        }
-                        Spacer(Modifier.height(16.dp))
-
-                        KeyValueRow("이름",     GreatUserView.greatuser!!.name.toString())
-                        KeyValueRow("생년월일", GreatUserView.greatuser!!.birthdate.toString())
-                        KeyValueRow("전화번호", GreatUserView.greatuser!!.phone.toString())
-                        KeyValueRow("주소",     GreatUserView.greatuser!!.region.toString())
-                        KeyValueRow("이메일",   GreatUserView.greatuser!!.email.toString())
+            when {
+                loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
 
-                Spacer(Modifier.height(28.dp))
-
-                /* ===== 경력 ===== */
-                SectionCard {
-                    SectionTitle(
-                        title = " 경력",
-                        iconRes = R.drawable.career,
-                        expanded = careerExpanded,
-                        onToggle = { careerExpanded = !careerExpanded }
-                    )
-                    if (careerExpanded) {
-                        triplescareer.forEachIndexed { i, (title, start, end) ->
-                            if (i > 0) {
-                                Spacer(Modifier.height(16.dp))
-                                ThinDivider()
-                                Spacer(Modifier.height(16.dp))
-                            } else {
-                                Spacer(Modifier.height(8.dp))
-                            }
-                            CareerItem(title.toString(), start.toString(), end.toString())
-                        }
-                        Spacer(Modifier.height(4.dp))
+                errorMessage != null -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = errorMessage ?: "",
+                            color = Color.Red,
+                            fontFamily = PretendardMed
+                        )
                     }
                 }
 
-                Spacer(Modifier.height(28.dp))
+                else -> {
+                    // 실제 내용
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scroll)
+                    ) {
+                        Spacer(Modifier.height(12.dp))
 
-                /* ===== 자격증 ===== */
-                SectionCard {
-                    SectionTitle(
-                        title = " 자격증",
-                        iconRes = R.drawable.license,
-                        expanded = licenseExpanded,
-                        onToggle = { licenseExpanded = !licenseExpanded }
-                    )
-                    if (licenseExpanded) {
-                        triplelicense.forEachIndexed { i, (org, title, code) ->
-                            if (i > 0) {
-                                Spacer(Modifier.height(16.dp))
-                                ThinDivider()
-                                Spacer(Modifier.height(16.dp))
-                            } else {
-                                Spacer(Modifier.height(8.dp))
-                            }
-                            LicenseItem(org.toString(), title.toString(), code.toString())
-                        }
-                        Spacer(Modifier.height(4.dp))
-                    }
-                }
-
-                Spacer(Modifier.height(28.dp))
-
-                /* ===== 희망직무 ===== */
-                SectionCard {
-                    // 드롭다운 아이콘 없이 제목 터치로 토글
-                    SectionTitle(
-                        title = " 희망직무",
-                        iconRes = R.drawable.hope_work,
-                        expanded = hopeExpanded,
-                        onToggle = { hopeExpanded = !hopeExpanded }
-                    )
-                    if (hopeExpanded) {
-                        Spacer(Modifier.height(20.dp))
-                        Row(
+                        Column(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                .padding(horizontal = 12.dp)
                         ) {
-                            JobChip(
-                                title = "서비스업",
-                                desc = "매장관리, 고객 응대",
-                                selected = selectedJob == "서비스업",
-                                onClick = { selectedJob = "서비스업" },
-                                modifier = Modifier.weight(1f)
-                            )
-                            JobChip(
-                                title = "교육/강의",
-                                desc = "강사, 지도사",
-                                selected = selectedJob == "교육/강의",
-                                onClick = { selectedJob = "교육/강의" },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        Spacer(Modifier.height(14.dp))
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            JobChip(
-                                title = "관리/운영",
-                                desc = "시설, 인력관리",
-                                selected = selectedJob == "관리/운영",
-                                onClick = { selectedJob = "관리/운영" },
-                                modifier = Modifier.weight(1f)
-                            )
-                            JobChip(
-                                title = "돌봄서비스",
-                                desc = "방문, 요양, 돌봄",
-                                selected = selectedJob == "돌봄서비스",
-                                onClick = { selectedJob = "돌봄서비스" },
-                                modifier = Modifier.weight(1f)
-                            )
+                            /* ===== 인적사항 ===== */
+                            SectionCard {
+                                SectionTitle(
+                                    title = " 인적사항",
+                                    iconRes = R.drawable.identification,
+                                    expanded = personalExpanded,
+                                    onToggle = { personalExpanded = !personalExpanded }
+                                )
+                                if (personalExpanded) {
+                                    Spacer(Modifier.height(16.dp))
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(96.dp)
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(Color(0xFFE0E0E0)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (userImageUrl.isNullOrBlank()) {
+                                                Text(
+                                                    text = "사진 없음",
+                                                    fontSize = 10.sp,
+                                                    color = TextGray,
+                                                    fontFamily = PretendardMed,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            } else {
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(context)
+                                                        .data(userImageUrl)
+                                                        .crossfade(true)
+                                                        .build(),
+                                                    contentDescription = "프로필 사진",
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            }
+                                        }
+                                        Spacer(Modifier.width(18.dp))
+                                    }
+
+                                    Spacer(Modifier.height(16.dp))
+
+                                    val u = userInfo
+                                    KeyValueRow("이름",     u?.name ?: "-")
+                                    KeyValueRow("생년월일", u?.birthdate ?: "-")
+                                    KeyValueRow("전화번호", formatPhoneNumber(u?.phone) ?: "-")
+                                    KeyValueRow("주소",     u?.region ?: "-")
+                                    KeyValueRow("이메일",   u?.email ?: "-")
+                                }
+                            }
+
+                            Spacer(Modifier.height(28.dp))
+
+                            /* ===== 경력 ===== */
+                            SectionCard {
+                                SectionTitle(
+                                    title = " 경력",
+                                    iconRes = R.drawable.career,
+                                    expanded = careerExpanded,
+                                    onToggle = { careerExpanded = !careerExpanded }
+                                )
+                                if (careerExpanded) {
+                                    if (triplescareer.isEmpty()) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            text = "등록된 경력이 없습니다.",
+                                            fontSize = 14.sp,
+                                            fontFamily = PretendardMed,
+                                            color = TextGray,
+                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                    } else {
+                                        triplescareer.forEachIndexed { i, (title, start, end) ->
+                                            if (i > 0) {
+                                                Spacer(Modifier.height(16.dp))
+                                                ThinDivider()
+                                                Spacer(Modifier.height(16.dp))
+                                            } else {
+                                                Spacer(Modifier.height(8.dp))
+                                            }
+                                            CareerItem(
+                                                title = title.orEmpty(),
+                                                start = start.orEmpty(),
+                                                end   = end.orEmpty()
+                                            )
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(28.dp))
+
+                            /* ===== 자격증 ===== */
+                            SectionCard {
+                                SectionTitle(
+                                    title = " 자격증",
+                                    iconRes = R.drawable.license,
+                                    expanded = licenseExpanded,
+                                    onToggle = { licenseExpanded = !licenseExpanded }
+                                )
+                                if (licenseExpanded) {
+                                    if (triplelicense.isEmpty()) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            text = "등록된 자격증이 없습니다.",
+                                            fontSize = 14.sp,
+                                            fontFamily = PretendardMed,
+                                            color = TextGray,
+                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                    } else {
+                                        triplelicense.forEachIndexed { i, (org, title, code) ->
+                                            if (i > 0) {
+                                                Spacer(Modifier.height(16.dp))
+                                                ThinDivider()
+                                                Spacer(Modifier.height(16.dp))
+                                            } else {
+                                                Spacer(Modifier.height(8.dp))
+                                            }
+                                            LicenseItem(
+                                                org   = org.orEmpty(),
+                                                title = title.orEmpty(),
+                                                code  = code.orEmpty()
+                                            )
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(28.dp))
+
+                            /* ===== 희망직무 ===== */
+                            SectionCard {
+                                SectionTitle(
+                                    title = " 희망직무",
+                                    iconRes = R.drawable.hope_work,
+                                    expanded = hopeExpanded,
+                                    onToggle = { hopeExpanded = !hopeExpanded }
+                                )
+                                if (hopeExpanded) {
+                                    Spacer(Modifier.height(20.dp))
+
+                                    val jobsForChips = hopeJobs.ifEmpty {
+                                        listOf("서비스업", "교육/강의", "관리/운영", "돌봄서비스")
+                                    }
+                                    val row1 = jobsForChips.take(2)
+                                    val row2 = jobsForChips.drop(2).take(2)
+
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        row1.getOrNull(0)?.let { title ->
+                                            JobChip(
+                                                title = title,
+                                                desc = "매장관리, 고객 응대",
+                                                selected = selectedJob == title,
+                                                onClick = { selectedJob = title },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                        row1.getOrNull(1)?.let { title ->
+                                            JobChip(
+                                                title = title,
+                                                desc = "강사, 지도사",
+                                                selected = selectedJob == title,
+                                                onClick = { selectedJob = title },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(14.dp))
+
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        row2.getOrNull(0)?.let { title ->
+                                            JobChip(
+                                                title = title,
+                                                desc = "시설, 인력관리",
+                                                selected = selectedJob == title,
+                                                onClick = { selectedJob = title },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                        row2.getOrNull(1)?.let { title ->
+                                            JobChip(
+                                                title = title,
+                                                desc = "방문, 요양, 돌봄",
+                                                selected = selectedJob == title,
+                                                onClick = { selectedJob = title },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(22.dp))
                         }
                     }
                 }
-
-                Spacer(Modifier.height(22.dp))
             }
         }
     }
@@ -415,10 +604,22 @@ private fun LicenseItem(org: String, title: String, code: String) {
         Spacer(Modifier.height(8.dp))
         Text(
             buildAnnotatedString {
-                withStyle(SpanStyle(color = LabelGray,  fontFamily = PretendardMed, fontSize = 14.sp)) {
+                withStyle(
+                    SpanStyle(
+                        color = LabelGray,
+                        fontFamily = PretendardMed,
+                        fontSize = 14.sp
+                    )
+                ) {
                     append("자격번호 ")
                 }
-                withStyle(SpanStyle(color = BrandBlue, fontFamily = PretendardMed, fontSize = 14.sp)) {
+                withStyle(
+                    SpanStyle(
+                        color = BrandBlue,
+                        fontFamily = PretendardMed,
+                        fontSize = 14.sp
+                    )
+                ) {
                     append(code)
                 }
             }
@@ -478,3 +679,4 @@ private fun JobChip(
         )
     }
 }
+

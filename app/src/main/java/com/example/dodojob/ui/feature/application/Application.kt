@@ -658,7 +658,7 @@ fun GraySingleLineInput(
     }
 }
 
-private fun formatPhoneNumber(raw: String?): String {
+fun formatPhoneNumber(raw: String?): String {
     val digits = raw
         ?.filter { it.isDigit() }
         .orEmpty()

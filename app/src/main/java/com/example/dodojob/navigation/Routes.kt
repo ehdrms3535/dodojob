@@ -54,7 +54,9 @@ sealed class Route(val path: String) {
     data object LikedJob : Route("liked_job")
     data object ManagementApplicants : Route("management_applicants")
     data object SuggestInterview : Route("suggest_interview")
-    data object InformationOfApplicants : Route("information_of_applicants")
+    data object InformationOfApplicants : Route("information_of_applicants/{username}") {
+        fun of(username: String) = "information_of_applicants/$username"
+    }
     data object PostingRegisterCompleteScreen : Route("postiongregistercomplet")
 
     data object WelfareHome : Route("welfare/home")
@@ -65,9 +67,7 @@ sealed class Route(val path: String) {
     data object Ad3        : Route("ad/3")
 
     companion object {
-        // ✅ 편의 함수 (탭에 따라 실제 네비게이션 경로 생성)
         fun welfareCategoryOf(tab: String) = "welfare/category/$tab"
-        // 혹은 enum 쓰면: fun welfareCategoryOf(tab: CategoryTab) = "welfare/category/${ if (tab==CategoryTab.Health) "health" else "leisure" }"
     }
 
     data object EduHome : Route("edu")      // 교육 홈
