@@ -31,7 +31,23 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import com.example.dodojob.R
+import com.example.dodojob.dao.getannouncebycom
+import com.example.dodojob.data.announcement.fullannouncement.fetchAnnouncementFull
+import com.example.dodojob.data.announcement.fullannouncement.AnnouncementFullRow
+import com.example.dodojob.session.CurrentUser
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import com.example.dodojob.session.AnnouncementSession
+import java.time.LocalTime
+import java.time.Duration
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /* -------- Colors -------- */
 private val Blue     = Color(0xFF005FFF)
@@ -40,6 +56,44 @@ private val BgGray   = Color(0xFFFFFFFF)
 private val CardBg   = Color.White
 private val LineGray = Color(0xFFE6EDF7)
 
+
+
+fun parseKoreanTime(text: String): LocalTime {
+    val trimmed = text.replace(" ", "")
+
+    val isPM = trimmed.startsWith("오후")
+    val timePart = trimmed.removePrefix("오전").removePrefix("오후")
+
+    val parts = timePart.split("시", "분")
+    val hour = parts[0].toInt()
+    val minute = parts[1].toInt()
+
+    val adjustedHour = when {
+        isPM && hour != 12 -> hour + 12   // 오후 1–11시는 +12
+        !isPM && hour == 12 -> 0          // 오전 12시는 00시
+        else -> hour
+    }
+
+    return LocalTime.of(adjustedHour, minute)
+}
+
+fun toKoreanTimeText(time: LocalTime): String {
+    val isPM = time.hour >= 12
+    val hour12 = when {
+        time.hour == 0 -> 12
+        time.hour > 12 -> time.hour - 12
+        else -> time.hour
+    }
+    val ampm = if (isPM) "오후" else "오전"
+    return "$ampm ${hour12}시 ${time.minute}분"
+}
+
+fun generateSerial(): String {
+    val now = LocalDate.now()
+    val datePart = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+    val random = (1..999).random().toString().padStart(3, '0')
+    return "SN-$datePart-$random"
+}
 /* ====== Screen ====== */
 @Composable
 fun Announcement6Screen(
@@ -153,8 +207,9 @@ fun Announcement6Screen(
                 }
 
                 // 섹션 2: 상세정보 (제목을 카드 안으로)
+                // 섹션 2: 상세정보 (제목을 카드 안으로)
                 AnnSectionCard(bottomPadding = 0.dp) {
-                    // ▶ 카드 안 공통 인너 패딩: 좌우/상하 12.dp (테두리와 내용 간격↑, 좌우 여백 살짝 추가)
+                    // ▶ 카드 안 공통 인너 패딩: 좌우/상하 12.dp
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -163,7 +218,7 @@ fun Announcement6Screen(
                             .background(CardBg)
                             .padding(horizontal = 10.dp, vertical = 12.dp)
                     ) {
-                        // 카드 안의 제목 행 (테두리와 텍스트 사이 간격↑)
+                        // 카드 안의 제목 행
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -178,28 +233,96 @@ fun Announcement6Screen(
                             )
                         }
 
-                        InfoRow("공고 제목", "카페 매장관리 시니어 직원 모집")
-                        BlueDivider()
-                        InfoRow("회사명", "○○카페 강남점")
-                        BlueDivider()
-                        InfoRow("공고번호", "SN-2025-0818-001")
-                        BlueDivider()
-                        InfoRow("등록일시", "2025년 8월 18일 14:30")
-                        BlueDivider()
-                        InfoRow("근무지역", "서울시 강남구")
-                        BlueDivider()
-                        InfoRow("근무시간", "오전 9시 ~ 오후 2시 (5시간)")
-                        BlueDivider()
-                        InfoRow("급여", "시급 12,000원")
-                        BlueDivider()
-                        InfoRow("지원 방법", "온라인 지원")
-                        BlueDivider()
+                        // ---------- 상태 ----------
+                        var announcement by remember { mutableStateOf<AnnouncementFullRow?>(null) }
 
+                        // ---------- 데이터 로딩 ----------
+                        LaunchedEffect(Unit) {
+                            val comid = CurrentUser.companyid
+                            val announceId = getannouncebycom(comid)?.id ?: return@LaunchedEffect
 
-                        // 둥근 모서리 살리기
-                        Spacer(Modifier.height(12.dp))
+                            val data = fetchAnnouncementFull(announceId)
+                            announcement = data
+                        }
+
+                        // ---------- null 분기 ----------
+                        val ann = announcement
+                        if (ann == null) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "공고 정보를 불러오는 중입니다...",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextGray,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        } else {
+                            // ann 은 여기서부터 non-null
+
+                            val companyName = ann.company_name ?: "(회사명 없음)"
+                            val job = ann.work_category ?: "(업무 없음)"
+
+                            // 지원 방법
+                            val applyMethod = AnnouncementSession.applyMethod
+                            val method = when (applyMethod?.name) {
+                                "PhoneSms" -> "문자/전화 지원"
+                                "PhoneOnly" -> "전화 지원"
+                                "SmsOnly" -> "문자 지원"
+                                else -> "온라인 지원"
+                            }
+
+                            // 근무시간
+                            val starttime = ann.starttime
+                            val endtime = ann.endtime
+                            val timeText = if (!starttime.isNullOrBlank() && !endtime.isNullOrBlank()) {
+                                try {
+                                    val start = parseKoreanTime(starttime)
+                                    val end = parseKoreanTime(endtime)
+                                    val diffMinutes = Duration.between(start, end).toMinutes()
+                                    "$starttime ~ $endtime (${diffMinutes}분)"
+                                } catch (e: Exception) {
+                                    "$starttime ~ $endtime"
+                                }
+                            } else {
+                                "시간 정보 없음"
+                            }
+
+                            // 급여
+                            val moneyType = ann.salary_type ?: ""
+                            val money = ann.salary_amount ?: 0
+                            val moneyText = if (moneyType.isBlank()) {
+                                "급여 정보 없음"
+                            } else {
+                                "$moneyType ${money}원"
+                            }
+
+                            // 공고번호는 한 번만 생성
+                            val serial by remember { mutableStateOf(generateSerial()) }
+
+                            InfoRow("공고 제목", "${companyName}에서 $job")
+                            BlueDivider()
+                            InfoRow("회사명", companyName)
+                            BlueDivider()
+                            InfoRow("공고번호", serial)
+                            BlueDivider()
+                            InfoRow("등록일시", ann.created_at?.toString() ?: "-")
+                            BlueDivider()
+                            InfoRow("근무지역", ann.company_locate ?: "-")
+                            BlueDivider()
+                            InfoRow("근무시간", timeText)
+                            BlueDivider()
+                            InfoRow("급여", moneyText)
+                            BlueDivider()
+                            InfoRow("지원 방법", method)
+                            BlueDivider()
+
+                            Spacer(Modifier.height(12.dp))
+                        }
                     }
                 }
+
                 Spacer(Modifier.height(24.dp))
             }
         }

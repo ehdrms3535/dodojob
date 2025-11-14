@@ -58,6 +58,7 @@ import io.ktor.http.ContentType
 import kotlinx.coroutines.launch
 import com.example.dodojob.data.announcement.AnnouncementDto
 import com.example.dodojob.data.announcement.AnnoucementUrlDto
+import com.example.dodojob.session.AnnouncementSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -405,7 +406,7 @@ fun Announcement1Screen(
                     SinglelineInputBox(
                         value = contactName,
                         onValueChange = { contactName = it },
-                        placeholder = "담당자 성함"
+                        placeholder = "담당자 성함",
                     )
                     Spacer(Modifier.height(13.dp))
 
@@ -622,6 +623,10 @@ fun Announcement1Screen(
                                     url4 = uploadedUrls.getOrNull(3) ?: ""
                                 )
                                 repo.insertAnnouncementUrl(Save2)
+
+                                AnnouncementSession.setsirname(contactName)
+                                AnnouncementSession.setsirphone(contactPhone)
+
                             }.onSuccess {
                                 withContext(Dispatchers.Main) {
                                     navigator.onNextStep()
@@ -1237,6 +1242,9 @@ private fun PhotoGridRow(
 🏢 경기도
 
 경기도 성남시 분당구 불정로 90 (네이버 그린팩토리)
+고객 문의 전화 응대
+
+영어회화가능
 
 경기도 용인시 수지구 포은대로 499 (수지이마트)
 

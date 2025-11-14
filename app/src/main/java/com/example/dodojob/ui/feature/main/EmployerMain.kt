@@ -388,7 +388,7 @@ fun EmployerHomeRoute(nav: NavController) {
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp)
                     ) {
-                        Spacer(Modifier.height(24.dp)) // 제목 위 여백
+                        Spacer(Modifier.height(20.dp)) // 제목 위 여백
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -419,7 +419,7 @@ fun EmployerHomeRoute(nav: NavController) {
                             }
                         }
 
-                        Spacer(Modifier.height(24.dp)) // 제목 아래 여백
+                        Spacer(Modifier.height(20.dp)) // 제목 아래 여백
                     }
                     ApplicantList(applicants = applicantsUi)
                 }
@@ -449,11 +449,11 @@ data class EmployerNavItem(
 @Composable
 fun EmployerBottomNavBar(current: String, onClick: (String) -> Unit) {
     val items = listOf(
-        EmployerNavItem("home",      R.drawable.unselected_home,      R.drawable.selected_home, 55.dp),
+        EmployerNavItem("home",      R.drawable.unselected_employer_home,      R.drawable.selected_employer_home, 75.dp),
         EmployerNavItem("notice",    R.drawable.unselected_notice,    R.drawable.selected_notice, 75.dp),
         EmployerNavItem("applicant", R.drawable.unselected_applicant, R.drawable.selected_applicant, 75.dp),
         EmployerNavItem("human_resource",R.drawable.unselected_human_resource, R.drawable.selected_human_resource, 75.dp),
-        EmployerNavItem("my",        R.drawable.unselected_my,        R.drawable.selected_my,    55.dp),
+        EmployerNavItem("my",        R.drawable.unselected_employer_my,        R.drawable.selected_employer_my,    75.dp),
     )
 
     NavigationBar(containerColor = Color.White) {
