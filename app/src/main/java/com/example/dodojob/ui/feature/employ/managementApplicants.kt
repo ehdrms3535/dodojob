@@ -142,11 +142,11 @@ class ApplicantsViewModel(
 fun ApplicantManagementRoute(
     nav: NavController,
     vm: ApplicantsViewModel = run {
-        // ✅ 1) Supabase 클라이언트/레포 준비
+        //  1) Supabase 클라이언트/레포 준비
         val client = LocalSupabase.current
         val repo = remember { AnnouncementRepositorySupabase(client) }
 
-        // ✅ 2) Provider 구성 (회사ID 필터 필요시 여기에 주입)
+        // 2) Provider 구성 (회사ID 필터 필요시 여기에 주입)
         val provider = remember {
             ApplicantsProvider {
                 val rows = repo.getannounceRows(companyId = null) // 필요 시 회사ID 전달
@@ -177,7 +177,7 @@ fun ApplicantManagementRoute(
             }
         }
 
-        // ✅ 3) ViewModel 팩토리 생성 (Hilt 미사용)
+        // 3) ViewModel 팩토리 생성 (Hilt 미사용)
         viewModel(
             factory = object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -296,6 +296,11 @@ fun ApplicantManagementRoute(
                                         nav.safeNavigate(Route.SuggestInterview.path)
                                     }
                                 }
+                            },
+                            onApplicantCardClick = { username ->
+                                nav.safeNavigate(
+                                    Route.InformationOfApplicants.of("1234")
+                                )
                             }
                         )
                     }
@@ -504,10 +509,12 @@ private fun ApplicantCard(
     modifier: Modifier = Modifier,
     onMenuClick: () -> Unit = {},
     onViewPostingClick: () -> Unit = {},
-    onAction: (String) -> Unit = {}
+    onAction: (String) -> Unit = {},
+    onApplicantCardClick: (String?) -> Unit = {}
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier
+            .clickable { onApplicantCardClick(data.username) },
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = White)
     ) {
@@ -765,5 +772,3 @@ private fun NavController.safeNavigate(
     route: String,
     builder: (NavOptionsBuilder.() -> Unit)? = { launchSingleTop = true; restoreState = true }
 ) { navigate(route) { builder?.invoke(this) } }
-
-
