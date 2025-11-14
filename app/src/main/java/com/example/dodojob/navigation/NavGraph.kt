@@ -1,5 +1,9 @@
 package com.example.dodojob.navigation
 
+import android.util.Log
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
 import com.example.dodojob.ui.feature.application.ApplyCompletedScreen
 import com.example.dodojob.ui.feature.verify.PreVerifyScreen
 import com.example.dodojob.ui.feature.main.AdOneScreen
@@ -34,7 +38,6 @@ import com.example.dodojob.ui.feature.experience.ExperienceCompleteScreen
 import com.example.dodojob.ui.feature.main.MainRoute
 import com.example.dodojob.ui.feature.profile.ProfileRoute
 import com.example.dodojob.ui.feature.signup.SignUpIdPwScreen
-import com.example.dodojob.ui.feature.application.ApplyRoute
 import com.example.dodojob.ui.feature.employ.ApplicantManagementRoute
 import com.example.dodojob.ui.feature.profile.LikedJobsRoute
 import com.example.dodojob.ui.todo.TodoScreen
@@ -77,6 +80,9 @@ import com.example.dodojob.ui.feature.jobdetail.toUiState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.launch
 import com.example.dodojob.data.jobdetail.JobDetailDto
 
@@ -102,7 +108,8 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         )
     }
 
-    NavHost(navController = nav, startDestination = Route.PreLogin.path) {
+    NavHost(navController = nav, startDestination = Route.Intro.path) {
+
       
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
         composable(Route.Onboarding.path) { OnboardingScreen(nav) }   // 2. 직업 선택
@@ -135,11 +142,9 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.Announcement6.path) {
             com.example.dodojob.ui.feature.announcement.Announcement6Screen(
                 onManageClick = {
-                    // 예시: 고용주 공고 관리로 이동
                     nav.navigate(Route.EmployerNotice.path)
                 },
                 onNewPostClick = {
-                    // 예시: 공고 등록 처음 화면으로 이동
                     nav.navigate(Route.Announcement.path) {
                         popUpTo(Route.Announcement.path) { inclusive = false }
                         launchSingleTop = true
@@ -207,11 +212,10 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         }
 // 지원서 작성
 
-        composable(Route.ApplicationCompleted.path) {          // 🔹 지원 완료
+        composable(Route.ApplicationCompleted.path) {          // 지원 완료
             ApplyCompletedScreen(
                 onAnyClick = {
                     nav.navigate(Route.Main.path) {
-                        // application / application_completed 둘 다 스택에서 제거
                         popUpTo(Route.Application.path) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -246,8 +250,31 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         }
 
         composable(Route.EmployerApplicant.path) { ApplicantManagementRoute(nav) } // 지원자관리
-        composable(Route.SuggestInterview.path) { SuggestInterviewScreen(nav) } // 면접지원}
-        composable(Route.InformationOfApplicants.path) { ApplicantInformationScreen(nav) } // 지원자정보)
+        composable(Route.SuggestInterview.path) { SuggestInterviewScreen(nav) } // 면접지원
+        composable(Route.InformationOfApplicants.path) { backStackEntry ->
+
+            val username = backStackEntry.arguments?.getString("username")
+
+            Log.d("ApplicantInfo", "[NAV] username arg from nav = $username")
+
+            if (username == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "지원자 username 정보를 찾을 수 없습니다.",
+                        color = Color.Red
+                    )
+                }
+            } else {
+                ApplicantInformationScreen(
+                    navController = nav,
+                    username = username
+                )
+            }
+        }
+        // 지원자정보
         composable(Route.EmployerHumanResource.path) { EmployerHumanResourceScreen(nav) } // 인재)
         composable(Route.ViewResourceDetail.path) { ViewResourceDetailScreen(nav) } //인재 상세보기
         composable(Route.ScrrapedHumanResource.path) { ScrappedHumanResourceScreen(nav) } //인재 스크랩
@@ -277,7 +304,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             val tabArg = backStackEntry.arguments?.getString("tab")
             com.example.dodojob.ui.feature.welfare.HealthLeisureRoute(
                 nav = nav,
-                startTabArg = tabArg   // "health" 또는 "leisure"
+                startTabArg = tabArg
             )
         }
 
@@ -306,7 +333,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
             }
 
             composable(
-                route = Route.EduLectureInitial.path, // "edu_lecture_ini/{courseId}"
+                route = Route.EduLectureInitial.path,
                 arguments = listOf(navArgument("courseId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
@@ -315,7 +342,6 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                     ?.savedStateHandle
                     ?.get<LecturePayload>("lec_payload")
 
-                // EduGraph 스코프의 ViewModel을 쓰고 싶으면:
                 val parentEntry = remember(backStackEntry) { nav.getBackStackEntry(Route.EduGraph.path) }
                 val eduVm: EducationViewModel = viewModel(parentEntry)
 
@@ -329,7 +355,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                     heroTitle     = payload?.title,
                     heroSubtitle  = payload?.subtitle,
                     heroThumbnail = payload?.thumbnail,
-                    viewModel     = eduVm           // ✅ 이름은 'viewModel'
+                    viewModel     = eduVm
                 )
             }
 
