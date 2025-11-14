@@ -28,6 +28,11 @@ data class AnnouncementUrlRow(
     val company_imgurl4: String? = null
 )
 
+@kotlinx.serialization.Serializable
+data class AnnouncementSeniorUpdate(
+    val user_status: String
+)
+
 
 class AnnouncementRepositorySupabase(
     private val client: SupabaseClient
@@ -89,5 +94,21 @@ class AnnouncementRepositorySupabase(
             .rpc("getannounce_rows", params)
             .decodeList<ApplicantRow>()
     }
+
+    suspend fun markApplicantRead(
+        announcementId: Long,
+        seniorUsername: String
+    ) {
+        val body = AnnouncementSeniorUpdate(
+            user_status = "read"
+        )
+        client.postgrest[
+            "announcement_senior" +
+                    "?announcement_id=eq.$announcementId" +
+                    "&senior_username=eq.$seniorUsername" +
+                    "&user_status=eq.unread"
+        ].update(body)
+    }
+
 }
 

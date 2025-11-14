@@ -23,14 +23,12 @@ import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.data.supabase.LocalSupabase
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.*
 import com.example.dodojob.session.CurrentUser
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import com.example.dodojob.session.SessionViewModel
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.dodojob.dao.getCompanyIdByUsername
 

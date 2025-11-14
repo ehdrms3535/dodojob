@@ -87,7 +87,8 @@ data class ApplicantsState(
 )
 
 class ApplicantsViewModel(
-    private val provider: ApplicantsProvider
+    private val provider: ApplicantsProvider,
+    private val repo: AnnouncementRepositorySupabase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ApplicantsState())
@@ -130,6 +131,36 @@ class ApplicantsViewModel(
             else         -> list
         }
         _state.update { it.copy(items = resorted) }
+    }
+
+    fun markAsRead(announcementId: Long?, username: String?) {
+        if (announcementId == null || username.isNullOrBlank()) return
+
+        val target = _state.value.items.firstOrNull {
+            it.announcementId == announcementId && it.username == username
+        }
+        if (target?.status != ApplicantStatus.UNREAD) {
+            return
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                repo.markApplicantRead(announcementId, username)
+            }.onSuccess {
+                _state.update { old ->
+                    val newList = old.items.map { ap ->
+                        if (ap.announcementId == announcementId && ap.username == username) {
+                            ap.copy(status = ApplicantStatus.READ)
+                        } else ap
+                    }
+
+                    old.copy(
+                        items = newList,
+                        unreadCount = newList.count { it.status == ApplicantStatus.UNREAD }
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -182,7 +213,7 @@ fun ApplicantManagementRoute(
             factory = object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return ApplicantsViewModel(provider) as T
+                    return ApplicantsViewModel(provider, repo) as T
                 }
             }
         )
@@ -287,20 +318,15 @@ fun ApplicantManagementRoute(
                             onMenuClick = { /* TODO */ },
                             onViewPostingClick = { /* TODO: 공고 상세 이동 */ },
                             onAction = { key ->
-                                when (key) {
-                                    "suggest_interview" -> {
-                                        nav.currentBackStackEntry
-                                            ?.savedStateHandle
-                                            ?.set("applicant", ap)
-
-                                        nav.safeNavigate(Route.SuggestInterview.path)
-                                    }
+                                if (key == "suggest_interview") {
+                                    vm.markAsRead(ap.announcementId!!, ap.username!!)
+                                    nav.currentBackStackEntry?.savedStateHandle?.set("applicant", ap)
+                                    nav.safeNavigate(Route.SuggestInterview.path)
                                 }
                             },
-                            onApplicantCardClick = { username ->
-                                nav.safeNavigate(
-                                    Route.InformationOfApplicants.of("1234")
-                                )
+                            onApplicantCardClick = {
+                                vm.markAsRead(ap.announcementId!!, ap.username!!)
+                                nav.safeNavigate(Route.InformationOfApplicants.of(ap.username!!))
                             }
                         )
                     }
