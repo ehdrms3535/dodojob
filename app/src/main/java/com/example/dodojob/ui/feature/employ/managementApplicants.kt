@@ -663,9 +663,7 @@ private fun ApplicantCard(
                     ) {
                         // 2-1) 이름 + (성별, 나이) + 메달
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
                             Text(
                                 text = data.name,
@@ -676,6 +674,7 @@ private fun ApplicantCard(
                                 letterSpacing = (-0.019).em,
                                 color = Color.Black
                             )
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "(${data.gender}, ${data.age}세)",
                                 fontSize = 12.sp,
@@ -685,7 +684,7 @@ private fun ApplicantCard(
                                 letterSpacing = (-0.019).em,
                                 color = TextGray
                             )
-                            Spacer(Modifier.width(4.dp))
+                            Spacer(Modifier.width(2.dp))
                             Image(
                                 painter = painterResource(id = medalRes(data.activityLevel)),
                                 contentDescription = "활동레벨 메달",
