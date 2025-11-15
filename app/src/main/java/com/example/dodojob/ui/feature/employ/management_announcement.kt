@@ -309,7 +309,7 @@ private fun TopNavigationBar(
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
+        Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Color.Black, modifier = Modifier.padding(top = 6.dp))
     }
 }
 
@@ -488,7 +488,7 @@ private fun ListControls(
                     color = TextGray,
                     letterSpacing = (-0.019).em
                 )
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(4.dp))
                 Image(
                     painter = painterResource(sortIconRes),
                     contentDescription = null,
