@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.*
@@ -30,6 +29,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -53,27 +53,29 @@ import com.example.dodojob.data.announcement.AnnouncementRepositorySupabase
  *  Fonts
  * ========================= */
 private val PretendardMedium = FontFamily(Font(R.font.pretendard_medium))
-private val PretendardBold   = FontFamily(Font(R.font.pretendard_bold))
+private val PretendardBold = FontFamily(Font(R.font.pretendard_bold))
 private val PretendardSemiBold = FontFamily(Font(R.font.pretendard_semibold))
 
 /* =========================
  *  Colors
  * ========================= */
-private val ScreenBg   = Color(0xFFF1F5F7)
-private val White      = Color(0xFFFFFFFF)
-private val BrandBlue  = Color(0xFF005FFF)
-private val TextGray   = Color(0xFF828282)
-private val LineGray   = Color(0xFFBDBDBD)
+private val ScreenBg = Color(0xFFF1F5F7)
+private val White = Color(0xFFFFFFFF)
+private val BrandBlue = Color(0xFF005FFF)
+private val TextGray = Color(0xFF828282)
+private val LineGray = Color(0xFFD7D7D7) // 공고관리 스타일
 private val TileBlueBg = Color(0xFFF5F9FF)
-private val IconBoxBg  = Color(0xFFDEEAFF)
+private val IconBoxBg = Color(0xFFDEEAFF)
 
-
+/* =========================
+ *  Provider
+ * ========================= */
 fun interface ApplicantsProvider {
     suspend fun fetchApplicants(): List<ApplicantUi>
 }
 
 /* =======================================================================
- *  State / ViewModel
+ *  State / ViewModel (백엔드 로직 그대로)
  * ======================================================================= */
 data class ApplicantsState(
     val items: List<ApplicantUi> = emptyList(),
@@ -100,9 +102,9 @@ class ApplicantsViewModel(
             runCatching { provider.fetchApplicants() }
                 .onSuccess { list ->
                     val base = when (_state.value.selectedSort) {
-                        "이름 A-Z"   -> list.sortedBy { it.name }
+                        "이름 A-Z" -> list.sortedBy { it.name }
                         "최근열람순" -> list.sortedByDescending { it.status == ApplicantStatus.READ }
-                        else         -> list // 지원일순(서버에서 최신순 주는 것으로 가정)
+                        else -> list // 지원일순(서버에서 최신순 주는 것으로 가정)
                     }
 
                     _state.update {
@@ -126,13 +128,11 @@ class ApplicantsViewModel(
         _state.update { it.copy(selectedSort = label) }
         val list = _state.value.items
         val resorted = when (label) {
-            "이름 A-Z"   -> list.sortedBy { it.name }
-            "최근열람순" -> list.sortedByDescending { it.status == ApplicantStatus.READ }
-            else         -> list
+            "경력순" -> list.sortedByDescending { it.careerYears } // 예시
+            else      -> list                                      // 지원일순(서버 최신순)
         }
         _state.update { it.copy(items = resorted) }
     }
-
     fun markAsRead(announcementId: Long?, username: String?) {
         if (announcementId == null || username.isNullOrBlank()) return
 
@@ -166,22 +166,21 @@ class ApplicantsViewModel(
 
 /* =======================================================================
  *  Route) 지원자 관리
- *  - NavGraph 수정 없이 Route 내부에서 repo/provider 준비
+ *  - 스타일만 공고관리 화면 스타일로 변경
  * ======================================================================= */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ApplicantManagementRoute(
     nav: NavController,
     vm: ApplicantsViewModel = run {
-        //  1) Supabase 클라이언트/레포 준비
+        // 1) Supabase 클라이언트/레포 준비
         val client = LocalSupabase.current
         val repo = remember { AnnouncementRepositorySupabase(client) }
 
-        // 2) Provider 구성 (회사ID 필터 필요시 여기에 주입)
+        // 2) Provider 구성
         val provider = remember {
             ApplicantsProvider {
                 val rows = repo.getannounceRows(companyId = null) // 필요 시 회사ID 전달
-                // DB rows → UI 매핑
                 rows.map { r ->
                     ApplicantUi(
                         id = r.id,
@@ -194,15 +193,15 @@ fun ApplicantManagementRoute(
                         method = r.method ?: "온라인지원",
                         postingTitle = r.postingTitle ?: "-",
                         status = when (r.status?.lowercase()) {
-                            "unread"      -> ApplicantStatus.UNREAD
-                            "read"        -> ApplicantStatus.READ
+                            "unread" -> ApplicantStatus.UNREAD
+                            "read" -> ApplicantStatus.READ
                             "suggesting",
-                            "interview"   -> ApplicantStatus.SUGGESTING
-                            else          -> ApplicantStatus.UNREAD
+                            "interview" -> ApplicantStatus.SUGGESTING
+                            else -> ApplicantStatus.UNREAD
                         },
                         activityLevel = r.activityLevel ?: 1,
                         announcementId = r.announcementId,
-                        username       = r.seniorUserName
+                        username = r.seniorUserName
                     )
                 }
             }
@@ -223,7 +222,7 @@ fun ApplicantManagementRoute(
 
     LaunchedEffect(Unit) { vm.load() }
 
-    val sortOptions = listOf("지원일순", "이름 A-Z", "최근열람순")
+    val sortOptions = listOf("지원일순", "경력순")
 
     Scaffold(
         containerColor = ScreenBg,
@@ -232,11 +231,11 @@ fun ApplicantManagementRoute(
                 current = "applicant",
                 onClick = { key ->
                     when (key) {
-                        "home"           -> nav.safeNavigate(Route.EmployerHome.path)
-                        "notice"         -> nav.safeNavigate(Route.EmployerNotice.path)
-                        "applicant"      -> nav.safeNavigate(Route.EmployerApplicant.path)
+                        "home" -> nav.safeNavigate(Route.EmployerHome.path)
+                        "notice" -> nav.safeNavigate(Route.EmployerNotice.path)
+                        "applicant" -> nav.safeNavigate(Route.EmployerApplicant.path)
                         "human_resource" -> nav.safeNavigate(Route.EmployerHumanResource.path)
-                        "my"             -> nav.safeNavigate(Route.EmployerMy.path)
+                        "my" -> nav.safeNavigate(Route.EmployerMy.path)
                     }
                 }
             )
@@ -249,7 +248,7 @@ fun ApplicantManagementRoute(
             contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 타이틀 + 통계
+            // 타이틀 + 통계 (공고관리 스타일)
             item {
                 Column(
                     modifier = Modifier
@@ -258,6 +257,7 @@ fun ApplicantManagementRoute(
                 ) {
                     TopNavigationBar(title = "지원자 관리", useOwnBackground = false)
                     Spacer(Modifier.height(8.dp))
+
                     val stats = listOf(
                         StatItem("전체 지원자", state.totalCount, R.drawable.total_applicants),
                         StatItem("미열람", state.unreadCount, R.drawable.unread_applicants),
@@ -270,21 +270,27 @@ fun ApplicantManagementRoute(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     )
-                    Spacer(Modifier.height(8.dp))
+
+                    Spacer(Modifier.height(24.dp))
                 }
             }
 
-            // 상단 컨트롤 (총 N개 / 정렬)
+            // 상단 컨트롤 (총 N개 / 정렬) - 공고관리 스타일
             item {
-                ListControls(
-                    totalLabel = "총 ${state.items.size}개",
-                    sortOptions = sortOptions,
-                    selectedSort = state.selectedSort,
-                    onSortChange = vm::onSortChange,
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(ScreenBg)
                         .padding(horizontal = 16.dp)
-                )
+                ) {
+                    ListControls(
+                        totalLabel = "총 ${state.items.size}개",
+                        sortOptions = sortOptions,
+                        selectedSort = state.selectedSort,
+                        onSortChange = vm::onSortChange,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             // 상태별 UI
@@ -299,6 +305,7 @@ fun ApplicantManagementRoute(
                         ) { CircularProgressIndicator() }
                     }
                 }
+
                 state.error != null -> {
                     item {
                         Text(
@@ -308,6 +315,7 @@ fun ApplicantManagementRoute(
                         )
                     }
                 }
+
                 else -> {
                     items(state.items) { ap ->
                         ApplicantCard(
@@ -330,17 +338,14 @@ fun ApplicantManagementRoute(
                             }
                         )
                     }
-
                 }
             }
-
-            item { Spacer(Modifier.height(80.dp)) }
         }
     }
 }
 
 /* =========================
- *  공통 컴포넌트
+ *  공통 컴포넌트 (공고관리 스타일로 수정)
  * ========================= */
 @Composable
 private fun TopNavigationBar(
@@ -356,39 +361,48 @@ private fun TopNavigationBar(
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
-            title,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Medium,
-            fontFamily = PretendardSemiBold,
-            color = Color.Black
+            text = title,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.Black,
+            modifier = Modifier.padding(top = 6.dp)
         )
     }
 }
+
+/* ===== Stats (공고관리 스타일 재사용) ===== */
+// StatItem 은 다른 파일(공고관리)에서 이미 선언되어 있다고 가정하고 사용만 함.
 
 @Composable
 private fun StatGrid(items: List<StatItem>, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items.take(2).forEach { item ->
-                StatTile(item = item, modifier = Modifier.weight(1f))
+                StatTile(item = item, isLast = false, modifier = Modifier.weight(1f))
             }
         }
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items.drop(2).forEach { item ->
-                StatTile(item = item, modifier = Modifier.weight(1f))
+            items.drop(2).forEachIndexed { i, item ->
+                StatTile(
+                    item = item,
+                    isLast = (i == items.drop(2).lastIndex),
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun StatTile(item: StatItem, modifier: Modifier = Modifier) {
+private fun StatTile(item: StatItem, isLast: Boolean, modifier: Modifier = Modifier) {
+    val bgColor = TileBlueBg
+
     Row(
         modifier = modifier
             .height(73.dp)
-            .background(TileBlueBg, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .background(bgColor, RoundedCornerShape(10.dp))
+            .padding(horizontal = 22.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -413,20 +427,20 @@ private fun StatTile(item: StatItem, modifier: Modifier = Modifier) {
                 item.label,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                fontFamily = PretendardMedium,
                 color = Color.Black
             )
             Text(
                 "${item.number}",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                fontFamily = PretendardBold,
                 color = BrandBlue
             )
         }
     }
 }
 
+
+/* ===== Sort bar (공고관리 스타일을 지원자 정렬에 맞게 수정) ===== */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ListControls(
@@ -452,39 +466,80 @@ private fun ListControls(
 
         var expanded by remember { mutableStateOf(false) }
 
-        ExposedDropdownMenuBox(expanded, { expanded = !expanded }) {
+        val sortIconRes = if (expanded) {
+            R.drawable.upper
+        } else {
+            R.drawable.down
+        }
+
+        Box {
             Row(
                 modifier = Modifier
-                    .menuAnchor()
-                    .height(24.dp)
-                    .clickable { expanded = true },
+                    .clickable { expanded = true }
+                    .height(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    selectedSort,
+                    text = selectedSort,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     fontFamily = PretendardMedium,
                     color = TextGray,
                     letterSpacing = (-0.019).em
                 )
-                Spacer(Modifier.width(6.dp))
-                Icon(
-                    imageVector = Icons.Filled.ExpandMore,
-                    contentDescription = "정렬 선택",
-                    modifier = Modifier.size(18.dp),
-                    tint = TextGray
+                Spacer(Modifier.width(4.dp))
+                Image(
+                    painter = painterResource(sortIconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            ExposedDropdownMenu(expanded, { expanded = false }) {
-                sortOptions.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option, fontFamily = PretendardMedium) },
-                        onClick = {
-                            onSortChange(option)
-                            expanded = false
+
+            // 드롭다운: 스타일만 공고관리처럼, 실제 항목은 sortOptions 사용
+            MaterialTheme(
+                colorScheme = MaterialTheme.colorScheme.copy(
+                    surface = Color.White,
+                    surfaceVariant = Color.White,
+                    surfaceTint = Color.Transparent
+                ),
+                typography = MaterialTheme.typography,
+                shapes = MaterialTheme.shapes
+            ) {
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    offset = DpOffset(x = (-40).dp, y = 0.dp),
+                    modifier = Modifier
+                        .width(113.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        sortOptions.forEach { option ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(34.dp)
+                                    .clickable {
+                                        onSortChange(option)
+                                        expanded = false
+                                    },
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = option,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = (-0.019).em,
+                                    color = TextGray,
+                                    modifier = Modifier.padding(start = 20.dp)
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             }
         }
@@ -510,9 +565,7 @@ private fun StatusChip(status: ApplicantStatus) {
     val intrinsic: Size = painter.intrinsicSize
     val aspect = if (intrinsic.width.isFinite() && intrinsic.height.isFinite() && intrinsic.height != 0f) {
         intrinsic.width / intrinsic.height
-    } else {
-        3f
-    }
+    } else 3f
 
     val chipWidth: Dp = with(density) { (CHIP_HEIGHT.toPx() * aspect).toDp() }
 
@@ -521,14 +574,11 @@ private fun StatusChip(status: ApplicantStatus) {
         contentDescription = null,
         contentScale = ContentScale.FillBounds,
         modifier = Modifier
-            .heightIn(min = CHIP_HEIGHT)
-            .size(width = chipWidth, height = CHIP_HEIGHT)
+            .height(CHIP_HEIGHT)
+            .width(chipWidth)
     )
 }
 
-/* =========================
- *  지원자 카드
- * ========================= */
 @Composable
 private fun ApplicantCard(
     data: ApplicantUi,
@@ -542,200 +592,322 @@ private fun ApplicantCard(
         modifier = modifier
             .clickable { onApplicantCardClick(data.username) },
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = White)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent) // 안쪽에서 흰 배경
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // 상단: 칩(필요 시 2개) + 메뉴
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // ───────────────── 상단 컨텐츠 영역 (230px) ─────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(White)
+                    .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                    .padding(horizontal = 20.dp, vertical = 20.dp) // Figma: 20px 0 상하, 안쪽 288 폭
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (data.status == ApplicantStatus.SUGGESTING) {
-                        StatusChip(ApplicantStatus.READ)       // 열람 칩
-                        StatusChip(ApplicantStatus.SUGGESTING) // 면접 제안 중 칩
-                    } else {
-                        StatusChip(data.status)                // 미열람 or 열람
-                    }
-                }
-                IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.MoreHoriz, contentDescription = "더 보기", tint = Color.Black)
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // 본문: 프로필 + 내용
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-
-                Image(
-                    painter = painterResource(id = data.profileRes),
-                    contentDescription = "프로필",
-                    modifier = Modifier.size(28.dp)
-                )
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                // 1) 상단: 상태 칩 + more 버튼
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 이름(검정) + (성별, 나이)(회색) + 메달
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = data.name,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = PretendardMedium,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "(${data.gender}, ${data.age}세)",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = PretendardMedium,
-                            color = TextGray
-                        )
-                        Image(
-                            painter = painterResource(id = medalRes(data.activityLevel)),
-                            contentDescription = "활동레벨 메달",
+                        if (data.status == ApplicantStatus.SUGGESTING) {
+                            StatusChip(ApplicantStatus.READ)
+                            StatusChip(ApplicantStatus.SUGGESTING)
+                        } else {
+                            StatusChip(data.status)
+                        }
+                    }
+
+                    IconButton(
+                        onClick = onMenuClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreHoriz,
+                            contentDescription = "더 보기",
+                            tint = Color.Black,
                             modifier = Modifier.size(24.dp)
                         )
                     }
-
-                    // 자기소개 한 줄 (따옴표 포함)
-                    Text(
-                        text = buildAnnotatedString {
-                            append("“")
-                            withStyle(SpanStyle(color = Color.Black)) { append(data.headline) }
-                            append("”")
-                        },
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        fontFamily = PretendardMedium,
-                        color = Color(0xFF5C5C5C)
-                    )
-
-                    // 위치
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.LocationOn,
-                            contentDescription = null,
-                            tint = TextGray,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = data.address,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = PretendardMedium,
-                            color = TextGray
-                        )
-                    }
-
-                    // 경력 행
-                    Row {
-                        MetaLabel("경력")
-                        Spacer(Modifier.width(8.dp))
-                        MetaValue("${data.careerYears}년")
-                    }
-
-                    // 지원 행
-                    Row {
-                        MetaLabel("지원")
-                        Spacer(Modifier.width(8.dp))
-                        MetaValue(data.method)
-                    }
                 }
-            }
 
-            Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
 
-            // 지원공고 pill (왼쪽 라벨 + 오른쪽 버튼형)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(White)
-                    .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 좌측 작은 라벨
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "지원공고",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        fontFamily = PretendardMedium,
-                        color = Color(0xFF6B7280)
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                // 제목 + >
+                // 2) 본문: 프로필 + 정보
                 Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .clickable { onViewPostingClick() },
+                        .fillMaxWidth()
+                        .heightIn(min = 118.dp),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Image(
+                        painter = painterResource(id = data.profileRes),
+                        contentDescription = "프로필",
+                        modifier = Modifier.size(50.dp),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // 🔹 오른쪽 내용 전체
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // 2-1) 이름 + (성별, 나이) + 메달
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                text = data.name,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                fontFamily = PretendardMedium,
+                                lineHeight = 22.sp,
+                                letterSpacing = (-0.019).em,
+                                color = Color.Black
+                            )
+                            Text(
+                                text = "(${data.gender}, ${data.age}세)",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = PretendardMedium,
+                                lineHeight = 18.sp,
+                                letterSpacing = (-0.019).em,
+                                color = TextGray
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Image(
+                                painter = painterResource(id = medalRes(data.activityLevel)),
+                                contentDescription = "활동레벨 메달",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // 2-2) 한 줄 자기소개 (따옴표 포함, Bold 느낌)
+                        Text(
+                            text = buildAnnotatedString {
+                                append("“")
+                                withStyle(SpanStyle(color = Color.Black)) { append(data.headline) }
+                                append("”")
+                            },
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = PretendardMedium,
+                            lineHeight = 21.sp,
+                            letterSpacing = (-0.019).em,
+                            color = Color.Black,
+                            maxLines = 1
+                        )
+
+                        // 2-3) 지역 / 경력 / 지원  세로 배치
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // 지역 (아이콘 + 주소)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.location),
+                                    contentDescription = "위치",
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = data.address,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    fontFamily = PretendardMedium,
+                                    lineHeight = 18.sp,
+                                    letterSpacing = (-0.019).em,
+                                    color = TextGray,
+                                    maxLines = 1
+                                )
+                            }
+
+                            Text(
+                                text = buildAnnotatedString {
+                                    withStyle(
+                                        SpanStyle(
+                                            fontWeight = FontWeight.Medium,
+                                            fontFamily = PretendardMedium,
+                                            color = TextGray
+                                        )
+                                    ) { append("경력 ") }
+
+                                    withStyle(
+                                        SpanStyle(
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontFamily = PretendardMedium,
+                                            color = Color.Black
+                                        )
+                                    ) { append("${data.careerYears}년") }
+                                },
+                                fontSize = 12.sp,
+                                lineHeight = 18.sp,
+                                letterSpacing = (-0.019).em
+                            )
+
+                            // 지원 (label = Medium, value = Bold)
+                            Text(
+                                text = buildAnnotatedString {
+                                    withStyle(
+                                        SpanStyle(
+                                            fontWeight = FontWeight.Medium,
+                                            fontFamily = PretendardMedium,
+                                            color = TextGray
+                                        )
+                                    ) { append("지원 ") }
+
+                                    withStyle(
+                                        SpanStyle(
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontFamily = PretendardMedium,
+                                            color = Color.Black
+                                        )
+                                    ) { append(data.method) }
+                                },
+                                fontSize = 12.sp,
+                                lineHeight = 18.sp,
+                                letterSpacing = (-0.019).em
+                            )
+                        }
+                    }
+                }
+
+
+                Spacer(Modifier.height(10.dp))
+
+                // 3) 지원공고 박스
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(Color.White)
+                        .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(5.dp)) // SuggestInterview 스타일
+                        .padding(horizontal = 10.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = " ${data.postingTitle} ",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        fontFamily = PretendardMedium,
-                        color = Color(0xFF111827),
-                        maxLines = 1
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Icon(
-                        imageVector = Icons.Filled.ChevronRight,
-                        contentDescription = null,
-                        tint = Color(0xFF9CA3AF),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    // "지원공고" 라벨 박스
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color.White)
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "지원공고",
+                            fontFamily = PretendardSemiBold,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            letterSpacing = (-0.019).em,
+                            color = Color(0xFF848484)
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // 공고 제목 + 오른쪽 화살표
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onViewPostingClick() },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = " [ ${data.postingTitle} ] ",
+                            fontFamily = PretendardSemiBold,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            letterSpacing = (-0.019).em,
+                            color = Color(0xFF000000),
+                            maxLines = 1
+                        )
+
+                        Spacer(Modifier.weight(1f))
+
+                        Image(
+                            painter = painterResource(R.drawable.right_back), // 🔥 리소스도 동일
+                            contentDescription = "지원공고 열기",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            // 하단 액션 바
-            Column {
+            // ───────────────── 하단 액션 바 (47px) ─────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(47.dp)
+                    .background(White)
+                    .clip(
+                        RoundedCornerShape(
+                            bottomStart = 10.dp,
+                            bottomEnd = 10.dp
+                        )
+                    )
+            ) {
+                // 상단 라인
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(0.6.dp)
-                        .background(LineGray)
+                        .height(1.dp)
+                        .align(Alignment.TopCenter)
+                        .background(LineGray.copy(alpha = 0.5f))
                 )
+
+                // 액션 3개
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(47.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                        .fillMaxSize(),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ActionCell(text = "면접제안") { onAction("suggest_interview") }
-                    VerticalDivider()
-                    ActionCell(text = "문자") {}
-                    VerticalDivider()
-                    ActionCell(text = "전화") { }
+
+                    Box(
+                        modifier = Modifier
+                            .width(29.dp)
+                            .height(47.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(29.dp)
+                                .background(LineGray.copy(alpha = 0.5f))
+                        )
+                    }
+
+                    ActionCell(text = "문자") { /* TODO */ }
+
+                    Box(
+                        modifier = Modifier
+                            .width(29.dp)
+                            .height(47.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(29.dp)
+                                .background(LineGray.copy(alpha = 0.5f))
+                        )
+                    }
+
+                    ActionCell(text = "전화") { /* TODO */ }
                 }
             }
         }
@@ -745,21 +917,26 @@ private fun ApplicantCard(
 /* =========================
  *  서브 컴포넌트
  * ========================= */
-@Composable private fun MetaLabel(text: String) = Text(
+@Composable
+private fun MetaLabel(text: String) = Text(
     text = text,
     fontSize = 13.sp,
     fontWeight = FontWeight.Medium,
     fontFamily = PretendardMedium,
     color = TextGray
 )
-@Composable private fun MetaValue(text: String) = Text(
+
+@Composable
+private fun MetaValue(text: String) = Text(
     text = text,
     fontSize = 13.sp,
     fontWeight = FontWeight.Medium,
     fontFamily = PretendardMedium,
     color = Color(0xFF111827)
 )
-@Composable private fun ActionCell(text: String, onClick: () -> Unit) {
+
+@Composable
+private fun ActionCell(text: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .width(96.dp)
@@ -777,7 +954,9 @@ private fun ApplicantCard(
         )
     }
 }
-@Composable private fun VerticalDivider() {
+
+@Composable
+private fun VerticalDivider() {
     Box(
         modifier = Modifier
             .width(0.6.dp)
@@ -786,7 +965,12 @@ private fun ApplicantCard(
     )
 }
 
+/* =========================
+ *  Nav 확장
+ * ========================= */
 private fun NavController.safeNavigate(
     route: String,
     builder: (NavOptionsBuilder.() -> Unit)? = { launchSingleTop = true; restoreState = true }
-) { navigate(route) { builder?.invoke(this) } }
+) {
+    navigate(route) { builder?.invoke(this) }
+}
