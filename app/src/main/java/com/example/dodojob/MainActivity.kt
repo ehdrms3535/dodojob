@@ -9,13 +9,14 @@ import com.example.dodojob.navigation.AppNavGraph
 import com.example.dodojob.data.supabase.ProvideSupabase
 import com.example.dodojob.session.SessionViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dodojob.ui.theme.DodoJobTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ProvideSupabase {  // App 싱글턴을 내부에서 제공
-                MaterialTheme {
+                DodoJobTheme {
                     val nav = rememberNavController()
                     val sessionVm: SessionViewModel = viewModel()
                     AppNavGraph(nav, sessionVm)
