@@ -89,7 +89,6 @@ object FakeTalentRepo {
         val seniorLevel: Long?, val intro: String?, val expYears: Int?,
         val location: String?, val jobCategories: List<String>, val updatedMinutesAgo: String?
     )
-
 }
 
 data class GreatUserUiState(
@@ -99,15 +98,12 @@ data class GreatUserUiState(
     val error: String? = null
 )
 
-
-
-
 class GreatUserViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(GreatUserUiState())
     val uiState: StateFlow<GreatUserUiState> = _uiState
 
-    fun loadUserData(username: String?,repo: CareerRepositoryImpl) {
+    fun loadUserData(username: String?, repo: CareerRepositoryImpl) {
         if (username.isNullOrBlank()) {
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
@@ -138,17 +134,18 @@ class GreatUserViewModel : ViewModel() {
                     } else {
                         "오래전"
                     }
-                    val jobtalent = JobBits.parse(JobBits.JobCategory.TALENT,user.job_talent)
-                    val jobmanage = JobBits.parse(JobBits.JobCategory.MANAGE,user.job_manage)
-                    val jobservice = JobBits.parse(JobBits.JobCategory.SERVICE,user.job_service)
-                    val jobcare = JobBits.parse(JobBits.JobCategory.CARE,user.job_care)
+
+                    val jobtalent = JobBits.parse(JobBits.JobCategory.TALENT, user.job_talent)
+                    val jobmanage = JobBits.parse(JobBits.JobCategory.MANAGE, user.job_manage)
+                    val jobservice = JobBits.parse(JobBits.JobCategory.SERVICE, user.job_service)
+                    val jobcare = JobBits.parse(JobBits.JobCategory.CARE, user.job_care)
 
                     val allJobs = sequenceOf(
                         jobtalent,
                         jobmanage,
                         jobservice,
                         jobcare
-                        ).flatten()
+                    ).flatten()
                         .filter { it.isNotBlank() }
                         .distinct()
                         .toList()
@@ -169,7 +166,6 @@ class GreatUserViewModel : ViewModel() {
                     val t = introlist[m]
 
                     val (years, months) = repo.totalCareerPeriod(user.username ?: "")
-
 
                     TalentUi(
                         name = user.username.toString(),
@@ -200,18 +196,43 @@ class GreatUserViewModel : ViewModel() {
     }
 }
 
+/* 경력 년수만 숫자로 추출 (예: "3년 2개월" -> 3) */
 private fun parseYears(exp: String): Int {
     return exp.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
 }
 
+/* 🔥 업데이트 문자열을 '분' 단위 숫자로 변환해서 정렬용으로 사용
+   - "10분 전"   -> 10
+   - "3시간 전"  -> 180
+   - "오래전"    -> 아주 큰 값 (맨 뒤로 가도록)
+ */
+private fun parseUpdatedMinutes(label: String): Int {
+    val text = label.trim()
+
+    return when {
+        text.endsWith("분 전") -> {
+            text.removeSuffix("분 전").trim().toIntOrNull() ?: Int.MAX_VALUE
+        }
+        text.endsWith("시간 전") -> {
+            val hour = text.removeSuffix("시간 전").trim().toIntOrNull()
+            if (hour != null) hour * 60 else Int.MAX_VALUE
+        }
+        text == "오래전" -> Int.MAX_VALUE
+        else -> Int.MAX_VALUE
+    }
+}
+
 /* =============== Screen: List =============== */
 @Composable
-fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+fun EmployerHumanResourceScreen(
+    nav: NavController,
+    viewModel: GreatUserViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
 
     val client = LocalSupabase.current
     val repo = remember { CareerRepositoryImpl(client) }
     LaunchedEffect(Unit) {
-        viewModel.loadUserData(CurrentUser.username,repo)
+        viewModel.loadUserData(CurrentUser.username, repo)
     }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -221,16 +242,19 @@ fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel
     val licenseRepo = LicenseRepositoryImpl(client)
     val careerRepo = CareerRepositoryImpl(client)
 
-    val scope = rememberCoroutineScope()   // ← 추가
+    val scope = rememberCoroutineScope()
 
     val talents = uiState.talents
+
+    // 🔧 정렬 로직 수정: "업데이트순"은 분 단위로 파싱해서 '가장 최근(작은 분)'이 먼저 오도록
     val talentsSorted = remember(talents, sort) {
         when (sort) {
-            "업데이트순" -> talents.sortedBy { it.updatedMinutesAgo }
+            "업데이트순" -> talents.sortedBy { parseUpdatedMinutes(it.updatedMinutesAgo) }
             "경력순"   -> talents.sortedByDescending { parseYears(it.expYears) }
             else       -> talents
         }
     }
+
     val totalCountForHeader = talentsSorted.size
 
     Scaffold(
@@ -272,10 +296,10 @@ fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel
                 TalentCard(
                     data = t,
                     onClick = {
-                        scope.launch {  // ✅ suspend 함수 안전하게 호출
+                        scope.launch {
                             var greatuserone = fetchGreatUserone(t.name)
                             if (greatuserone == null) {
-                                greatuserone = GreatUser(        // ✅ 기본값 or 빈 객체 대입
+                                greatuserone = GreatUser(
                                     name = t.name,
                                     region = "-",
                                     phone = "-",
@@ -684,7 +708,7 @@ private fun TalentCard(
                 }
             }
 
-            //상단 우측 5분전 텍스트
+            // 상단 우측 업데이트 텍스트 (예: "5분 전")
             Text(
                 text = data.updatedMinutesAgo,
                 fontFamily = Pretendard,
@@ -701,16 +725,19 @@ private fun TalentCard(
     }
 }
 
-
 /* =============== Utils =============== */
 private fun formatWithComma(n: Int?): String = "%,d".format(n)
 private fun maskName(name: String) = if (name.isNotEmpty()) name.first() + "**" else "**"
-@DrawableRes private fun medalResForLevel(level: Int?): Int = when (level) {
+@DrawableRes
+private fun medalResForLevel(level: Int?): Int = when (level) {
     1 -> R.drawable.red_medal
     2 -> R.drawable.yellow_medal
     else -> R.drawable.blue_medal
 }
+
 private fun NavController.safeNavigate(
     route: String,
     builder: (NavOptionsBuilder.() -> Unit)? = { launchSingleTop = true; restoreState = true }
-) { navigate(route) { builder?.invoke(this) } }
+) {
+    navigate(route) { builder?.invoke(this) }
+}
