@@ -15,15 +15,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -222,7 +227,7 @@ fun ManagementAnnouncementRoute(
                             .padding(horizontal = 16.dp)
                     )
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
 
                     FilterTabs(
                         tabs = TABS,
@@ -230,7 +235,7 @@ fun ManagementAnnouncementRoute(
                         onSelect = vm::onTabSelect,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 6.dp)
                     )
                 }
             }
@@ -304,7 +309,7 @@ private fun TopNavigationBar(
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        Text(title, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
+        Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Color.Black, modifier = Modifier.padding(top = 6.dp))
     }
 }
 
@@ -339,7 +344,7 @@ private fun StatTile(item: StatItem, isLast: Boolean, modifier: Modifier = Modif
         modifier = modifier
             .height(73.dp)
             .background(bgColor, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 22.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -359,7 +364,7 @@ private fun StatTile(item: StatItem, isLast: Boolean, modifier: Modifier = Modif
     }
 }
 
-/* ===== Tabs (animated underline) ===== */
+/* ===== Tabs (지원완료/면접예정/합격결과 스타일 재사용) ===== */
 @Composable
 private fun FilterTabs(
     tabs: List<String>,
@@ -367,67 +372,66 @@ private fun FilterTabs(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
-    var rowWidthPx by remember { mutableStateOf(0) }
-    val tabCount = tabs.size.coerceAtLeast(1)
-
-    val segmentWidth by remember(rowWidthPx, tabCount) {
-        derivedStateOf { with(density) { (rowWidthPx / tabCount).toDp() } }
-    }
-    val targetX by remember(selected, segmentWidth) { derivedStateOf { segmentWidth * selected } }
-    val indicatorX by animateDpAsState(
-        targetValue = targetX,
-        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
-        label = "indicatorX"
-    )
-
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(45.dp)
+            .background(Color.White)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
-                .onGloballyPositioned { rowWidthPx = it.size.width }
+                .height(45.dp)
+                .padding(horizontal = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            tabs.forEachIndexed { i, t ->
-                val color by animateColorAsState(
-                    targetValue = if (i == selected) BrandBlue else TextGray,
-                    animationSpec = tween(180),
-                    label = "tabColor"
-                )
+            tabs.forEachIndexed { index, text ->
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxHeight()
-                        .clickable { onSelect(i) },
+                        .fillMaxHeight(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = t,
-                        fontSize = 15.sp,
-                        fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Medium,
-                        color = color
+                    ManagementTabLabel(
+                        text = text,
+                        isSelected = selected == index,
+                        onClick = { onSelect(index) }
                     )
                 }
             }
         }
-        Box(modifier = Modifier.fillMaxWidth().height(3.dp)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(LineGray)
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .offset(x = indicatorX)
-                    .width(segmentWidth)
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(BrandBlue)
-            )
-        }
+    }
+}
+
+@Composable
+private fun ManagementTabLabel(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()          // 🔹 Row 높이(45dp)를 꽉 채움
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Bottom   // 🔹 내용 전체를 아래로 붙임
+    ) {
+        Text(
+            text = text,
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            letterSpacing = (-0.019).em,
+            color = if (isSelected) BrandBlue else Color(0xFF848484), // ← Figma: #848484
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(10.dp))              // 텍스트와 선 사이 간격
+        Box(
+            modifier = Modifier
+                .width(66.dp)
+                .height(3.dp)
+                .background(if (isSelected) BrandBlue else Color.Transparent)
+        )
     }
 }
 
@@ -441,6 +445,13 @@ private fun ListControls(
     onSortChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 드롭다운에 실제로 보여줄 3개 (Figma 텍스트)
+    val dropdownItems = listOf(
+        "최신순",
+        "지원자 많은 순",
+        "마감 임박 순"
+    )
+
     Row(
         modifier = modifier.height(24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -456,9 +467,18 @@ private fun ListControls(
 
         var expanded by remember { mutableStateOf(false) }
 
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        // 최신순이면 upper, 아니면 down
+        val sortIconRes = if (expanded == true) {
+            R.drawable.upper
+        } else {
+            R.drawable.down
+        }
+
+        Box {
             Row(
-                modifier = Modifier.menuAnchor().height(24.dp).clickable { expanded = true },
+                modifier = Modifier
+                    .clickable { expanded = true }
+                    .height(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -468,18 +488,58 @@ private fun ListControls(
                     color = TextGray,
                     letterSpacing = (-0.019).em
                 )
-                Spacer(Modifier.width(6.dp))
-                Icon(imageVector = Icons.Filled.ExpandMore, contentDescription = "정렬 선택", modifier = Modifier.size(20.dp), tint = TextGray)
+                Spacer(Modifier.width(4.dp))
+                Image(
+                    painter = painterResource(sortIconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
             }
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                sortOptions.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onSortChange(option) // UI 텍스트만 바뀜
-                            expanded = false
+
+            MaterialTheme(
+                colorScheme = MaterialTheme.colorScheme.copy(
+                    surface = Color.White,
+                    surfaceVariant = Color.White,
+                    surfaceTint = Color.Transparent
+                ),
+                typography = MaterialTheme.typography,
+                shapes = MaterialTheme.shapes
+            ) {
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    offset = DpOffset(x = (-50).dp, y = 0.dp),
+                    modifier = Modifier
+                        .width(113.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        dropdownItems.forEach { option ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(34.dp)
+                                    .clickable {
+                                        onSortChange(option)
+                                        expanded = false
+                                    },
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = option,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = (-0.019).em,
+                                    color = TextGray,
+                                    modifier = Modifier.padding(start = 20.dp)
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             }
         }
@@ -508,33 +568,103 @@ private fun AnnouncementCard(
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = White)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp)
+        ) {
             // 제목 + 더보기
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    data.title,
+                    text = data.title,
                     fontSize = 15.sp,
-                    lineHeight = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 22.sp, // 여기 줄이면 이제 확실히 차이 보일 거야
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = (-0.019).em,
                     color = Color.Black,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { /* TODO: overflow menu */ }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "더 보기", tint = Color.Black)
+
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)                // 전체 터치 영역 (원하면 20.dp로 더 줄여도 됨)
+                        .clickable { /* TODO: overflow menu */ },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "더 보기",
+                        tint = Color.Black,
+                        modifier = Modifier.size(24.dp)   // 아이콘 자체 크기
+                    )
                 }
             }
 
-            // 위치
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(painter = painterResource(id = R.drawable.location), contentDescription = null, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(displayLocation, fontSize = 12.sp, color = TextGray)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // 위치 / 관리·운영 / 회사 내규
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(18.dp)   // 세 그룹 사이 gap 18px
+            ) {
+                // 1) 위치
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.location),
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp)                // 12x12
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = displayLocation,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        letterSpacing = (-0.019).em,
+                        color = TextGray
+                    )
+                }
+
+                // 2) 관리/운영 (desk.png)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.desk),
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = "관리/운영",
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        letterSpacing = (-0.019).em,
+                        color = TextGray
+                    )
+                }
+
+                // 3) 회사 내규 (db.png)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.db),
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = "회사 내규",
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        letterSpacing = (-0.019).em,
+                        color = TextGray
+                    )
+                }
             }
 
-            // 메트릭: 지원자/조회수/마감일
-            Spacer(Modifier.height(12.dp))
+// 메트릭: 지원자/조회수/마감일
+            Spacer(Modifier.height(20.dp))   // ← 12dp → 20dp 로 변경
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 MetricItem(R.drawable.number_of_applicant, "지원자", "${data.applicants}명", BrandBlue)
                 MetricItem(R.drawable.number_of_views, "조회수", "${data.views}", BrandBlue)
@@ -542,9 +672,9 @@ private fun AnnouncementCard(
             }
 
             // 구분선
-            Spacer(Modifier.height(12.dp))
-            Divider(color = LineGray, thickness = 0.5.dp)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(20.dp))
+            HorizontalDivider(thickness = 1.dp, color = LineGray)
+            Spacer(Modifier.height(20.dp))
 
             // 하단: 근무형태 칩 + 액션(수정/복사/통계)
             Row(
@@ -555,15 +685,17 @@ private fun AnnouncementCard(
                 // 칩
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(5.dp))          // radius 5
                         .background(Color(0xFFDEEAFF))
-                        .padding(horizontal = 10.dp, vertical = 2.dp)
+                        .padding(horizontal = 10.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        data.workType,
+                        text = data.workType,
                         fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        letterSpacing = (-0.019).em,
                         color = BrandBlue,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
@@ -588,12 +720,25 @@ private fun MetricItem(iconRes: Int, label: String, value: String, color: Color)
         Image(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(24.dp)   // 24x24
         )
-        Spacer(Modifier.width(8.dp))
-        Text(label, fontSize = 13.sp, color = Color.Black)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            lineHeight = 20.sp,
+            letterSpacing = (-0.019).em,
+            color = Color.Black
+        )
         Spacer(Modifier.width(6.dp))
-        Text(value, fontSize = 13.sp, color = color, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = value,
+            fontSize = 13.sp,
+            lineHeight = 20.sp,
+            letterSpacing = (-0.019).em,
+            color = color,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -603,10 +748,16 @@ private fun ActionItem(iconRes: Int, text: String) {
         Image(
             painter = painterResource(id = iconRes),
             contentDescription = text,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(12.dp)      // 12x12
         )
         Spacer(Modifier.width(5.dp))
-        Text(text, fontSize = 12.sp, color = TextGray)
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            lineHeight = 18.sp,
+            letterSpacing = (-0.019).em,
+            color = TextGray
+        )
     }
 }
 
