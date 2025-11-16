@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,10 +58,10 @@ private val White     = Color(0xFFFFFFFF)
 /* ============ Divider ============ */
 @Composable
 private fun ThinDivider(modifier: Modifier = Modifier) {
-    Divider(
+    HorizontalDivider(
         modifier = modifier,
-        color = Color(0xFFE8E8E8),
-        thickness = 1.dp
+        thickness = 0.3.dp,
+        color = Color(0xFF969696)
     )
 }
 
@@ -127,6 +128,7 @@ fun EmployerMyRoute(nav: NavController) {
                 contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                /* ===== 상단 헤더 + 담당자 카드 ===== */
                 item {
                     Column(
                         modifier = Modifier
@@ -134,12 +136,12 @@ fun EmployerMyRoute(nav: NavController) {
                             .background(White)
                     ) {
 
-                        // Title row
+                        // 타이틀 영역 (72dp)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(72.dp)
-                                .padding(vertical = 20.dp, horizontal = 16.dp),
+                                .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -151,96 +153,121 @@ fun EmployerMyRoute(nav: NavController) {
                             )
                         }
 
-                        Row(
+                        // 담당자 + 빠른 액션 카드 (Frame 1707480277 느낌)
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                                .clickable {
-                                    nav.navigate(Route.EditEmployerInformation.path)
-                                },
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(horizontal = 16.dp, vertical = 25.dp),
+                            verticalArrangement = Arrangement.spacedBy(30.dp)
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.employermyprofile),
-                                contentDescription = "프로필 사진",
+                            // 프로필 + 이름 + 기업정보 수정
+                            Row(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                            )
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        nav.navigate(Route.EditEmployerInformation.path)
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.employermyprofile),
+                                    contentDescription = "프로필 사진",
+                                    modifier = Modifier
+                                        .offset(y = (-10).dp)
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                )
 
-                            Spacer(Modifier.width(10.dp))
+                                Spacer(Modifier.width(10.dp))
 
-                            Column(Modifier.weight(1f)) {
-                                // 이름(파랑) + 담당자님(검정)
-                                val full = managerDisplay
-                                val suffix = " 담당자님"
-                                val namePart = if (full.endsWith(suffix)) full.removeSuffix(suffix) else full
-                                val suffixPart = if (full.endsWith(suffix)) "담당자님" else ""
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            withStyle(SpanStyle(color = BrandBlue, fontWeight = FontWeight.Bold)) {
-                                                append(namePart)
-                                            }
-                                            if (suffixPart.isNotEmpty()) {
-                                                append(" ")
-                                                withStyle(SpanStyle(color = Color.Black, fontWeight = FontWeight.Bold)) {
-                                                    append(suffixPart)
+                                Column(
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    // 이름(파랑) + 담당자님(검정)
+                                    val full = managerDisplay
+                                    val suffix = " 담당자님"
+                                    val namePart = if (full.endsWith(suffix)) full.removeSuffix(suffix) else full
+                                    val suffixPart = if (full.endsWith(suffix)) "담당자님" else ""
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = buildAnnotatedString {
+                                                withStyle(
+                                                    SpanStyle(
+                                                        color = BrandBlue,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                ) {
+                                                    append(namePart)
                                                 }
-                                            }
-                                        },
-                                        fontSize = 24.sp,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Outlined.ChevronRight,
-                                        contentDescription = null,
-                                        tint = Color.Black
-                                    )
+                                                if (suffixPart.isNotEmpty()) {
+                                                    append(" ")
+                                                    withStyle(
+                                                        SpanStyle(
+                                                            color = Color.Black,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    ) {
+                                                        append(suffixPart)
+                                                    }
+                                                }
+                                            },
+                                            fontSize = 24.sp,
+                                            letterSpacing = (-0.5).sp,
+                                            lineHeight = 32.sp,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Image(
+                                            painter = painterResource(id = R.drawable.right_back),
+                                            contentDescription = "detail",
+                                            modifier = Modifier.size(24.dp),
+                                            colorFilter = ColorFilter.tint(Color.Black)
+                                        )
+                                    }
+
+                                    Spacer(Modifier.height(6.dp))
+
+                                    // 기업정보 수정
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.setting),
+                                            contentDescription = "setting",
+                                            modifier = Modifier.size(16.dp),
+                                            colorFilter = ColorFilter.tint(Color.Black)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = "기업정보 수정",
+                                            fontSize = 16.sp,
+                                            fontFamily = PretendardFamily,
+                                            fontWeight = FontWeight.Medium,
+                                            letterSpacing = (-0.5).sp,
+                                            color = Color(0xFF787878)
+                                        )
+                                    }
                                 }
+                            }
 
-                                Spacer(Modifier.height(6.dp))
-
-                                // 기업정보 수정 (Pretendard Medium)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.setting),
-                                        contentDescription = "setting",
-                                        modifier = Modifier.size(16.dp),
-                                        colorFilter = ColorFilter.tint(Color.Black)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = "기업정보 수정",
-                                        fontSize = 16.sp,
-                                        fontFamily = PretendardFamily,
-                                        fontWeight = FontWeight.Medium,
-                                        letterSpacing = (-0.5).sp,
-                                        color = Color(0xFF787878)
-                                    )
+                            // 빠른 액션 4개 (공고 등록 / 공고 관리 / 지원자 관리 / 인재관리)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                QuickAction("공고 등록", R.drawable.register_announcement) {
+                                    nav.safeNavigate(Route.Announcement.path)
                                 }
-                            }
-                        }
-
-                        // 빠른 액션 4개
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            QuickAction("공고 등록", R.drawable.register_announcement) {
-                                nav.safeNavigate(Route.EmployerNotice.path)
-                            }
-                            QuickAction("공고 관리", R.drawable.manage_announcement) {
-                                nav.safeNavigate(Route.EmployerNotice.path)
-                            }
-                            QuickAction("지원자 관리", R.drawable.manage_applicant) {
-                                nav.safeNavigate(Route.EmployerApplicant.path)
-                            }
-                            QuickAction("인재관리", R.drawable.manage_resource) {
-                                nav.safeNavigate(Route.EmployerHumanResource.path)
+                                QuickAction("공고 관리", R.drawable.manage_announcement) {
+                                    nav.safeNavigate(Route.EmployerNotice.path)
+                                }
+                                QuickAction("지원자 관리", R.drawable.manage_applicant) {
+                                    nav.safeNavigate(Route.EmployerApplicant.path)
+                                }
+                                QuickAction("인재관리", R.drawable.manage_resource) {
+                                    nav.safeNavigate(Route.ScrrapedHumanResource.path)
+                                }
                             }
                         }
                     }
@@ -256,14 +283,16 @@ fun EmployerMyRoute(nav: NavController) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 12.dp)
+                                .padding(start = 20.dp, end = 16.dp, bottom = 20.dp)
                         ) {
                             Text(
                                 text = "나의 활동",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.SemiBold,
+                                letterSpacing = (-0.019).em,
                                 color = Color.Black,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)
+                                modifier = Modifier
+                                    .padding(top = 20.dp, bottom = 20.dp)
                             )
 
                             val stats = listOf(
@@ -277,32 +306,26 @@ fun EmployerMyRoute(nav: NavController) {
                                     title = title,
                                     countText = countText,
                                     onClick = {
-                                        when (title) {
-                                            "활성공고" -> nav.safeNavigate(Route.EmployerNotice.path)
-                                            "총 지원자" -> nav.safeNavigate(Route.EmployerApplicant.path)
-                                            "채용완료" -> nav.safeNavigate(Route.EmployerNotice.path)
-                                        }
+                                        nav.safeNavigate(Route.EmployerApplicant.path)
                                     }
                                 )
-                                if (idx != stats.lastIndex) {
-                                    ThinDivider(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 8.dp)
-                                    )
+                                if (idx < stats.lastIndex) {
+                                    Spacer(modifier = Modifier.height(10.dp))
                                 }
                             }
                         }
                     }
                 }
 
-                /* ===== 섹션 리스트 ===== */
+                /* ===== 섹션 리스트 1 ===== */
                 item {
                     InfoSectionList(
                         sections = listOf("기본정보", "인증 및 보안", "알림 설정", "기업 인증"),
                         onRowClick = { /* TODO: 화면 이동 */ }
                     )
                 }
+
+                /* ===== 섹션 리스트 2 ===== */
                 item {
                     InfoSectionList(
                         sections = listOf("공지 사항", "도움말 & 문의", "로그아웃"),
@@ -318,7 +341,7 @@ fun EmployerMyRoute(nav: NavController) {
                                             CurrentUser.clear()
                                         }
 
-                                        nav.navigate("login") {
+                                        nav.navigate("prelogin") {
                                             popUpTo(0) { inclusive = true }
                                             launchSingleTop = true
                                         }
@@ -393,13 +416,15 @@ private fun ActivityRow(
             text = countText,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.019).em,
             color = BrandBlue
         )
         Spacer(Modifier.width(6.dp))
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = Color.Black
+        Image(
+            painter = painterResource(id = R.drawable.right_back),
+            contentDescription = "detail",
+            modifier = Modifier.size(24.dp),
+            colorFilter = ColorFilter.tint(Color.Black)
         )
     }
 }
@@ -437,17 +462,20 @@ private fun InfoSectionList(
                         color = Color.Black,
                         modifier = Modifier.weight(1f)
                     )
-                    Icon(
-                        imageVector = Icons.Outlined.ChevronRight,
-                        contentDescription = null,
-                        tint = TextGray
+                    Image(
+                        painter = painterResource(id = R.drawable.right_back),
+                        contentDescription = "setting",
+                        modifier = Modifier.size(24.dp),
+                        colorFilter = ColorFilter.tint(Color.Black)
                     )
                 }
-                ThinDivider(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth()
-                )
+                if (index < sections.lastIndex) {
+                    ThinDivider(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth()
+                    )
+                }
             }
         }
     }

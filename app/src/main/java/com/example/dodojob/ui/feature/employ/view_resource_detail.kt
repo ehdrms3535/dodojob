@@ -45,6 +45,7 @@ import com.example.dodojob.session.JobBits
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 import com.example.dodojob.data.greatuser.existSGU
+import com.example.dodojob.navigation.Route
 
 /* ===== Colors / Fonts ===== */
 private val BrandBlue = Color(0xFF005FFF)
@@ -310,7 +311,35 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         }
                     }
                 },
-                onInviteClick = { /* TODO: 면접 제의 로직 */ },
+                onInviteClick = {
+                    // 🔥 면접 제의하기 눌렀을 때 전달할 ApplicantUi 구성
+                    val maskedName = maskName(displayName ?: safeTalent.name)
+
+                    val applicant = ApplicantUi(
+                        id            = 0L,                         // 상세에서 바로 제안이라 임시 ID
+                        name          = maskedName,                 // 화면에 보일 이름 (마스킹)
+                        gender        = gu?.gender ?: safeTalent.gender,
+                        age           = safeTalent.age,
+                        headline      = safeTalent.intro,
+                        address       = gu?.region ?: safeTalent.location,
+                        careerYears   = parseYears(safeTalent.expYears),
+                        method        = "직접 제안",
+                        postingTitle  = "-",
+                        status        = ApplicantStatus.SUGGESTING,
+                        activityLevel = safeTalent.seniorLevel,
+                        profileRes    = R.drawable.basic_profile,
+                        announcementId = null,                      // 공고 없이 직접 제안
+                        username      = gu?.username ?: safeTalent.name  // 실제 식별용 username
+                    )
+
+                    // 면접제안 화면에서 꺼내 쓸 데이터 넣어주기
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("applicant", applicant)
+
+                    // 면접제안 화면으로 이동
+                    navController.navigate(Route.SuggestInterview.path)
+                },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -701,4 +730,8 @@ private fun medalResForLevel(level: Int): Int = when (level) {
     1 -> R.drawable.red_medal
     2 -> R.drawable.yellow_medal
     else -> R.drawable.blue_medal
+}
+private fun parseYears(exp: String): Int {
+    // "3년 2개월", "8년", "0개월" 같은 문자열에서 앞 숫자만 파싱
+    return exp.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
 }
