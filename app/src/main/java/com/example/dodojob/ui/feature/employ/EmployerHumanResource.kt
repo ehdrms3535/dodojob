@@ -4,12 +4,14 @@ package com.example.dodojob.ui.feature.employ
 
 import android.os.Parcelable
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.em
 import com.example.dodojob.dao.fetchDisplayNameByUsername
 import java.util.Calendar
 import kotlin.random.Random
@@ -211,7 +216,7 @@ fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel
 
     val uiState by viewModel.uiState.collectAsState()
     var sort by remember { mutableStateOf("업데이트순") }
-    val sortOptions = listOf("업데이트순", "이름순", "경력순")
+    val sortOptions = listOf("업데이트순", "경력순")
 
     val licenseRepo = LicenseRepositoryImpl(client)
     val careerRepo = CareerRepositoryImpl(client)
@@ -221,8 +226,7 @@ fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel
     val talents = uiState.talents
     val talentsSorted = remember(talents, sort) {
         when (sort) {
-            "업데이트순" -> talents.sortedBy { it.updatedMinutesAgo }     // 최근 업데이트가 상단이면 오름차순이 자연스럽습니다
-            "이름순"   -> talents.sortedBy { it.name }
+            "업데이트순" -> talents.sortedBy { it.updatedMinutesAgo }
             "경력순"   -> talents.sortedByDescending { parseYears(it.expYears) }
             else       -> talents
         }
@@ -259,8 +263,7 @@ fun EmployerHumanResourceScreen(nav: NavController,viewModel: GreatUserViewModel
                     sortOptions = sortOptions,
                     sort = sort,
                     onSortChange = { sort = it },
-                    onStarClick = { nav.safeNavigate("scrapped_human_resource") },
-                    onFilterClick = { /* TODO */ }
+                    onStarClick = { nav.safeNavigate("scrapped_human_resource") }
                 )
             }
 
@@ -306,44 +309,165 @@ private fun TopSection(
     sortOptions: List<String>,
     sort: String,
     onSortChange: (String) -> Unit,
-    onStarClick: () -> Unit,
-    onFilterClick: () -> Unit
+    onStarClick: () -> Unit
 ) {
-    Column(Modifier.fillMaxWidth().background(CardBg)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CardBg)
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .padding(start = 16.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("인재", fontFamily = Pretendard, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = TitleBlack, modifier = Modifier.weight(1f))
-            IconButton(onClick = onStarClick) {
-                Icon(painterResource(R.drawable.empty_star), contentDescription = "즐겨찾기", tint = Color.Unspecified)
+            Text(
+                text = "인재",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = Pretendard,
+                color = Color.Black,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            IconButton(
+                onClick = onStarClick,
+                modifier = Modifier
+                    .size(28.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.empty_star),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .offset(y = 2.dp)
+                )
             }
         }
-        Divider(color = DividerGray, thickness = 0.5.dp)
-        Row(
-            modifier = Modifier.fillMaxWidth().height(54.dp).background(CardBg).padding(horizontal = 26.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("맞춤 조건을 설정해보세요.", fontFamily = Pretendard, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextGray, modifier = Modifier.weight(1f))
-            Box(Modifier.size(24.dp).clickable { onFilterClick() }, contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.ic_sliders), contentDescription = "조건 설정", tint = Color.Unspecified)
-            }
-        }
-        Divider(color = DividerGray, thickness = 0.5.dp)
+
+        Spacer(Modifier.height(8.dp))
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(ScreenBg)
+            .padding(top = 12.dp)
+            .padding(horizontal = 16.dp)
+    ) {
+        HumanListControls(
+            totalLabel = "총 ${formatWithComma(totalCount)}개",
+            sortOptions = sortOptions,
+            selectedSort = sort,
+            onSortChange = onSortChange,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HumanListControls(
+    totalLabel: String,
+    sortOptions: List<String>,
+    selectedSort: String,
+    onSortChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.height(24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = totalLabel,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            fontFamily = Pretendard,
+            color = TextGray,
+            letterSpacing = (-0.019).em
+        )
+
         var expanded by remember { mutableStateOf(false) }
-        Row(
-            modifier = Modifier.fillMaxWidth().background(ScreenBg).padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("총 ${formatWithComma(totalCount)}개", fontFamily = Pretendard, fontSize = 13.sp, color = TextGray, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            TextButton(onClick = { expanded = true }) {
-                Text(sort, fontFamily = Pretendard, fontSize = 14.sp, color = TextGray, fontWeight = FontWeight.SemiBold)
+
+        val sortIconRes = if (expanded) {
+            R.drawable.upper
+        } else {
+            R.drawable.down
+        }
+
+        Box {
+            Row(
+                modifier = Modifier
+                    .clickable { expanded = true }
+                    .height(24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = selectedSort,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = Pretendard,
+                    color = TextGray,
+                    letterSpacing = (-0.019).em
+                )
                 Spacer(Modifier.width(4.dp))
-                Icon(painterResource(R.drawable.caret_down), contentDescription = null, tint = TextGray)
+                Image(
+                    painter = painterResource(sortIconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                sortOptions.forEach { opt ->
-                    DropdownMenuItem(text = { Text(opt, fontFamily = Pretendard, fontSize = 14.sp) }, onClick = { onSortChange(opt); expanded = false })
+
+            MaterialTheme(
+                colorScheme = MaterialTheme.colorScheme.copy(
+                    surface = Color.White,
+                    surfaceVariant = Color.White,
+                    surfaceTint = Color.Transparent
+                ),
+                typography = MaterialTheme.typography,
+                shapes = MaterialTheme.shapes
+            ) {
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    offset = DpOffset(x = (-40).dp, y = 0.dp),
+                    modifier = Modifier
+                        .width(113.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        sortOptions.forEach { option ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(34.dp)
+                                    .clickable {
+                                        onSortChange(option)
+                                        expanded = false
+                                    },
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = option,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = (-0.019).em,
+                                    color = TextGray,
+                                    fontFamily = Pretendard,
+                                    modifier = Modifier.padding(start = 20.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -356,15 +480,13 @@ private fun TalentCard(
     data: TalentUi,
     onClick: () -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val client = LocalSupabase.current  // ⚙️ 이미 CompositionLocal로 주입된 SupabaseClient라면
+    val client = LocalSupabase.current
     var displayName by remember { mutableStateOf<String?>(null) }
 
-    // 이름 비동기로 가져오기
     LaunchedEffect(data.name) {
         try {
-            val name = fetchDisplayNameByUsername(data.name.toString())
-            displayName = name ?: data.name   // 없으면 원래 username 그대로
+            val name = fetchDisplayNameByUsername(data.name)
+            displayName = name ?: data.name
         } catch (e: Exception) {
             e.printStackTrace()
             displayName = data.name
@@ -375,96 +497,205 @@ private fun TalentCard(
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         onClick = onClick
     ) {
         Box(
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp)
         ) {
+            // 메인 내용
             Row(
-                Modifier
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = 20.dp,
+                        bottom = 20.dp
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFFDEEAFF)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.basic_profile),
-                            contentDescription = "profile",
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(64.dp)
+                // 왼쪽 컬럼 (아바타 + 경력)
+                Column(
+                    modifier = Modifier.width(51.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.basic_profile),
+                        contentDescription = "profile",
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(50.dp)
+                    )
+
+                    Spacer(Modifier.height(5.dp))
+
+                    // 경력 표시 문구 결정
+                    val isNewbie = data.expYears == "0개월" ||
+                            data.expYears == "0년 0개월" ||
+                            data.expYears == "0년"
+
+                    if (isNewbie) {
+                        Text(
+                            text = "신입",
+                            modifier = Modifier.width(51.dp),
+                            fontFamily = Pretendard,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = BrandBlue,
+                            textAlign = TextAlign.Center,
+                            letterSpacing = (-0.019).em,
+                            lineHeight = 16.sp
+                        )
+                    } else {
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(
+                                    SpanStyle(
+                                        color = BrandBlue,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                ) { append("경력") }
+
+                                append("\n")
+
+                                withStyle(
+                                    SpanStyle(
+                                        color = BrandBlue,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                ) { append(data.expYears) }
+                            },
+                            modifier = Modifier.width(51.dp),
+                            fontFamily = Pretendard,
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp,
+                            letterSpacing = (-0.019).em,
+                            textAlign = TextAlign.Center
                         )
                     }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = buildAnnotatedString {
-                            withStyle(SpanStyle(color = BrandBlue, fontWeight = FontWeight.SemiBold)) { append("경력") }
-                            append("\n")
-                            withStyle(SpanStyle(color = BrandBlue, fontWeight = FontWeight.Medium)) { append("${data.expYears}") }
-                        },
-                        fontFamily = Pretendard,
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp
-                    )
                 }
 
-                Spacer(Modifier.width(20.dp))
-
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // ✅ 가져온 displayName 사용
+                // 오른쪽 컬럼 (이름/한줄소개/주소/직무)
+                Column(
+                    modifier = Modifier
+                        .width(0.dp)
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    // 이름 + (성별, 나이) + 메달
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
                         Text(
                             text = maskName(displayName ?: data.name),
                             fontFamily = Pretendard,
                             fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.019).em,
+                            color = Color.Black,
+                            maxLines = 1
                         )
-                        Spacer(Modifier.width(6.dp))
+
                         Text(
-                            "(${data.gender}, ${data.age}세)",
-                            fontSize = 15.sp,
+                            text = "(${data.gender}, ${data.age}세)",
                             fontFamily = Pretendard,
-                            color = TextGray
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = (-0.019).em,
+                            color = TextGray,
+                            maxLines = 1
                         )
-                        Spacer(Modifier.width(6.dp))
+
                         Icon(
-                            painterResource(medalResForLevel(data.seniorLevel)),
+                            painter = painterResource(id = medalResForLevel(data.seniorLevel)),
                             contentDescription = "medal",
                             tint = Color.Unspecified,
                             modifier = Modifier.size(18.dp)
                         )
                     }
 
-                    Text("“${data.intro}”", fontFamily = Pretendard, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    // 한 줄 자기소개
+                    Text(
+                        text = "“${data.intro}”",
+                        fontFamily = Pretendard,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-0.019).em,
+                        lineHeight = 21.sp,
+                        color = Color.Black,
+                        maxLines = 1
+                    )
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(painterResource(R.drawable.location), null, tint = TextGray, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(data.location, fontFamily = Pretendard, fontSize = 13.sp, color = TextGray, fontWeight = FontWeight.Medium)
-                    }
+                    // 주소 / 직무 2줄
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        // 주소
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.location),
+                                contentDescription = null,
+                                tint = TextGray,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = data.location,
+                                fontFamily = Pretendard,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = (-0.019).em,
+                                lineHeight = 18.sp,
+                                color = TextGray,
+                                maxLines = 1
+                            )
+                        }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(painterResource(R.drawable.cargo), null, tint = TextGray, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(data.jobCategories.joinToString(", "), fontFamily = Pretendard, fontSize = 13.sp, color = TextGray, fontWeight = FontWeight.Medium)
+                        // 직무
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.cargo),
+                                contentDescription = null,
+                                tint = TextGray,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = data.jobCategories.joinToString(", "),
+                                fontFamily = Pretendard,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = (-0.019).em,
+                                lineHeight = 18.sp,
+                                color = TextGray,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }
+
+            //상단 우측 5분전 텍스트
             Text(
-                "${data.updatedMinutesAgo}",
+                text = data.updatedMinutesAgo,
                 fontFamily = Pretendard,
                 fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = (-0.019).em,
                 color = TextGray,
-                modifier = Modifier.align(Alignment.TopEnd).padding(end = 20.dp)
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 12.dp, end = 20.dp),
+                textAlign = TextAlign.Right
             )
         }
     }
