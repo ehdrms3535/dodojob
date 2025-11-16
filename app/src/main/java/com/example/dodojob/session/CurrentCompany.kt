@@ -9,9 +9,11 @@ object CurrentCompany {
     private val _companyid = MutableStateFlow<String>("")           // password
     private val _companylocate = MutableStateFlow<String>("")
 
+
     val name: String? get() = _name.value
     val username: String? get() = _email.value
     val companyid: String get() = _companyid.value
+
     val companylocate: String get() = _companylocate.value
 
     /** 로그인 시 (username/password) */
@@ -19,7 +21,6 @@ object CurrentCompany {
         _companyid.value = companyid
 
     }
-
     fun setCompanylocate(companylocate : String){
         _companylocate.value = companylocate
     }

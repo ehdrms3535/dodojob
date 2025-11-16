@@ -30,8 +30,11 @@ import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.components.AppBottomBar
+
 import com.example.dodojob.dao.fetchAppliedCount
 import com.example.dodojob.dao.fetchAnnounceSeniorCount
+
+import kotlinx.datetime.Month
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -50,7 +53,6 @@ fun ProfileRoute(nav: NavController) {
 
     var applyCount by remember { mutableStateOf(0L)}
     var resumeViews by remember { mutableStateOf(0L)}
-
 
     LaunchedEffect(username) {
         loading = true
