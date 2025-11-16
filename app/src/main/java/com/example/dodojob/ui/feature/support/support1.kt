@@ -1,5 +1,6 @@
 package com.example.dodojob.ui.feature.support
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,11 +32,30 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
-import com.example.dodojob.ui.feature.support.MapCardData
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import androidx.compose.material3.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.dodojob.session.CurrentUser
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import com.example.dodojob.dao.fetchSupportDataMerged
+import com.example.dodojob.dao.SupportData
+import com.example.dodojob.session.CurrentCompany
+import com.example.dodojob.dao.fetchInterDataMerged
+import com.example.dodojob.data.naver.rememberGeocodedLatLng
+import com.naver.maps.geometry.LatLng
+import com.example.dodojob.ui.components.DodoNaverMap
+import com.example.dodojob.data.naver.rememberGeocodedLatLng
+import com.example.dodojob.ui.components.DodoNaverMap
+import com.naver.maps.map.CameraPosition
+import java.time.format.DateTimeFormatter
 
 /* ===================== 색상/타이포 공통 ===================== */
 private val PrimaryBlue = Color(0xFF005FFF)
@@ -54,6 +74,7 @@ data class AppliedItem(
     val appliedAt: String,
     val company: String,
     val title: String,
+    val company_locate: String
 )
 
 data class InterviewItem(
@@ -72,14 +93,11 @@ data class ResultItem(
     val result: ResultState
 )
 
+
+private val DOT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 /* ===================== Fake DB ===================== */
 private object SupportFakeDb {
-    fun applied(): List<AppliedItem> = listOf(
-        AppliedItem("a1", ReadState.Read,   "2025.08.25", "모던하우스", "매장운영 및 고객관리 하는 일에 적합한 분 구해요"),
-        AppliedItem("a2", ReadState.Unread, "2025.08.20", "대구동구 어린이도서관", "아이들 책 읽어주기, 독서 습관 형성 프로그램 지원"),
-        AppliedItem("a3", ReadState.Unread, "2025.08.14", "수성구 체육센터", "회원 운동 지도 보조, 센터 관리 가능하신 분 지원 요망"),
-        AppliedItem("a4", ReadState.Read,   "2025.08.10", "대구도시철도공사", "지하철 역사 안전 순찰, 이용객 안내, 분실물 관리"),
-    )
+
 
     fun interviews(): List<InterviewItem> {
         val ws = weekStart(LocalDate.now())
@@ -98,12 +116,141 @@ private object SupportFakeDb {
     )
 }
 
+data class SupportUiState(
+    val applied: List<AppliedItem> = emptyList(),
+    val interviews: List<InterviewItem> = emptyList(),
+    val results: List<ResultItem> = emptyList(),
+    val keyword: String = "",
+    val selectedTab: Int = 0,
+    val loading: Boolean = false,
+    val error: String? = null
+)
+
+class SupportViewModel : ViewModel() {
+
+    private val _uiState = MutableStateFlow(SupportUiState())
+    val uiState: StateFlow<SupportUiState> = _uiState
+
+    fun SupportData.majorToJobSentence(): String {
+        val m = major?.trim()?.replace("/", "·") ?: return "직무 정보 없음"
+
+        return when {
+            // 헬스/운동 계열
+            m.contains("운동") || m.contains("체육") -> "$m 보조 및 센터 운영에 함께하실 분을 찾고 있어요"
+
+            // 돌봄/케어 계열
+            m.contains("돌봄") || m.contains("요양") || m.contains("케어") ->
+                "$m 관련 업무를 성실히 도와주실 분을 모집합니다"
+
+            // 매장/판매 계열
+            m.contains("매장") || m.contains("고객") || m.contains("상품") ->
+                "$m 업무에 함께하실 분을 구하고 있어요"
+
+            // 사무 계열
+            m.contains("사무") || m.contains("행정") ->
+                "$m 관련 업무를 도와주실 분을 찾습니다"
+
+            // 도서관/교육 계열
+            m.contains("도서") || m.contains("교육") || m.contains("독서") ->
+                "$m 활동에 관심 있는 분 환영합니다"
+
+            // 예비 처리 (기본)
+            else -> "$m 업무에 적합한 분을 모집합니다"
+        }
+    }
+
+    fun load(username: String) {
+        viewModelScope.launch {
+            Log.d("SupportVM", "▶ load() called username=$username")
+            _uiState.update { it.copy(loading = true, error = null) }
+
+            runCatching {
+                val supportList = fetchSupportDataMerged(username)
+                val interviewList  = fetchInterDataMerged(username)
+
+                Log.d("SupportVM", "✅ supportList size=${supportList.size}")
+                supportList.forEachIndexed { idx, sd ->
+                    Log.d("SupportVM", "item[$idx] = $sd")
+                }
+
+
+                val applied = supportList.map { sd ->
+                    val title = sd.majorToJobSentence()
+                    Log.d("SupportVM", "mapped item: id=${sd.announcement_id}, company=${sd.company_name}, title=$title, status=${sd.user_status}")
+
+                    AppliedItem(
+                        id = sd.announcement_id.toString(),
+                        readState = if (sd.user_status.equals("unread", true)) {
+                            ReadState.Unread
+                        } else {
+                            ReadState.Read
+                        },
+                        appliedAt = sd.applied_at.take(10).replace("-", "."),
+                        company = sd.company_name.orEmpty(),
+                        title = title,
+                        company_locate = sd.company_locate.toString()
+                    )
+                }
+                val interviews = interviewList.map{ iv->
+                    val parsedDate = LocalDate.parse(iv.interview_date, DOT_DATE_FORMAT)
+                    InterviewItem(
+                        id = iv.announcement_id.toString(),
+                        date = parsedDate,
+                        company = iv.company_name,
+                        title = iv.major,
+                        address = iv.address
+                    )
+
+                }
+
+
+                Triple(applied, interviews, emptyList<ResultItem>())
+            }.onSuccess { (applied, interviews, results) ->
+                Log.d("SupportVM", "✅ onSuccess applied.size=${applied.size}")
+                _uiState.update {
+                    it.copy(
+                        applied = applied,
+                        interviews = interviews,
+                        results = results,
+                        loading = false
+                    )
+                }
+            }.onFailure { e ->
+                Log.e("SupportVM", "❌ load() failed", e)
+                _uiState.update {
+                    it.copy(
+                        loading = false,
+                        error = e.message
+                    )
+                }
+            }
+        }
+    }
+
+    fun onKeywordChange(v: String) {
+        _uiState.update { it.copy(keyword = v) }
+    }
+
+    fun onTabChange(tab: Int) {
+        _uiState.update { it.copy(selectedTab = tab) }
+    }
+}
+
+
 /* ===================== Route + Screen ===================== */
 @Composable
-fun SupportRoute(nav: NavController) {
-    val appliedAll   = remember { SupportFakeDb.applied() }
-    val interviewAll = remember { SupportFakeDb.interviews() }
-    val resultAll    = remember { SupportFakeDb.results() }
+fun SupportRoute(nav: NavController,
+                 viewModel: SupportViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+
+    val state by viewModel.uiState.collectAsState()
+
+    // 화면 진입 시 한 번만 로드
+    LaunchedEffect(Unit) {
+        viewModel.load(username = CurrentUser.username.toString())  // TODO 실제 username 넣기
+    }
+    val appliedAll   = state.applied
+    val interviewAll = state.interviews
+    val resultAll    = state.results
 
     var keyword by remember { mutableStateOf("") }
 
@@ -346,7 +493,8 @@ private fun AppliedCard(item: AppliedItem, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .clickable { onClick() }
+            .clickable { CurrentCompany.setCompanylocate(item.company_locate)   // ← 여기서 id 저장
+                onClick()  }
             .padding(horizontal = 0.dp)
     ) {
         Column(
@@ -558,6 +706,9 @@ private fun WeeklyHeader(
 
 @Composable
 private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
+
+    val mapCenter = rememberGeocodedLatLng(item.address)   // ← 주소 기반 좌표
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -627,16 +778,35 @@ private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
                 .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 스크린샷 자리 (지도 썸네일)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(187.54.dp) // Figma height
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFEDEFF3))
-            )
+            val mapHeight = 187.54.dp
 
-            // 주소 텍스트 (20sp, 30px line-height)
+            // 🔵 지도 영역
+            if (mapCenter != null) {
+                DodoNaverMap(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(mapHeight)
+                        .clip(RoundedCornerShape(10.dp)),
+                    initialCameraPosition = CameraPosition(mapCenter!!, 16.0),
+                    enableMyLocation = false,
+                    markerPosition = mapCenter,
+                    markerCaption = item.company   // or item.title
+                )
+            } else {
+                // 지오코딩 전 / 실패시 플레이스홀더
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(mapHeight)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFEDEFF3)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("지도 영역 (주소 지오코딩 중)", color = Color(0xFF9C9C9C), fontSize = 13.sp)
+                }
+            }
+
+            // 주소 텍스트
             Text(
                 text = item.address,
                 fontSize = 20.sp,
@@ -649,7 +819,7 @@ private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
                     .padding(horizontal = 6.dp)
             )
 
-            // 지도 보기 버튼 (327.47 x 54.48 근사)
+            // 지도 보기 버튼
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -785,7 +955,8 @@ private fun AppliedItem.toMapCardData(): MapCardData {
         company = company,
         highlight = highlight,
         title = title,
-        distanceText = "내 위치에서 214m"
+        distanceText = "내 위치에서 214m",
+        imageUrl = "https://your-image-url"   // 나중에 실제 이미지 주소
     )
 }
 
@@ -798,7 +969,8 @@ private fun InterviewItem.toMapCardData(): MapCardData {
         company = company,
         highlight = "면접예정",
         title = title,
-        distanceText = "내 위치에서 214m"
+        distanceText = "내 위치에서 214m",
+        imageUrl = "https://your-image-url"   // 나중에 실제 이미지 주소
     )
 }
 

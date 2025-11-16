@@ -32,6 +32,10 @@ import com.example.dodojob.data.suggestinterview.SuggestInterviewInsert
 import com.example.dodojob.data.suggestinterview.SuggestInterviewRepository
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import com.example.dodojob.data.naver.NaverGeocoding
 
 /* =========================
  *  Fonts
@@ -123,6 +127,12 @@ fun SuggestInterviewScreen(navController: NavController) {
 
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    var screenLoading by remember { mutableStateOf(false) }   // 초기 사용자 정보
+    var geocodeLoading by remember { mutableStateOf(false) }  // 주소찾기
+    var nextLoading by remember { mutableStateOf(false) }     // 다음단계 저장
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = Modifier
@@ -270,9 +280,61 @@ fun SuggestInterviewScreen(navController: NavController) {
                 Spacer(Modifier.height(8.dp))
                 AddressSearchButton(
                     onClick = {
-                        // TODO: 주소 검색 화면/바텀시트 열기
+                        scope.launch {
+                            geocodeLoading = true
+                            try {
+                                val q = address.trim()
+                                if (q.isEmpty()) {
+                                    Toast.makeText(context, "주소를 입력해 주세요.", Toast.LENGTH_SHORT).show()
+                                    return@launch
+                                }
+
+                                val r = NaverGeocoding.geocode(context, q)
+                                if (r != null) {
+                                    fun stripHtml(s: String?) =
+                                        s?.replace(Regex("<.*?>"), "")?.trim().orEmpty()
+
+                                    val best = listOf(
+                                        r.roadAddress,
+                                        r.jibunAddress,
+                                        r.display
+                                    ).map(::stripHtml).firstOrNull { it.isNotEmpty() }.orEmpty()
+
+                                    if (best.isNotEmpty()) {
+                                        address = best
+                                        focusManager.clearFocus()
+                                        Toast.makeText(
+                                            context,
+                                            "찾음: $best (${r.lat}, ${r.lng})",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "주소 문자열이 비어 있습니다.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "주소를 찾을 수 없어요. 다른 표현으로 검색해 보세요.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    "오류: ${e.message ?: "네트워크/권한/키 확인"}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } finally {
+                                geocodeLoading = false
+                            }
+                        }
                     }
                 )
+
 
                 Spacer(Modifier.height(16.dp))
                 InputBlock(

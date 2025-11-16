@@ -34,7 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dodojob.data.naver.NaverGeocoding
+import com.example.dodojob.data.naver.rememberGeocodedLatLng
+import com.example.dodojob.session.CurrentCompany
 import kotlinx.parcelize.Parcelize
+import com.naver.maps.geometry.LatLng
+import com.naver.maps.map.CameraPosition
+import com.example.dodojob.ui.components.DodoNaverMap
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 
 /* 전달 받을 카드 데이터 */
 @Parcelize
@@ -43,7 +51,8 @@ data class MapCardData(
     val company: String,     // 회사명
     val highlight: String,   // | 경력자 우대, 면접예정, 미열람 등
     val title: String,       // 공고 제목
-    val distanceText: String // 내 위치에서 214m (placeholder)
+    val distanceText: String, // 내 위치에서 214m (placeholder)
+    val imageUrl: String? = null
 ) : Parcelable
 
 @Composable
@@ -77,6 +86,10 @@ fun MapScreen(
     val BorderBlue = Color(0xFFC1D2ED)
 
     var keyword by remember { mutableStateOf("") }
+// ✅ 1) 여기 추가: 지도 중심 좌표 + 임시 주소/좌표
+    var mapCenter by remember { mutableStateOf<LatLng?>(null) }
+    val tempAddress = CurrentCompany.companylocate
+    mapCenter = rememberGeocodedLatLng(tempAddress)
 
     // ▼ 카드 위치/버튼 위치 계산용
     val cardSidePadding   = 18.dp
@@ -87,8 +100,24 @@ fun MapScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MapBg)
     ) {
+        // ✅ 2) 맨 아래에 실제 지도 영역 추가
+        if (mapCenter != null) {
+            DodoNaverMap(
+                modifier = Modifier.fillMaxSize(),
+                initialCameraPosition = CameraPosition(mapCenter!!, 16.0),
+                enableMyLocation = true,
+                markerPosition = mapCenter,
+                markerCaption = data?.company ?: ""   // 없으면 빈 문자열
+            )
+        } else {
+            // 좌표 아직 없을 때 임시 배경
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MapBg)
+            )
+        }
         /* 상태바 대체 */
         Box(
             modifier = Modifier
@@ -245,7 +274,8 @@ private fun JobFloatingCard(
     distanceText: String,
     onClick: () -> Unit,
     primaryBlue: Color,
-    dangerRed: Color
+    dangerRed: Color,
+    imageUrl: String? = null        // ← 이미지 URL 추가
 ) {
     val shape = RoundedCornerShape(10.dp)
 
@@ -257,14 +287,26 @@ private fun JobFloatingCard(
             .background(Color.White)
             .clickable { onClick() }
     ) {
-        // 이미지 자리 (placeholder)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(84.dp)
-                .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
-                .background(Color(0xFFE7E9EE))
-        )
+
+        if (imageUrl != null) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(84.dp)
+                    .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(84.dp)
+                    .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                    .background(Color(0xFFE7E9EE))
+            )
+        }
 
         Column(
             modifier = Modifier

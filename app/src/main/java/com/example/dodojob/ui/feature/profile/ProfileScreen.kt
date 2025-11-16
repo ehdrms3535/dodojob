@@ -30,7 +30,8 @@ import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.components.AppBottomBar
-import kotlinx.datetime.Month
+import com.example.dodojob.dao.fetchAppliedCount
+import com.example.dodojob.dao.fetchAnnounceSeniorCount
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -45,6 +46,11 @@ fun ProfileRoute(nav: NavController) {
 
     var recentCount by remember { mutableStateOf(0L) }
     var recentError by remember { mutableStateOf<String?>(null) }
+
+
+    var applyCount by remember { mutableStateOf(0L)}
+    var resumeViews by remember { mutableStateOf(0L)}
+
 
     LaunchedEffect(username) {
         loading = true
@@ -70,7 +76,25 @@ fun ProfileRoute(nav: NavController) {
             }.onFailure { t ->
                 recentError = t.message
             }
+            runCatching {
+                fetchAppliedCount(username)
+            }.onSuccess { cnt ->
+                applyCount = cnt.toLong()
+            }.onFailure {
+                applyCount = 0
+            }
+            runCatching {
+                fetchAnnounceSeniorCount(username)
+            }.onSuccess { cnt->
+                resumeViews = cnt.toLong()
+            }.onFailure {
+                resumeViews=0
+            }
+
+
         }
+
+
 
         loading = false
     }
@@ -88,8 +112,8 @@ fun ProfileRoute(nav: NavController) {
 
     val s = senior!!
     val displayName = s.user?.name ?: s.username
-    val applyCount = s.applyCount
-    val resumeViews = s.resumeViews
+    //val applyCount = s.applyCount
+    //val resumeViews = s.resumeViews
     val likedCount = s.likedCount
     val activityLevel = s.activityLevel
     val applyWithinYear = s.applyWithinYear
