@@ -1,6 +1,5 @@
 package com.example.dodojob.ui.feature.support
 
-
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -33,13 +32,10 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
-import com.example.dodojob.ui.feature.support.MapCardData
-
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-
 import androidx.compose.material3.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
@@ -61,7 +57,6 @@ import com.example.dodojob.ui.components.DodoNaverMap
 import com.naver.maps.map.CameraPosition
 import java.time.format.DateTimeFormatter
 
-
 /* ===================== 색상/타이포 공통 ===================== */
 private val PrimaryBlue = Color(0xFF005FFF)
 private val DangerRed   = Color(0xFFF24822)
@@ -79,9 +74,7 @@ data class AppliedItem(
     val appliedAt: String,
     val company: String,
     val title: String,
-
     val company_locate: String
-
 )
 
 data class InterviewItem(
@@ -101,20 +94,9 @@ data class ResultItem(
 )
 
 
-
 private val DOT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 /* ===================== Fake DB ===================== */
 private object SupportFakeDb {
-
-
-/* ===================== Fake DB ===================== */
-private object SupportFakeDb {
-    fun applied(): List<AppliedItem> = listOf(
-        AppliedItem("a1", ReadState.Read,   "2025.08.25", "모던하우스", "매장운영 및 고객관리 하는 일에 적합한 분 구해요"),
-        AppliedItem("a2", ReadState.Unread, "2025.08.20", "대구동구 어린이도서관", "아이들 책 읽어주기, 독서 습관 형성 프로그램 지원"),
-        AppliedItem("a3", ReadState.Unread, "2025.08.14", "수성구 체육센터", "회원 운동 지도 보조, 센터 관리 가능하신 분 지원 요망"),
-        AppliedItem("a4", ReadState.Read,   "2025.08.10", "대구도시철도공사", "지하철 역사 안전 순찰, 이용객 안내, 분실물 관리"),
-    )
 
 
     fun interviews(): List<InterviewItem> {
@@ -133,7 +115,6 @@ private object SupportFakeDb {
         ResultItem("r3", "2025.08.12", "대구동구 어린이도서관", "독서 프로그램 지원", ResultState.Pass),
     )
 }
-
 
 data class SupportUiState(
     val applied: List<AppliedItem> = emptyList(),
@@ -270,13 +251,6 @@ fun SupportRoute(nav: NavController,
     val appliedAll   = state.applied
     val interviewAll = state.interviews
     val resultAll    = state.results
-/* ===================== Route + Screen ===================== */
-@Composable
-fun SupportRoute(nav: NavController) {
-    val appliedAll   = remember { SupportFakeDb.applied() }
-    val interviewAll = remember { SupportFakeDb.interviews() }
-    val resultAll    = remember { SupportFakeDb.results() }
-
 
     var keyword by remember { mutableStateOf("") }
 
@@ -733,7 +707,6 @@ private fun WeeklyHeader(
 @Composable
 private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
 
-
     val mapCenter = rememberGeocodedLatLng(item.address)   // ← 주소 기반 좌표
 
     Column(
@@ -805,7 +778,6 @@ private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
                 .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-
             val mapHeight = 187.54.dp
 
             // 🔵 지도 영역
@@ -835,18 +807,6 @@ private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
             }
 
             // 주소 텍스트
-
-            // 스크린샷 자리 (지도 썸네일)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(187.54.dp) // Figma height
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFEDEFF3))
-            )
-
-            // 주소 텍스트 (20sp, 30px line-height)
-
             Text(
                 text = item.address,
                 fontSize = 20.sp,
@@ -859,11 +819,7 @@ private fun InterviewCard(item: InterviewItem, onClick: () -> Unit) {
                     .padding(horizontal = 6.dp)
             )
 
-
             // 지도 보기 버튼
-
-            // 지도 보기 버튼 (327.47 x 54.48 근사)
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1001,8 +957,6 @@ private fun AppliedItem.toMapCardData(): MapCardData {
         title = title,
         distanceText = "내 위치에서 214m",
         imageUrl = "https://your-image-url"   // 나중에 실제 이미지 주소
-        distanceText = "내 위치에서 214m"
-
     )
 }
 
@@ -1017,8 +971,6 @@ private fun InterviewItem.toMapCardData(): MapCardData {
         title = title,
         distanceText = "내 위치에서 214m",
         imageUrl = "https://your-image-url"   // 나중에 실제 이미지 주소
-        distanceText = "내 위치에서 214m"
-
     )
 }
 
