@@ -2,6 +2,9 @@
 
 package com.example.dodojob.ui.feature.employ
 
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.unit.em
+import androidx.compose.foundation.Image
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -75,14 +78,17 @@ data class UserTmpRow(
 /* ===== 공통 컴포넌트 ===== */
 @Composable
 private fun SectionCard(
+    expanded: Boolean,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val vPadding = if (expanded) 20.dp else 8.dp
+
     Column(
         modifier
             .fillMaxWidth()
             .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(horizontal = 20.dp, vertical = 20.dp)
+            .padding(horizontal = 20.dp, vertical = vPadding)
     ) { content() }
 }
 
@@ -96,7 +102,12 @@ private fun SectionTitle(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .padding(
+                start = 4.dp,
+                end = 4.dp,
+                top = 8.dp,
+                bottom = 2.dp
+            )
             .clickable { onToggle() }
     ) {
         Row(
@@ -117,8 +128,8 @@ private fun SectionTitle(
                 color = Color.Black
             )
         }
-        Spacer(Modifier.height(16.dp))
-        ThinDivider(insetStart = 4.dp, insetEnd = 4.dp)
+
+        Spacer(Modifier.height(6.dp))
     }
 }
 
@@ -175,32 +186,38 @@ private fun ScrollHeader(
     onBack: () -> Unit
 ) {
     Column {
+        // 앱바 영역 (72dp, 흰 배경, 좌우 4dp 패딩)
         Box(
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
+                .height(72.dp)
                 .background(Color.White)
-                .height(70.dp)
-                .padding(horizontal = 12.dp)
+                .padding(horizontal = 4.dp)
         ) {
-            Icon(
-                imageVector = Icons.Outlined.ArrowBackIosNew,
-                contentDescription = "뒤로가기",
-                tint = Color.Unspecified,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .size(20.dp)
-                    .clickable { onBack() }
-            )
+            // 뒤로가기 버튼 (왼쪽 정렬, back 아이콘 이미지 사용)
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.back),
+                    contentDescription = "뒤로가기",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            // 타이틀 (가운데 정렬, 폰트/사이즈 동일)
             Text(
                 text = title,
-                fontSize = 28.sp,
-                fontFamily = PretendardSemi,
+                fontFamily = PretendardSemi,             // = PretendardSemiBold 역할
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 24.sp,
+                lineHeight = 36.sp,
+                letterSpacing = (-0.019).em,
                 color = Color.Black,
-                modifier = Modifier.align(Alignment.Center),
-                maxLines = 1
+                modifier = Modifier.align(Alignment.Center)
             )
         }
-        Divider(color = LineGray, thickness = 1.dp)
     }
 }
 
@@ -360,7 +377,7 @@ fun ApplicantInformationScreen(
                                 .padding(horizontal = 12.dp)
                         ) {
                             /* ===== 인적사항 ===== */
-                            SectionCard {
+                            SectionCard(expanded = personalExpanded) {
                                 SectionTitle(
                                     title = " 인적사항",
                                     iconRes = R.drawable.identification,
@@ -417,7 +434,7 @@ fun ApplicantInformationScreen(
                             Spacer(Modifier.height(28.dp))
 
                             /* ===== 경력 ===== */
-                            SectionCard {
+                            SectionCard(expanded = careerExpanded) {
                                 SectionTitle(
                                     title = " 경력",
                                     iconRes = R.drawable.career,
@@ -437,15 +454,12 @@ fun ApplicantInformationScreen(
                                         Spacer(Modifier.height(4.dp))
                                     } else {
                                         triplescareer.forEachIndexed { i, (title, start, end) ->
-                                            if (i > 0) {
-                                                Spacer(Modifier.height(16.dp))
-                                                ThinDivider()
-                                                Spacer(Modifier.height(16.dp))
-                                            } else {
-                                                Spacer(Modifier.height(8.dp))
-                                            }
+                                            Spacer(Modifier.height(12.dp))
+                                            ThinDivider()
+                                            Spacer(Modifier.height(12.dp))
+
                                             CareerItem(
-                                                title = title.orEmpty(),
+                                                title = title?.trim().orEmpty(),
                                                 start = start.orEmpty(),
                                                 end   = end.orEmpty()
                                             )
@@ -458,7 +472,7 @@ fun ApplicantInformationScreen(
                             Spacer(Modifier.height(28.dp))
 
                             /* ===== 자격증 ===== */
-                            SectionCard {
+                            SectionCard(expanded = licenseExpanded) {
                                 SectionTitle(
                                     title = " 자격증",
                                     iconRes = R.drawable.license,
@@ -478,13 +492,10 @@ fun ApplicantInformationScreen(
                                         Spacer(Modifier.height(4.dp))
                                     } else {
                                         triplelicense.forEachIndexed { i, (org, title, code) ->
-                                            if (i > 0) {
-                                                Spacer(Modifier.height(16.dp))
-                                                ThinDivider()
-                                                Spacer(Modifier.height(16.dp))
-                                            } else {
-                                                Spacer(Modifier.height(8.dp))
-                                            }
+                                            Spacer(Modifier.height(12.dp))
+                                            ThinDivider()
+                                            Spacer(Modifier.height(12.dp))
+
                                             LicenseItem(
                                                 org   = org.orEmpty(),
                                                 title = title.orEmpty(),
@@ -499,7 +510,7 @@ fun ApplicantInformationScreen(
                             Spacer(Modifier.height(28.dp))
 
                             /* ===== 희망직무 ===== */
-                            SectionCard {
+                            SectionCard(expanded = hopeExpanded) {
                                 SectionTitle(
                                     title = " 희망직무",
                                     iconRes = R.drawable.hope_work,
@@ -658,7 +669,7 @@ private fun JobChip(
             .background(bg)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .heightIn(min = 64.dp),
+            .height(56.dp),
         verticalArrangement = Arrangement.Center
     ) {
         Text(
