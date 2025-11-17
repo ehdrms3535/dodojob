@@ -40,7 +40,9 @@ sealed class Route(val path: String) {
     }
 
     data object ApplicationCompleted : Route("application_completed")
-    data object Support : Route("support")
+    data object Support : Route("support") {
+        fun withTab(tab: Int) = "support?tab=$tab"
+    }
     data object Todo : Route("todo")
     data object TodoRealtime : Route("todo_realtime")
     data object EmployerHome : Route("employer_home")

@@ -550,6 +550,7 @@ fun EditEmployerInformationScreen(navController: NavController) {
                     .fillMaxWidth()
                     .background(BgGray)
                     .padding(top = 10.dp)
+                    .navigationBarsPadding()
             ) {
                 Column(
                     Modifier

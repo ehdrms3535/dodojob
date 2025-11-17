@@ -359,10 +359,12 @@ private fun LikedTabBar(
                 val selected = i == selectedIndex
 
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
+                        .fillMaxHeight()
                         .padding(horizontal = 32.dp)
-                        .clickable { onSelected(i) }
+                        .clickable { onSelected(i) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom
                 ) {
                     Text(
                         text = label,
@@ -389,9 +391,6 @@ private fun LikedTabBar(
                 }
             }
         }
-
-        // 탭 아래 흰색 여백
-        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 

@@ -436,6 +436,7 @@ fun SuggestInterviewScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(White)
+                    .navigationBarsPadding()
                     .padding(vertical = 20.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically

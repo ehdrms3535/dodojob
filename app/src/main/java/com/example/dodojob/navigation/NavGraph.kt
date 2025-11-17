@@ -108,7 +108,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         )
     }
 
-    NavHost(navController = nav, startDestination = Route.Intro.path) {
+    NavHost(navController = nav, startDestination = Route.PreLogin.path) {
 
       
         composable(Route.Intro.path) { IntroScreen(nav) }              // 1. 시작화면
@@ -222,7 +222,18 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
                 }
             )
         }
-        composable(Route.Support.path) { SupportRoute(nav) } // 지원 내역
+        composable(
+            route = "${Route.Support.path}?tab={tab}",
+            arguments = listOf(
+                navArgument("tab") {
+                    type = NavType.IntType
+                    defaultValue = 0
+                }
+            )
+        ) { backStackEntry ->
+            val initialTab = backStackEntry.arguments?.getInt("tab") ?: 0
+            SupportRoute(nav = nav, initialTab = initialTab)
+        }
         composable(Route.RecentlyViewed.path) { RecentViewedRoute(nav) } // 최근 본 공고
         composable(Route.LikedJob.path) { LikedJobsRoute(nav) } // 좋아요한 공고
         composable(Route.Resume.path) { ResumeManageScreen(nav) } // 이력서 관리

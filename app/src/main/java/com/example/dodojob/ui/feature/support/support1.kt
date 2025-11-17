@@ -239,9 +239,11 @@ class SupportViewModel : ViewModel() {
 
 /* ===================== Route + Screen ===================== */
 @Composable
-fun SupportRoute(nav: NavController,
-                 viewModel: SupportViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
-
+fun SupportRoute(
+    nav: NavController,
+    initialTab: Int = 0,
+    viewModel: SupportViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
     val state by viewModel.uiState.collectAsState()
 
     // 화면 진입 시 한 번만 로드
@@ -289,7 +291,8 @@ fun SupportRoute(nav: NavController,
             onShowMap      = { card ->
                 nav.currentBackStackEntry?.savedStateHandle?.set("mapCard", card)
                 nav.navigate("map")
-            }
+            },
+            initialTab     = initialTab
         )
     }
 }
@@ -406,9 +409,10 @@ private fun SupportBodySection(
     appliedItems: List<AppliedItem>,
     interviewItems: List<InterviewItem>,
     resultItems: List<ResultItem>,
-    onShowMap: (MapCardData) -> Unit
+    onShowMap: (MapCardData) -> Unit,
+    initialTab: Int = 0
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableStateOf(initialTab) }
 
     Column(
         modifier = Modifier
@@ -448,11 +452,13 @@ private fun SupportBodySection(
 @Composable
 private fun TabLabel(text: String, isSelected: Boolean, onClick: () -> Unit) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(vertical = 4.dp)
+            .fillMaxHeight()
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(Modifier.height(8.dp))   // 위쪽 여백
+
         Text(
             text = text,
             fontSize = 18.sp,
@@ -461,15 +467,18 @@ private fun TabLabel(text: String, isSelected: Boolean, onClick: () -> Unit) {
             letterSpacing = (-0.5f).sp,
             color = if (isSelected) PrimaryBlue else Color(0xFF000000)
         )
-        Spacer(Modifier.height(6.dp))
+
+        Spacer(Modifier.weight(1f))
+
         Box(
             modifier = Modifier
-                .width(70 .dp)
+                .width(70.dp)
                 .height(2.5.dp)
                 .background(if (isSelected) PrimaryBlue else Color.Transparent)
         )
     }
 }
+
 
 /* ===================== 지원완료 탭 ===================== */
 @Composable

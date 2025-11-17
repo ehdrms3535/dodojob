@@ -308,7 +308,9 @@ fun MainRoute(nav: NavController, vm: MainViewModel = viewModel()) {
             nav.navigate(Route.JobDetail.of(id))
         },
 
-        onOpenCalendar = { nav.navigate(Route.Map.path)  },
+        onOpenCalendar = {
+            nav.navigate(Route.Support.withTab(1))
+        },
         onShortcut = { key ->
             when (key) {
                 "home" -> nav.navigate("main") { launchSingleTop = true }
@@ -890,8 +892,7 @@ private fun JobDetailCard(job: JobCardUi, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 236.dp),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(3.dp)
