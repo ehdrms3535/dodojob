@@ -19,48 +19,27 @@ import kotlinx.coroutines.delay
 import androidx.navigation.NavController
 import com.example.dodojob.navigation.Route
 import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 
 @Composable
 fun IntroScreen(navController: NavController) {
     LaunchedEffect(Unit) {
-        delay(3000)
+        delay(1500)
         navController.navigate(Route.Onboarding.path) {
             popUpTo(Route.Intro.path) { inclusive = true }
         }
     }
 
-    val paperlogy = FontFamily(
-        Font(R.font.paperlogy_bold, FontWeight.Bold)
-    )
-
+    // 🔵 전체 화면 이미지 스플래시
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF1F5F7))
+        Modifier.fillMaxSize()
     ) {
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-            // ✅ 이미지 로고
-            Image(
-                painter = painterResource(id = R.drawable.intro),
-                contentDescription = "앱 로고",
-                modifier = Modifier.size(120.dp)
-            )
-
-            // ✅ 커스텀 폰트 적용된 텍스트
-            Text(
-                text = "하고싶은 일을,\n다시 할 수 있게 두두잡",
-                fontFamily = paperlogy,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                lineHeight = 36.sp,
-                textAlign = TextAlign.Center,
-                color = Color.Black
-            )
-        }
+        Image(
+            painter = painterResource(id = R.drawable.splash), // ← 전체 이미지 넣기
+            contentDescription = "두두잡 인트로",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
     }
 }
