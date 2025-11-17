@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/dodojob/ui/components/AppBottomBar.kt
 package com.example.dodojob.ui.components
 
 import androidx.compose.foundation.Image
@@ -14,18 +13,21 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.dodojob.R
 
+// ✅ navigationBarsPadding import 필요
+import androidx.compose.foundation.layout.navigationBarsPadding
+
 private object BarSpec {
     val Container = Color.White
-    val Active = Color(0xFF005FFF)   // (지금은 아이콘에 포함돼 있어서 미사용)
-    val Inactive = Color(0xFF828282) // (지금은 아이콘에 포함돼 있어서 미사용)
+    val Active = Color(0xFF005FFF)
+    val Inactive = Color(0xFF828282)
 
     val BottomPadding = 12.dp
-    val TopPadding = 9.dp           // Figma: top padding 9
-    val Gap = 40.dp                 // Figma: gap 35px
-    val ItemW = 48.dp               // Figma: width 48
-    val ItemH = 69.dp               // Figma: height 69
+    val TopPadding = 9.dp
+    val Gap = 40.dp
+    val ItemW = 48.dp
+    val ItemH = 69.dp
 
-    val BarHeight = TopPadding + ItemH + BottomPadding
+    val BarHeight = TopPadding + ItemH + BottomPadding // 참고용
 }
 
 enum class AppTab(val key: String, val label: String) {
@@ -45,8 +47,10 @@ fun AppBottomBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(BarSpec.BarHeight)
             .background(BarSpec.Container)
+            // ⬇️ 시스템 네비바 만큼 위로 올려주기
+            .navigationBarsPadding()
+            // ⬇️ Figma 기준 상/하 패딩
             .padding(
                 top = BarSpec.TopPadding,
                 bottom = BarSpec.BottomPadding
@@ -55,7 +59,8 @@ fun AppBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.TopCenter),
+                .height(BarSpec.ItemH)         // 아이콘 영역 세로 69dp 유지
+                .align(Alignment.Center),      // 가운데 정렬 (위로 딱 붙일거면 TopCenter)
             horizontalArrangement = Arrangement.spacedBy(
                 BarSpec.Gap,
                 Alignment.CenterHorizontally
@@ -93,8 +98,7 @@ fun AppBottomBar(
     }
 }
 
-
-/** 문자열 호환 버전 (기존 코드 drop-in) */
+/** 문자열 호환 버전 */
 @Composable
 fun AppBottomBar(
     current: String,
@@ -135,7 +139,7 @@ private fun BottomItem(
         Image(
             painter = painterResource(id = if (selected) selectedIcon else unselectedIcon),
             contentDescription = label,
-            modifier = Modifier.fillMaxSize(), // 아이콘 리소스(48x69)에 맞게 전체 사용
+            modifier = Modifier.fillMaxSize(),  // 48 x 69 그대로
             contentScale = ContentScale.Fit
         )
     }
