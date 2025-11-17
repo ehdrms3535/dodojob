@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/dodojob/ui/feature/profile/ActivityLevelRoute.kt
 package com.example.dodojob.ui.feature.profile
 
 import android.os.Parcelable
@@ -22,11 +21,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.dodojob.R
 import com.example.dodojob.navigation.Route
 import com.example.dodojob.ui.components.AppBottomBar
@@ -40,7 +42,8 @@ data class ActivityLevelData(
     val applyWithinYear: Long,
     val realWorkExpCount: Long,
     val eduCompleted: Boolean,
-    val joinedDate: String       // "2025년 9월 3일" 고정 전달
+    val joinedDate: String,      // "2025년 9월 3일" 고정 전달
+    val profileImageUrl: String?
 ) : Parcelable
 
 /* =============== 팔레트 =============== */
@@ -49,12 +52,12 @@ data class LevelPalette(
     val primaryLight: Color,
     val border: Color
 )
+
 private fun paletteFor(level: Int): LevelPalette = when (level) {
     1 -> LevelPalette(Color(0xFFFC4545), Color(0xFFFFB297), Color(0xFFF24822)) // 레벨1(레드)
     2 -> LevelPalette(Color(0xFFFFC527), Color(0xFFFFEB80), Color(0xFFDDB739)) // 레벨2(옐로)
     else -> LevelPalette(Color(0xFF6D69FE), Color(0xFF9997FF), Color(0xFF6D69FE)) // 레벨3(블루)
 }
-
 
 /* =============== 리소스 맵핑 =============== */
 @DrawableRes
@@ -63,12 +66,14 @@ private fun badgeResFor(level: Int) = when (level) {
     2 -> R.drawable.yellow_medal
     else -> R.drawable.blue_medal
 }
+
 @DrawableRes
 private fun levelBannerResFor(level: Int) = when (level) {
     1 -> R.drawable.level1_banner
     2 -> R.drawable.level2_banner
     else -> R.drawable.level3_banner
 }
+
 @DrawableRes
 private fun benefitsImageResFor(level: Int) = when (level) {
     1 -> R.drawable.benefits_level1
@@ -81,7 +86,6 @@ private fun benefitsImageResFor(level: Int) = when (level) {
 fun ActivityLevelRoute(
     nav: NavController
 ) {
-    // Profile 화면에서 저장한 값을 이전 back stack entry에서 1회 읽어오기
     val payload: ActivityLevelData? = remember(nav) {
         nav.previousBackStackEntry
             ?.savedStateHandle
@@ -89,21 +93,11 @@ fun ActivityLevelRoute(
     }
 
     if (payload == null) {
-        // 잘못된 진입(직접 경로 진입 등) 대응
         MissingPayloadScreen(
             onBackToProfile = { nav.navigate(Route.My.path) { launchSingleTop = true } }
         )
         return
     }
-
-    val data = ActivityLevelData(
-        name = payload.name,
-        level = payload.level,
-        applyWithinYear = payload.applyWithinYear,
-        realWorkExpCount = payload.realWorkExpCount,
-        eduCompleted = payload.eduCompleted,
-        joinedDate = payload.joinedDate
-    )
 
     val shortcut: (String) -> Unit = { key ->
         when (key) {
@@ -115,7 +109,7 @@ fun ActivityLevelRoute(
     }
 
     ActivityLevelScreen(
-        data = data,
+        data = payload,
         onShortcut = { key ->
             when (key) {
                 "home"      -> nav.navigate("main") { launchSingleTop = true }
@@ -127,9 +121,9 @@ fun ActivityLevelRoute(
         onBackToProfile = { nav.navigate(Route.My.path) { launchSingleTop = true } },
         bottomBar = {
             AppBottomBar(
-            current = "my",          // 현재 탭
-            onClick = shortcut       // 탭 클릭 시 위에서 만든 네비게이션 로직 재사용
-           )
+                current = "my",
+                onClick = shortcut
+            )
         }
     )
 }
@@ -147,6 +141,7 @@ fun ActivityLevelScreen(
 
     val screenBg  = Color(0xFFF1F5F7)
     val brandBlue = Color(0xFF005FFF)
+    val context   = LocalContext.current
 
     Scaffold(
         containerColor = screenBg,
@@ -192,14 +187,20 @@ fun ActivityLevelScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.senior_id),
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(data.profileImageUrl)
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "프로필 사진",
                             modifier = Modifier
                                 .size(104.dp)
                                 .clip(CircleShape),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            placeholder = painterResource(R.drawable.senior_id),
+                            error = painterResource(R.drawable.senior_id)
                         )
+
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
@@ -263,7 +264,11 @@ fun ActivityLevelScreen(
                     ) {
                         ActivityRow("1년 이내 일자리 지원", "${data.applyWithinYear}건", valueColor = brandBlue)
                         ActivityRow("실제 근무 경험", "${data.realWorkExpCount}건", valueColor = brandBlue)
-                        ActivityRow("교육/강의 콘텐츠", if (data.eduCompleted) "수강 완료" else "수강 중", valueColor = brandBlue)
+                        ActivityRow(
+                            "교육/강의 콘텐츠",
+                            if (data.eduCompleted) "수강 완료" else "수강 중",
+                            valueColor = brandBlue
+                        )
                         ActivityRow("회원가입", data.joinedDate, valueColor = brandBlue)
                     }
                 }
