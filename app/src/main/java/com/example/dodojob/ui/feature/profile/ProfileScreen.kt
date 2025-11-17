@@ -19,22 +19,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.dodojob.R
 import com.example.dodojob.dao.CountRecentView
 import com.example.dodojob.dao.getSeniorInformation
 import com.example.dodojob.data.senior.SeniorJoined
 import com.example.dodojob.session.CurrentUser
 import com.example.dodojob.ui.components.AppBottomBar
-
 import com.example.dodojob.dao.fetchAppliedCount
 import com.example.dodojob.dao.fetchAnnounceSeniorCount
-
-import kotlinx.datetime.Month
 
 @Composable
 fun ProfileRoute(nav: NavController) {
@@ -50,9 +50,8 @@ fun ProfileRoute(nav: NavController) {
     var recentCount by remember { mutableStateOf(0L) }
     var recentError by remember { mutableStateOf<String?>(null) }
 
-
-    var applyCount by remember { mutableStateOf(0L)}
-    var resumeViews by remember { mutableStateOf(0L)}
+    var applyCount by remember { mutableStateOf(0L) }
+    var resumeViews by remember { mutableStateOf(0L) }
 
     LaunchedEffect(username) {
         loading = true
@@ -69,7 +68,7 @@ fun ProfileRoute(nav: NavController) {
 
         senior = s
 
-        // 2) 최근 본 공고 개수 로드
+        // 2) 최근 본 공고 개수, 지원 수, 이력서 열람 수 로드
         if (!username.isNullOrBlank()) {
             runCatching {
                 CountRecentView(username)
@@ -78,6 +77,7 @@ fun ProfileRoute(nav: NavController) {
             }.onFailure { t ->
                 recentError = t.message
             }
+
             runCatching {
                 fetchAppliedCount(username)
             }.onSuccess { cnt ->
@@ -85,43 +85,56 @@ fun ProfileRoute(nav: NavController) {
             }.onFailure {
                 applyCount = 0
             }
+
             runCatching {
                 fetchAnnounceSeniorCount(username)
-            }.onSuccess { cnt->
+            }.onSuccess { cnt ->
                 resumeViews = cnt.toLong()
             }.onFailure {
-                resumeViews=0
+                resumeViews = 0
             }
-
-
         }
-
-
 
         loading = false
     }
 
     when {
-        loading -> { LoadingOrErrorBox("프로필 정보를 불러오는 중입니다…"); return }
-        error != null -> { LoadingOrErrorBox("불러오기 실패: $error"); return }
-        username.isNullOrBlank() -> {
-            LoadingOrErrorBox("로그인이 필요합니다.", "마이 탭의 전체 기능을 사용하려면 로그인하세요."); return
+        loading -> {
+            LoadingOrErrorBox("프로필 정보를 불러오는 중입니다…")
+            return
         }
+
+        error != null -> {
+            LoadingOrErrorBox("불러오기 실패: $error")
+            return
+        }
+
+        username.isNullOrBlank() -> {
+            LoadingOrErrorBox(
+                "로그인이 필요합니다.",
+                "마이 탭의 전체 기능을 사용하려면 로그인하세요."
+            )
+            return
+        }
+
         senior == null -> {
-            LoadingOrErrorBox("사용자 정보를 찾을 수 없습니다.", "프로필을 먼저 등록해 주세요."); return
+            LoadingOrErrorBox(
+                "사용자 정보를 찾을 수 없습니다.",
+                "프로필을 먼저 등록해 주세요."
+            )
+            return
         }
     }
 
     val s = senior!!
     val displayName = s.user?.name ?: s.username
-    //val applyCount = s.applyCount
-    //val resumeViews = s.resumeViews
     val likedCount = s.likedCount
     val activityLevel = s.activityLevel
     val applyWithinYear = s.applyWithinYear
     val realWorkExpCount = s.realWorkExpCount
     val eduCompleted = s.eduCompleted
     val createdAt = s.user?.created_at
+    val profileImageUrl = s.user?.userImage?.imgUrl
 
     val sb = StringBuilder()
     sb.append(
@@ -161,9 +174,7 @@ fun ProfileRoute(nav: NavController) {
         onClickChangePw = { nav.navigate("change_password") },
         onClickLogout = { showLogout = true },
         onClickLeave = { showLeave = true },
-        onClickApplyStatus = {
-            nav.navigate("support")
-        },
+        onClickApplyStatus = { nav.navigate("support") },
         onShortcut = { key ->
             when (key) {
                 "home" -> nav.navigate("main") { launchSingleTop = true }
@@ -171,7 +182,8 @@ fun ProfileRoute(nav: NavController) {
                 "welfare" -> nav.navigate("welfare")
                 "my" -> Unit
             }
-        }
+        },
+        profileImageUrl = profileImageUrl // ✅ 추가
     )
 
     if (showLeave) {
@@ -232,7 +244,8 @@ fun ProfileScreen(
     onClickLogout: () -> Unit,
     onClickLeave: () -> Unit,
     onClickApplyStatus: () -> Unit,
-    onShortcut: (String) -> Unit
+    onShortcut: (String) -> Unit,
+    profileImageUrl: String? = null // ✅ 새 파라미터 (Preview에서 기본값 사용)
 ) {
     val brandBlue = Color(0xFF005FFF)
     val screenBg = Color(0xFFF1F5F7)
@@ -244,6 +257,8 @@ fun ProfileScreen(
         2 -> R.drawable.yellow_medal
         else -> R.drawable.blue_medal
     }
+
+    val context = LocalContext.current
 
     Scaffold(
         containerColor = screenBg,
@@ -259,7 +274,7 @@ fun ProfileScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // 상단 그라데이션 헤더 (ActivityLevelScreen 과 위치 맞춤)
+                // 상단 그라데이션 헤더
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -285,7 +300,7 @@ fun ProfileScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Spacer(modifier = Modifier.height(3.dp))
-                        // 로고 + 알림 아이콘 (ActivityLevel 의 back 버튼 자리)
+                        // 로고 + 알림 아이콘
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -309,20 +324,27 @@ fun ProfileScreen(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // 프로필 사진 + 이름 + 메달 (ActivityLevel 과 동일한 레이아웃)
+                        // 프로필 사진 + 이름 + 메달
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.senior_id),
+                            // ✅ 네트워크 이미지 + fallback
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(profileImageUrl)
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "프로필 사진",
                                 modifier = Modifier
                                     .size(104.dp)
                                     .clip(CircleShape),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                placeholder = painterResource(R.drawable.senior_id),
+                                error = painterResource(R.drawable.senior_id)
                             )
+
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -351,7 +373,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 헤더 위로 겹쳐 올라오는 이력서 카드 (ActivityLevel 의 배너 카드 위치와 동일)
+                // 이력서 카드 (헤더 위로 살짝 겹치게)
                 ResumeCard(
                     brandBlue = brandBlue,
                     applyCount = applyCount,
@@ -364,7 +386,7 @@ fun ProfileScreen(
                         .offset(y = (-85).dp)
                 )
 
-                // 나머지 카드들 (ActivityLevel 의 "나의 활동" 카드와 유사 오프셋)
+                // 나머지 카드들
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -647,5 +669,6 @@ fun ProfileScreenPreview() {
         onClickLeave = { },
         onClickApplyStatus = { },
         onShortcut = { }
+        // profileImageUrl는 기본값 null 사용
     )
 }

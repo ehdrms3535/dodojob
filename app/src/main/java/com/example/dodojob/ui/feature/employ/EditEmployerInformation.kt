@@ -2,6 +2,10 @@
 
 package com.example.dodojob.ui.feature.employ
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,19 +14,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBackIosNew
-import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,11 +42,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
+import com.example.dodojob.navigation.Route
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 
 fun Modifier.dashedBorder(
     color: Color,
@@ -53,26 +63,13 @@ fun Modifier.dashedBorder(
     )
 }
 
-
-/* ===== Colors ===== */
 private val BrandBlue  = Color(0xFF005FFF)
 private val TextGray   = Color(0xFF828282)
 private val LineGray   = Color(0xFFDDDDDD)
 private val BgGray     = Color(0xFFF1F5F7)
 
-/* ===== Fonts ===== */
 private val PretendardSemi = FontFamily(Font(R.font.pretendard_semibold, FontWeight.SemiBold))
 private val PretendardMed  = FontFamily(Font(R.font.pretendard_medium,  FontWeight.Medium))
-
-/* ===== Common ===== */
-@Composable
-private fun ThinDivider(insetStart: Dp = 0.dp, insetEnd: Dp = 0.dp) {
-    Divider(
-        modifier = Modifier.padding(start = insetStart, end = insetEnd),
-        color = LineGray,
-        thickness = 1.dp
-    )
-}
 
 @Composable
 private fun ScrollHeader(title: String, onBack: () -> Unit) {
@@ -84,10 +81,9 @@ private fun ScrollHeader(title: String, onBack: () -> Unit) {
                 .height(72.dp)
                 .padding(horizontal = 16.dp)
         ) {
-            Icon(
-                imageVector = Icons.Outlined.ArrowBackIosNew,
+            Image(
+                painter = painterResource(id = R.drawable.back),
                 contentDescription = "뒤로가기",
-                tint = Color.Unspecified,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .size(24.dp)
@@ -103,11 +99,9 @@ private fun ScrollHeader(title: String, onBack: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
         }
-        ThinDivider()
     }
 }
 
-/* ===== Label + One-line TextField ===== */
 @Composable
 private fun LabeledTextField(
     label: String,
@@ -115,11 +109,12 @@ private fun LabeledTextField(
     onValueChange: (String) -> Unit,
     placeholder: String = "",
     keyboardType: KeyboardType = KeyboardType.Text,
+    topPadding: Dp = 10.dp
 ) {
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp),
+            .padding(top = topPadding, bottom = 10.dp),
         horizontalAlignment = Alignment.Start
     ) {
         Text(
@@ -129,10 +124,10 @@ private fun LabeledTextField(
             color = Color.Black
         )
         Spacer(Modifier.height(10.dp))
-        OutlinedTextField(
+        androidx.compose.material3.OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 48.dp), // ⬅️ 최소 높이만 보장
+                .heightIn(min = 43.dp),
             value = value,
             onValueChange = onValueChange,
             placeholder = {
@@ -151,7 +146,7 @@ private fun LabeledTextField(
             shape = RoundedCornerShape(10.dp),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            colors = OutlinedTextFieldDefaults.colors(
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TextGray,
                 unfocusedBorderColor = TextGray,
                 focusedContainerColor = Color.White,
@@ -161,7 +156,6 @@ private fun LabeledTextField(
     }
 }
 
-/* ===== Label + Select Row ===== */
 @Composable
 private fun LabeledSelectField(
     label: String,
@@ -183,7 +177,7 @@ private fun LabeledSelectField(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp) // 셀렉트는 터치 타겟 유지
+                .height(44.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .border(1.dp, TextGray, RoundedCornerShape(10.dp))
                 .clickable { onClick() }
@@ -198,24 +192,28 @@ private fun LabeledSelectField(
                     color = Color.Black,
                     modifier = Modifier.weight(1f)
                 )
-                Icon(Icons.Outlined.ExpandMore, contentDescription = null, tint = Color.Black)
+                Image(
+                    painter = painterResource(id = R.drawable.down),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
     }
 }
 
-/* ===== Label + Multiline TextField ===== */
 @Composable
 private fun LabeledMultilineField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String
+    placeholder: String,
+    topPadding: Dp = 10.dp
 ) {
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp)
+            .padding(top = topPadding, bottom = 10.dp)
     ) {
         Text(
             text = label,
@@ -224,10 +222,10 @@ private fun LabeledMultilineField(
             color = Color.Black
         )
         Spacer(Modifier.height(10.dp))
-        OutlinedTextField(
+        androidx.compose.material3.OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 120.dp), // ⬅️ 최소 높이만 보장
+                .heightIn(min = 120.dp),
             value = value,
             onValueChange = onValueChange,
             placeholder = {
@@ -247,7 +245,7 @@ private fun LabeledMultilineField(
             ),
             shape = RoundedCornerShape(10.dp),
             minLines = 4,
-            colors = OutlinedTextFieldDefaults.colors(
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TextGray,
                 unfocusedBorderColor = TextGray,
                 focusedContainerColor = Color.White,
@@ -257,32 +255,33 @@ private fun LabeledMultilineField(
     }
 }
 
-/* ===== Logo Upload Box ===== */
 @Composable
 private fun LogoUploadBox(onClick: () -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     Box(
         modifier = Modifier
-            .size(80.dp)
+            .size(74.5.dp)
             .clip(shape)
             .background(Color.White)
             .dashedBorder(
                 color = Color(0xFF68A0FE),
-                strokeWidth = 1.dp,
-                dashLength = 10.dp,
+                strokeWidth = 0.5.dp,
+                dashLength = 8.dp,
                 gapLength = 6.dp,
                 cornerRadius = 10.dp
             )
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        // 가운데 + 표시(간단 버전)
-        Text("+", fontSize = 24.sp, color = Color(0xFF7EAAF3), fontFamily = PretendardSemi)
+        Text(
+            "+",
+            fontSize = 24.sp,
+            color = Color(0xFF7EAAF3),
+            fontFamily = PretendardSemi
+        )
     }
 }
 
-
-/* ===== Primary Button ===== */
 @Composable
 private fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
@@ -302,7 +301,6 @@ private fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier 
     }
 }
 
-/* ============= Screen ============= */
 @Composable
 fun EditEmployerInformationScreen(navController: NavController) {
     val scroll = rememberScrollState()
@@ -320,59 +318,80 @@ fun EditEmployerInformationScreen(navController: NavController) {
 
     Scaffold(
         containerColor = BgGray,
-        topBar = { }
+        contentWindowInsets = WindowInsets(0)
     ) { inner ->
         Column(
             Modifier
                 .padding(inner)
                 .fillMaxSize()
-                .verticalScroll(scroll)
                 .background(BgGray)
+                .verticalScroll(scroll)
         ) {
+            Spacer(
+                modifier = Modifier
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(Color.White)
+            )
+
             ScrollHeader(title = "기업 정보", onBack = { navController.popBackStack() })
 
-            // ===== 회사정보 섹션 =====
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .background(BgGray)
-                    .padding(vertical = 8.dp)
             ) {
                 Column(
                     Modifier
                         .fillMaxWidth()
                         .background(Color.White)
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 20.dp)
                 ) {
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         LogoUploadBox { }
                         Spacer(Modifier.height(10.dp))
                         Text(
                             text = "회사 로고를 등록해주세요.\n권장크기 : 200x200px",
-                            fontSize = 13.sp,
+                            fontSize = 15.sp,
                             color = TextGray,
                             textAlign = TextAlign.Center,
                             fontFamily = PretendardMed
                         )
                     }
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
                     LabeledTextField("회사명", companyName, { companyName = it }, "회사명을 적어주세요")
                     LabeledSelectField("업종", businessType) { }
-                    Text(text = "회사주소", fontSize = 18.sp, fontFamily = PretendardSemi, color = Color.Black)
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        text = "회사주소",
+                        fontSize = 18.sp,
+                        fontFamily = PretendardSemi,
+                        color = Color.Black
+                    )
                     Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
+                    androidx.compose.material3.OutlinedTextField(
                         value = address,
                         onValueChange = { address = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 48.dp), // ⬅️ 최소 높이
+                            .heightIn(min = 43.dp),
                         placeholder = {
-                            Text("주소를 검색해주세요", fontSize = 15.sp, fontFamily = PretendardMed, color = TextGray)
+                            Text(
+                                "주소를 검색해주세요",
+                                fontSize = 15.sp,
+                                fontFamily = PretendardMed,
+                                color = TextGray
+                            )
                         },
-                        textStyle = TextStyle(fontSize = 15.sp, fontFamily = PretendardMed, color = Color.Black),
+                        textStyle = TextStyle(
+                            fontSize = 15.sp,
+                            fontFamily = PretendardMed,
+                            color = Color.Black
+                        ),
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TextGray,
                             unfocusedBorderColor = TextGray,
                             focusedContainerColor = Color.White,
@@ -382,37 +401,56 @@ fun EditEmployerInformationScreen(navController: NavController) {
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = { },
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
                     ) {
-                        Text(text = "주소찾기", fontSize = 16.sp, fontFamily = PretendardSemi, color = Color.White)
+                        Text(
+                            text = "주소찾기",
+                            fontSize = 16.sp,
+                            fontFamily = PretendardSemi,
+                            color = Color.White
+                        )
                     }
+                    Spacer(Modifier.height(20.dp))
                     LabeledTextField("상세주소", addressDetail, { addressDetail = it }, "상세주소를 입력해주세요")
                 }
             }
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // ===== 회사소개 섹션 =====
             Box(
                 Modifier
                     .fillMaxWidth()
                     .background(BgGray)
-                    .padding(vertical = 8.dp)
+                    .padding(top = 4.dp, bottom = 10.dp)
             ) {
                 Column(
                     Modifier
                         .fillMaxWidth()
                         .background(Color.White)
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 20.dp)
                 ) {
-                    LabeledMultilineField("회사소개", intro, { intro = it }, "예 : 풍부한 경험과 전문성을 갖춘 시니어 인재분들과 함께 성장하고 있습니다. 나이가 아닌 역량을 중심으로 평가하며, 시니어분들의 노하우를 젊은 세대와 공유하는 상생의 기업문화를 만들어가고 있습니다.")
+                    LabeledMultilineField(
+                        label = "회사소개",
+                        value = intro,
+                        onValueChange = { intro = it },
+                        placeholder = "예 : 풍부한 경험과 전문성을 갖춘 시니어 인재분들과 함께 성장하고 있습니다. 나이가 아닌 역량을 중심으로 평가하며, 시니어분들의 노하우를 젊은 세대와 공유하는 상생의 기업문화를 만들어가고 있습니다.",
+                        topPadding = 0.dp
+                    )
                     Spacer(Modifier.height(10.dp))
-                    Text(text = "회사 홈페이지", fontSize = 18.sp, fontFamily = PretendardSemi, color = Color.Black)
+                    Text(
+                        text = "회사 홈페이지",
+                        fontSize = 18.sp,
+                        fontFamily = PretendardSemi,
+                        color = Color.Black
+                    )
                     Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
+                    androidx.compose.material3.OutlinedTextField(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 48.dp), // ⬅️ 최소 높이
+                            .heightIn(min = 43.dp),
                         value = homepage,
                         onValueChange = { homepage = it },
                         placeholder = {
@@ -432,7 +470,7 @@ fun EditEmployerInformationScreen(navController: NavController) {
                         ),
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TextGray,
                             unfocusedBorderColor = TextGray,
                             focusedContainerColor = Color.White,
@@ -442,22 +480,40 @@ fun EditEmployerInformationScreen(navController: NavController) {
                 }
             }
 
-            // ===== 담당자 정보 섹션 =====
             Box(
                 Modifier
                     .fillMaxWidth()
                     .background(BgGray)
-                    .padding(vertical = 8.dp)
+                    .padding(top = 4.dp, bottom = 10.dp)
             ) {
                 Column(
                     Modifier
                         .fillMaxWidth()
                         .background(Color.White)
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 20.dp)
                 ) {
-                    LabeledTextField("담당자명", managerName, { managerName = it }, "담당자 성함")
-                    LabeledTextField("담당자 연락처", managerPhone, { managerPhone = it }, "010-0000-0000", keyboardType = KeyboardType.Phone)
-                    LabeledTextField("담당자 이메일", managerEmail, { managerEmail = it }, "이메일을 입력해주세요", keyboardType = KeyboardType.Email)
+                    LabeledTextField(
+                        label = "담당자명",
+                        value = managerName,
+                        onValueChange = { managerName = it },
+                        placeholder = "담당자 성함",
+                        topPadding = 0.dp
+                    )
+                    LabeledTextField(
+                        "담당자 연락처",
+                        managerPhone,
+                        { managerPhone = it },
+                        "010-0000-0000",
+                        keyboardType = KeyboardType.Phone
+                    )
+                    LabeledTextField(
+                        "담당자 이메일",
+                        managerEmail,
+                        { managerEmail = it },
+                        "이메일을 입력해주세요",
+                        keyboardType = KeyboardType.Email
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Row(
                         modifier = Modifier
@@ -466,36 +522,49 @@ fun EditEmployerInformationScreen(navController: NavController) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.End
                     ) {
-                        Checkbox(
-                            checked = saveContact,
-                            onCheckedChange = { saveContact = it },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = BrandBlue,
-                                uncheckedColor = BrandBlue,
-                                checkmarkColor = Color.White
-                            )
+                        Image(
+                            painter = painterResource(
+                                id = if (saveContact)
+                                    R.drawable.announce_checked_button
+                                else
+                                    R.drawable.announce_unchecked_button
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .clickable { saveContact = !saveContact }
                         )
-                        Text(text = "입력한 담당자 정보 저장", fontSize = 15.sp, fontFamily = PretendardMed, color = TextGray)
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            text = "입력한 담당자 정보 저장",
+                            fontSize = 15.sp,
+                            fontFamily = PretendardMed,
+                            color = TextGray
+                        )
                     }
                 }
             }
 
-            // ===== 저장 버튼 섹션 =====
             Box(
                 Modifier
                     .fillMaxWidth()
                     .background(BgGray)
-                    .padding(top = 8.dp)
+                    .padding(top = 10.dp)
             ) {
                 Column(
                     Modifier
                         .fillMaxWidth()
                         .background(Color.White)
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 20.dp)
                 ) {
                     PrimaryButton(
                         text = "저장하기",
-                        onClick = { /* TODO: submit */ }
+                        onClick = {
+                            navController.navigate(Route.EmployerMy.path) {
+                                launchSingleTop = true
+                                popUpTo(Route.EmployerMy.path) { inclusive = false }
+                            }
+                        }
                     )
                 }
             }

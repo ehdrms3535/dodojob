@@ -3,6 +3,7 @@
 package com.example.dodojob.ui.feature.employ
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,8 +13,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dodojob.R
@@ -45,6 +45,7 @@ import com.example.dodojob.session.JobBits
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 import com.example.dodojob.data.greatuser.existSGU
+import com.example.dodojob.navigation.Route
 
 /* ===== Colors / Fonts ===== */
 private val BrandBlue = Color(0xFF005FFF)
@@ -55,9 +56,6 @@ private val BgGray    = Color(0xFFF1F5F7)
 
 private val PretendardSemi = FontFamily(Font(R.font.pretendard_semibold, FontWeight.SemiBold))
 private val PretendardMed  = FontFamily(Font(R.font.pretendard_medium,  FontWeight.Medium))
-
-/* ===== 상세 섹션용 FakeDB ===== */
-// information_of_applicants에 정의되어 있다고 가정
 
 /* ===== 상세 화면 ===== */
 @Composable
@@ -78,21 +76,18 @@ fun ViewResourceDetailScreen(navController: NavController) {
     var licenseExpanded  by remember { mutableStateOf(true) }
     var isFavorite       by remember { mutableStateOf(false) }
 
-
-
-
     val triplescareer = GreatUserView.careers.map { career ->
         Triple(career.title, career.startDate, career.endDate)
     }
-    val triplelicense = GreatUserView.licenses.map {lisense ->
-        Triple(lisense.location, lisense.name,lisense.number)
+    val triplelicense = GreatUserView.licenses.map { lisense ->
+        Triple(lisense.location, lisense.name, lisense.number)
     }
 
     val gu = GreatUserView.greatuser
 
     LaunchedEffect(gu?.username) {
         val companyId = CurrentUser.companyid.toString()
-        val seniorId = gu?.username ?: return@LaunchedEffect   // username 없으면 아예 조회 안 함
+        val seniorId = gu?.username ?: return@LaunchedEffect
         runCatching {
             isFavorite = existSGU(companyId, seniorId.toString())
         }.onFailure {
@@ -100,11 +95,10 @@ fun ViewResourceDetailScreen(navController: NavController) {
         }
     }
 
-
-    val jobtalent = JobBits.parse(JobBits.JobCategory.TALENT, gu?.job_talent)
-    val jobmanage = JobBits.parse(JobBits.JobCategory.MANAGE,  gu?.job_manage)
+    val jobtalent  = JobBits.parse(JobBits.JobCategory.TALENT,  gu?.job_talent)
+    val jobmanage  = JobBits.parse(JobBits.JobCategory.MANAGE,  gu?.job_manage)
     val jobservice = JobBits.parse(JobBits.JobCategory.SERVICE, gu?.job_service)
-    val jobcare = JobBits.parse(JobBits.JobCategory.CARE,    gu?.job_care)
+    val jobcare    = JobBits.parse(JobBits.JobCategory.CARE,    gu?.job_care)
 
     val allJobs = sequenceOf(jobtalent, jobmanage, jobservice, jobcare)
         .flatten()
@@ -114,9 +108,10 @@ fun ViewResourceDetailScreen(navController: NavController) {
 
     val randomJobs = allJobs.shuffled(Random(System.currentTimeMillis()))
         .take(minOf(4, allJobs.size))
+
     val client = LocalSupabase.current
     val scope = rememberCoroutineScope()
-    val repo = ScrappedGreatUserSupabase(client) // Supabase client 주입받은 것
+    val repo = ScrappedGreatUserSupabase(client)
 
     Scaffold(containerColor = BgGray, topBar = { }) { inner ->
         Column(
@@ -125,18 +120,21 @@ fun ViewResourceDetailScreen(navController: NavController) {
                 .fillMaxSize()
                 .verticalScroll(scroll)
         ) {
-            ScrollHeader(title = "인재 상세보기", onBack = { navController.popBackStack() })
+            // 👉 헤더: ApplicantInformationScreen 스타일 적용
+            ScrollHeader(
+                title = "인재 상세보기",
+                onBack = { navController.popBackStack() }
+            )
             Spacer(Modifier.height(12.dp))
 
             val context = LocalContext.current
-            val client = LocalSupabase.current  // ⚙️ 이미 CompositionLocal로 주입된 SupabaseClient라면
             var displayName by remember { mutableStateOf<String?>(null) }
 
             // 이름 비동기로 가져오기
             LaunchedEffect(safeTalent.name) {
                 try {
                     val name = fetchDisplayNameByUsername(safeTalent.name.toString())
-                    displayName = name ?: safeTalent.name   // 없으면 원래 username 그대로
+                    displayName = name ?: safeTalent.name
                 } catch (e: Exception) {
                     e.printStackTrace()
                     displayName = safeTalent.name
@@ -161,8 +159,8 @@ fun ViewResourceDetailScreen(navController: NavController) {
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
             ) {
-                /* 인적사항 */
-                SectionCard {
+                /* 인적사항 섹션 */
+                SectionCard(expanded = personalExpanded) {
                     SectionTitle(
                         title = " 인적사항",
                         iconRes = R.drawable.identification,
@@ -170,19 +168,19 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         onToggle = { personalExpanded = !personalExpanded }
                     )
                     if (personalExpanded) {
+                        Spacer(Modifier.height(16.dp))
                         KeyValueRow("이름",     gu?.name ?: safeTalent.name)
                         KeyValueRow("생년월일", gu?.birthdate ?: "-")
                         KeyValueRow("전화번호", gu?.phone ?: "-")
                         KeyValueRow("주소",     gu?.region ?: safeTalent.location)
                         KeyValueRow("이메일",   gu?.email ?: "-")
-
                     }
                 }
 
                 Spacer(Modifier.height(28.dp))
 
-                /* 경력 */
-                SectionCard {
+                /* 경력 섹션 */
+                SectionCard(expanded = careerExpanded) {
                     SectionTitle(
                         title = " 경력",
                         iconRes = R.drawable.career,
@@ -190,17 +188,46 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         onToggle = { careerExpanded = !careerExpanded }
                     )
                     if (careerExpanded) {
-                        triplescareer.forEachIndexed { i, (title, start, end) ->
-                            if (i > 0) { Spacer(Modifier.height(16.dp)); ThinDivider(); Spacer(Modifier.height(16.dp)) }
-                            CareerItem(title.toString(), start.toString(), end.toString())
+                        if (triplescareer.isEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "등록된 경력이 없습니다.",
+                                fontSize = 14.sp,
+                                fontFamily = PretendardMed,
+                                color = TextGray,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            Spacer(Modifier.height(4.dp))
+                        } else {
+                            // 🔹 제목 아래에 첫 구분선
+                            Spacer(Modifier.height(12.dp))
+                            ThinDivider()
+                            Spacer(Modifier.height(12.dp))
+
+                            triplescareer.forEachIndexed { index, (title, start, end) ->
+                                CareerItem(
+                                    title = title?.trim().orEmpty(),
+                                    start = start.orEmpty(),
+                                    end   = end.orEmpty()
+                                )
+
+                                // 마지막 아이템이 아니면 그 다음 구분선
+                                if (index != triplescareer.lastIndex) {
+                                    Spacer(Modifier.height(12.dp))
+                                    ThinDivider()
+                                    Spacer(Modifier.height(12.dp))
+                                }
+                            }
+
+                            Spacer(Modifier.height(4.dp))
                         }
                     }
                 }
 
                 Spacer(Modifier.height(28.dp))
 
-                /* 자격증 */
-                SectionCard {
+                /* 자격증 섹션 */
+                SectionCard(expanded = licenseExpanded) {
                     SectionTitle(
                         title = " 자격증",
                         iconRes = R.drawable.license,
@@ -208,26 +235,53 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         onToggle = { licenseExpanded = !licenseExpanded }
                     )
                     if (licenseExpanded) {
-                        triplelicense.forEachIndexed { i, (org, title, code) ->
-                            if (i > 0) { Spacer(Modifier.height(16.dp)); ThinDivider(); Spacer(Modifier.height(16.dp)) }
-                            LicenseItem(org.toString(), title.toString(), code.toString())
+                        if (triplelicense.isEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "등록된 자격증이 없습니다.",
+                                fontSize = 14.sp,
+                                fontFamily = PretendardMed,
+                                color = TextGray,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            Spacer(Modifier.height(4.dp))
+                        } else {
+                            // 🔹 제목 아래 첫 구분선
+                            Spacer(Modifier.height(12.dp))
+                            ThinDivider()
+                            Spacer(Modifier.height(12.dp))
+
+                            triplelicense.forEachIndexed { index, (org, title, code) ->
+                                LicenseItem(
+                                    org   = org.orEmpty(),
+                                    title = title.orEmpty(),
+                                    code  = code.orEmpty()
+                                )
+
+                                if (index != triplelicense.lastIndex) {
+                                    Spacer(Modifier.height(12.dp))
+                                    ThinDivider()
+                                    Spacer(Modifier.height(12.dp))
+                                }
+                            }
+
+                            Spacer(Modifier.height(4.dp))
                         }
                     }
                 }
 
                 Spacer(Modifier.height(28.dp))
 
-                /* 희망직무 카드 (흰 박스 안 / 파란 아웃라인 칩) */
+                /* 희망직무 카드 (기존 로직 그대로, UI도 그대로 둠) */
                 HopeJobCard(
                     jobs = safeTalent.jobCategories,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(20.dp))
-                // ⛔️ 하단 바는 여기(패딩 Column) 안에 넣지 않음
             }
 
-            // ===== edge-to-edge 하단 바: 패딩 없는 루트 Column 레벨 =====
+            // ===== 하단 액션바 =====
             BottomActionBar(
                 isFavorite = isFavorite,
                 onFavoriteToggle = { next ->
@@ -238,9 +292,8 @@ fun ViewResourceDetailScreen(navController: NavController) {
                             isreal = true
                         )
 
-                        // ✅ 낙관적 업데이트(선반영) 후 결과 보고 롤백/유지 중 택1
                         val prev = isFavorite
-                        isFavorite = next  // 화면 즉시 반영
+                        isFavorite = next
 
                         val result = runCatching {
                             if (next) repo.insertSGU(dto) else repo.deleteSGU(dto)
@@ -249,17 +302,46 @@ fun ViewResourceDetailScreen(navController: NavController) {
                         if (result.isSuccess) {
                             Log.d("Scrap", if (next) "insert success ✅" else "delete success ✅")
                         } else {
-                            // ❌ 실패하면 화면 되돌리기
                             isFavorite = prev
-                            Log.e("Scrap", (if (next) "insert" else "delete") +
-                                    " failed ❌: ${result.exceptionOrNull()?.message}")
+                            Log.e(
+                                "Scrap",
+                                (if (next) "insert" else "delete") +
+                                        " failed ❌: ${result.exceptionOrNull()?.message}"
+                            )
                         }
                     }
                 },
-                onInviteClick = { /* ... */ },
+                onInviteClick = {
+                    // 🔥 면접 제의하기 눌렀을 때 전달할 ApplicantUi 구성
+                    val maskedName = maskName(displayName ?: safeTalent.name)
+
+                    val applicant = ApplicantUi(
+                        id            = 0L,                         // 상세에서 바로 제안이라 임시 ID
+                        name          = maskedName,                 // 화면에 보일 이름 (마스킹)
+                        gender        = gu?.gender ?: safeTalent.gender,
+                        age           = safeTalent.age,
+                        headline      = safeTalent.intro,
+                        address       = gu?.region ?: safeTalent.location,
+                        careerYears   = parseYears(safeTalent.expYears),
+                        method        = "직접 제안",
+                        postingTitle  = "-",
+                        status        = ApplicantStatus.SUGGESTING,
+                        activityLevel = safeTalent.seniorLevel,
+                        profileRes    = R.drawable.basic_profile,
+                        announcementId = null,                      // 공고 없이 직접 제안
+                        username      = gu?.username ?: safeTalent.name  // 실제 식별용 username
+                    )
+
+                    // 면접제안 화면에서 꺼내 쓸 데이터 넣어주기
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("applicant", applicant)
+
+                    // 면접제안 화면으로 이동
+                    navController.navigate(Route.SuggestInterview.path)
+                },
                 modifier = Modifier.fillMaxWidth()
             )
-            // ⛔️ 아래 불필요 스페이서 제거 (회색 여백 원인)
         }
     }
 }
@@ -277,53 +359,94 @@ private fun TalentHeaderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .heightIn(min = 96.dp),
+            .padding(horizontal = 16.dp)
+            .height(96.dp),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 12.dp),
+                .padding(vertical = 10.dp, horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.Top
         ) {
+            Icon(
+                painter = painterResource(R.drawable.basic_profile),
+                contentDescription = "profile",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(76.dp)
+            )
+
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFDEEAFF)),
-                contentAlignment = Alignment.Center
+                    .height(76.dp)
+                    .weight(1f)
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.basic_profile),
-                    contentDescription = "profile",
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(64.dp)
-                )
-            }
+                // 위쪽: 이름/나이/메달 + 한 줄 소개
+                Column(
+                    modifier = Modifier.align(Alignment.TopStart),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = maskName(name),
+                            fontSize = 15.sp,
+                            fontFamily = PretendardSemi,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = (-0.019).em,
+                            color = Color.Black
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            text = "(${gender}, ${age}세)",
+                            fontSize = 13.sp,
+                            fontFamily = PretendardMed,
+                            letterSpacing = (-0.019).em,
+                            color = TextGray
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Icon(
+                            painter = painterResource(id = medalResForLevel(seniorLevel)),
+                            contentDescription = "medal",
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(width = 11.dp, height = 18.dp) // 11 x 18
+                        )
+                    }
 
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(maskName(name), fontSize = 16.sp, fontFamily = PretendardSemi, color = Color.Black)
-                    Spacer(Modifier.width(6.dp))
-                    Text("(${gender}, ${age}세)", fontSize = 13.sp, fontFamily = PretendardMed, color = TextGray)
-                    Spacer(Modifier.width(6.dp))
-                    Icon(
-                        painter = painterResource(id = medalResForLevel(seniorLevel)),
-                        contentDescription = "medal",
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(18.dp)
+                    Text(
+                        text = "“$intro”",
+                        fontSize = 14.sp,
+                        fontFamily = PretendardSemi,
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 21.sp,
+                        letterSpacing = (-0.019).em,
+                        color = Color.Black,
+                        maxLines = 1
                     )
                 }
-                Text("“$intro”", fontSize = 14.sp, fontFamily = PretendardSemi, color = Color.Black)
-                Spacer(Modifier.height(6.dp))
-                Row(Modifier.fillMaxWidth()) {
-                    Spacer(Modifier.weight(1f))
-                    Text("경력 ${expYears}년", fontSize = 13.sp, fontFamily = PretendardMed, color = BrandBlue)
+
+                val displayExp = when {
+                    expYears.contains("0개월") || expYears.contains("0년") -> "신입"
+                    expYears.trim().isEmpty() -> "신입"
+                    else -> "경력 $expYears"
                 }
+
+                // 아래쪽 오른쪽 정렬: 경력 텍스트
+                Text(
+                    text = displayExp,
+                    fontSize = 11.sp,
+                    fontFamily = PretendardMed,
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 16.5.sp,
+                    letterSpacing = (-0.019).em,
+                    color = BrandBlue,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                )
             }
         }
     }
@@ -339,7 +462,7 @@ private fun HopeJobCard(
         modifier = modifier
             .fillMaxWidth()
             .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(horizontal = 20.dp, vertical = 20.dp)   // SectionCard와 동일 패딩
+            .padding(horizontal = 20.dp, vertical = 20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -352,10 +475,7 @@ private fun HopeJobCard(
             Text("희망직무", fontSize = 18.sp, fontFamily = PretendardSemi, color = Color.Black)
         }
 
-        Spacer(Modifier.height(16.dp))
-        ThinDivider(insetStart = 4.dp, insetEnd = 4.dp)
-        Spacer(Modifier.height(16.dp))
-
+        Spacer(Modifier.height(32.dp))
 
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -379,7 +499,7 @@ private fun HopeJobChipOutlined(text: String) {
     }
 }
 
-/* ===== 하단 액션바 (edge-to-edge, 회색 여백 제거) ===== */
+/* ===== 하단 액션바 ===== */
 @Composable
 private fun BottomActionBar(
     isFavorite: Boolean,
@@ -390,13 +510,12 @@ private fun BottomActionBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.White) // 배경을 Box에 깔아 내비 영역까지 흰색 유지
+            .background(Color.White)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp) // 내부 여백만
-                .navigationBarsPadding(),                      // 제스처/내비 영역 보정 (배경은 그대로 흰색)
+                .padding(horizontal = 12.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -406,11 +525,11 @@ private fun BottomActionBar(
             ) {
                 Icon(
                     painter = painterResource(
-                        if (isFavorite) R.drawable.full_star else R.drawable.empty_grey_star
+                        if (isFavorite) R.drawable.full_star else R.drawable.grey_star
                     ),
                     contentDescription = null,
                     tint = Color.Unspecified,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -422,23 +541,26 @@ private fun BottomActionBar(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BrandBlue)
             ) {
-                Text("면접 제의하기", fontSize = 16.sp, fontFamily = PretendardSemi, color = Color.White)
+                Text("면접 제의하기", fontSize = 18.sp, fontFamily = PretendardSemi, color = Color.White)
             }
         }
     }
 }
 
-/* ===== 공통 섹션 ===== */
+/* ===== 공통 섹션 (ApplicantInformationScreen 스타일) ===== */
 @Composable
 private fun SectionCard(
+    expanded: Boolean,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val vPadding = if (expanded) 20.dp else 8.dp
+
     Column(
         modifier
             .fillMaxWidth()
             .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(horizontal = 20.dp, vertical = 20.dp)
+            .padding(horizontal = 20.dp, vertical = vPadding)
     ) { content() }
 }
 
@@ -452,7 +574,13 @@ private fun SectionTitle(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .padding(
+                start = 4.dp,
+                end = 4.dp,
+                top = 8.dp,
+                bottom = 2.dp
+            )
+            .clickable { onToggle() }
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -465,10 +593,14 @@ private fun SectionTitle(
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(10.dp))
-            Text(title, fontSize = 18.sp, fontFamily = PretendardSemi, color = Color.Black)
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontFamily = PretendardSemi,
+                color = Color.Black
+            )
         }
-        Spacer(Modifier.height(16.dp))
-        ThinDivider(insetStart = 4.dp, insetEnd = 4.dp)
+        Spacer(Modifier.height(6.dp))
     }
 }
 
@@ -488,8 +620,20 @@ private fun KeyValueRow(
                 .padding(start = startPadding, end = endPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, fontSize = 16.sp, fontFamily = PretendardSemi, color = LabelGray, modifier = Modifier.weight(1f))
-            Text(value, fontSize = 16.sp, fontFamily = PretendardSemi, color = valueColor, textAlign = TextAlign.Right)
+            Text(
+                label,
+                fontSize = 16.sp,
+                fontFamily = PretendardSemi,
+                color = LabelGray,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                value,
+                fontSize = 16.sp,
+                fontFamily = PretendardSemi,
+                color = valueColor,
+                textAlign = TextAlign.Right
+            )
         }
         Spacer(Modifier.height(6.dp))
     }
@@ -497,42 +641,52 @@ private fun KeyValueRow(
 
 @Composable
 private fun ThinDivider(insetStart: Dp = 4.dp, insetEnd: Dp = 4.dp) {
+    Spacer(Modifier.height(6.dp))
     Divider(
         modifier = Modifier.padding(start = insetStart, end = insetEnd),
         color = LineGray,
         thickness = 1.dp
     )
+    Spacer(Modifier.height(6.dp))
 }
 
+/* ===== 스크롤 헤더 (ApplicantInformationScreen 스타일) ===== */
 @Composable
-private fun ScrollHeader(title: String, onBack: () -> Unit) {
+private fun ScrollHeader(
+    title: String,
+    onBack: () -> Unit
+) {
     Column {
         Box(
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
+                .height(72.dp)
                 .background(Color.White)
-                .height(70.dp)
-                .padding(horizontal = 12.dp)
+                .padding(horizontal = 4.dp)
         ) {
-            Icon(
-                imageVector = Icons.Outlined.ArrowBackIosNew,
-                contentDescription = "뒤로가기",
-                tint = Color.Unspecified,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .size(20.dp)
-                    .clickable { onBack() }
-            )
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.back),
+                    contentDescription = "뒤로가기",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
             Text(
                 text = title,
-                fontSize = 28.sp,
                 fontFamily = PretendardSemi,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 24.sp,
+                lineHeight = 36.sp,
+                letterSpacing = (-0.019).em,
                 color = Color.Black,
                 modifier = Modifier.align(Alignment.Center),
                 maxLines = 1
             )
         }
-        Divider(color = LineGray, thickness = 1.dp)
     }
 }
 
@@ -559,8 +713,12 @@ private fun LicenseItem(org: String, title: String, code: String) {
         Spacer(Modifier.height(8.dp))
         Text(
             buildAnnotatedString {
-                withStyle(SpanStyle(color = LabelGray, fontFamily = PretendardMed, fontSize = 14.sp)) { append("자격번호 ") }
-                withStyle(SpanStyle(color = BrandBlue, fontFamily = PretendardMed, fontSize = 14.sp)) { append(code) }
+                withStyle(SpanStyle(color = LabelGray, fontFamily = PretendardMed, fontSize = 14.sp)) {
+                    append("자격번호 ")
+                }
+                withStyle(SpanStyle(color = BrandBlue, fontFamily = PretendardMed, fontSize = 14.sp)) {
+                    append(code)
+                }
             }
         )
     }
@@ -572,4 +730,8 @@ private fun medalResForLevel(level: Int): Int = when (level) {
     1 -> R.drawable.red_medal
     2 -> R.drawable.yellow_medal
     else -> R.drawable.blue_medal
+}
+private fun parseYears(exp: String): Int {
+    // "3년 2개월", "8년", "0개월" 같은 문자열에서 앞 숫자만 파싱
+    return exp.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
 }
