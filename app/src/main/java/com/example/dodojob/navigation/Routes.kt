@@ -7,7 +7,7 @@ sealed class Route(val path: String) {
     data object Onboarding : Route("onboarding")
     data object Login : Route("login")
     data object PreLogin : Route("prelogin")
-    data object EmploySignupsec : Route("employsignupsec")
+    data object EmploySignupIDPW : Route("employsignupsec")
     data object Verify : Route("verify")
 
     data object PreVerify : Route("preverify")

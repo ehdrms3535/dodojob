@@ -120,7 +120,7 @@ fun AppNavGraph(nav: NavHostController,sessionVm: SessionViewModel) {
         composable(Route.PreVerify.path) { PreVerifyScreen(nav, sessionVm) }// 4. 인증(회원가입)
         composable(Route.SignUp.path) { SignUpIdPwScreen(nav) }   // 4-1. 회원가입
         composable(Route.SignUpComplete.path) { SignUpCompleteScreen(nav) } // 4-2. 회원가입 성공
-        composable(Route.EmploySignupsec.path) { EmploySignUpIdPwScreen(nav) }
+        composable(Route.EmploySignupIDPW.path) { EmploySignUpIdPwScreen(nav) }
         composable(Route.EmploySignup.path) { EmployerSignupScreen(nav) }
         composable(Route.PostingRegisterCompleteScreen.path) { PostingRegisterCompleteScreen(nav) }
 

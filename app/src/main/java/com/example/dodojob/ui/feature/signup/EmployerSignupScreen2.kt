@@ -36,9 +36,7 @@ fun EmploySignUpIdPwScreen(nav: NavController) {
     val client = LocalSupabase.current
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
 
-    val prefill = remember { nav.previousBackStackEntry?.savedStateHandle?.get<SignUpPrefill>("prefill") }
-    val userRowId = remember { nav.previousBackStackEntry?.savedStateHandle?.get<String>("userRowId") }
-    LaunchedEffect(prefill) { if (prefill == null) nav.popBackStack() }
+    val userRowId = CurrentUser.id
 
     var userId by rememberSaveable { mutableStateOf("") }
     var pw by rememberSaveable { mutableStateOf("") }
@@ -54,7 +52,7 @@ fun EmploySignUpIdPwScreen(nav: NavController) {
 
     val Bg = Color(0xFFF1F5F7)
     val Primary = Color(0xFF005FFF)
-    val canSubmit = idOk && pwOk && pw2Ok && prefill != null
+    val canSubmit = idOk && pwOk && pw2Ok != null
 
     val scope = rememberCoroutineScope()
     var loading by rememberSaveable { mutableStateOf(false) }
@@ -126,6 +124,7 @@ fun EmploySignUpIdPwScreen(nav: NavController) {
                         loading = true
                         scope.launch {
                             runCatching {
+
                                 val idForUpsert = userRowId ?: error("userRowId 누락")
                                 repo.upsertIdPw(id = idForUpsert, username = userId, rawPassword = pw)
                             }.onSuccess {
