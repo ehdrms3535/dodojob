@@ -224,7 +224,7 @@ fun LeaveDialog(
                 onClosed()
 
                 if (result.isSuccess) {
-                    nav.navigate("login") {
+                    nav.navigate("onboarding") {
                         popUpTo(0) { inclusive = true }
                         launchSingleTop = true
                     }
