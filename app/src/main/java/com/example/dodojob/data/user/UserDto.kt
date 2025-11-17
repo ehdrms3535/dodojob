@@ -9,7 +9,7 @@ data class UserDto(
     val region: String,
     val phone: String,
     val email: String,
-    val username: String,
-    val password: String,
+    val username: String?,
+    val password: String?,
     val job: String
 )

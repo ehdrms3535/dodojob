@@ -149,7 +149,7 @@ fun SignUpIdPwScreen(nav: NavController) {
                             }.onSuccess { created ->
                                 CurrentUser.setAuthUserId(created.id)
                                 CurrentUser.setUsername(created.username)
-                                CurrentUser.setLogin(created.username, pw)
+                                CurrentUser.setLogin(created.username.toString(), pw)
                                 rrnFront = ""; rrnBackFirst = ""; pw = ""; pw2 = ""
                                 nav.navigate(Route.SignUpComplete.path) { launchSingleTop = true }
                             }.onFailure { e ->

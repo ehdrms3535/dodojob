@@ -37,6 +37,8 @@ import com.example.dodojob.navigation.Route
 import com.example.dodojob.ui.feature.verify.PreVerifyPrefill
 import kotlinx.coroutines.launch
 import java.util.*
+import android.util.Log
+import com.example.dodojob.session.CurrentUser
 
 @Composable
 fun EmployerSignupScreen(nav: NavController) {
@@ -44,8 +46,15 @@ fun EmployerSignupScreen(nav: NavController) {
     val repo: UserRepository = remember(client) { UserRepositorySupabase(client) }
     val repo1: EmployRepository = remember(client) { EmployRepositorySupabase(client) }
 
-    val prefillFromPrev = remember { nav.previousBackStackEntry?.savedStateHandle?.get<PreVerifyPrefill>("prefill") }
-    val prefill = prefillFromPrev
+    val prefill: PreVerifyPrefill? = remember {
+        runCatching {
+            nav.getBackStackEntry(Route.PreVerify.path)
+                .savedStateHandle
+                .get<PreVerifyPrefill>("prefill")
+        }.getOrNull()
+    }.also {
+        Log.d("EmployerSignup", "🔍 prefill 로드 결과 = $it")
+    }
 
     val generatedId = remember { UUID.randomUUID().toString() }
 
@@ -139,6 +148,18 @@ fun EmployerSignupScreen(nav: NavController) {
                         error = null
                         loading = true
                         scope.launch {
+                            Log.d(
+                                "EmployerSignup",
+                                "nameOk=$nameOk, phoneOk=$phoneOk, emailOk=$emailOk, bizOk=$bizOk, prefill=${prefill != null}"
+                            )
+
+                            val safePrefill = prefill
+                            if (safePrefill == null) {
+                                error = "인증 정보가 없습니다. 다시 인증을 진행해 주세요."
+                                loading = false
+                                return@launch
+                            }
+
                             runCatching {
                                 val user = UserDto(
                                     id = generatedId,
@@ -149,16 +170,19 @@ fun EmployerSignupScreen(nav: NavController) {
                                     region = prefill.region,
                                     phone = phone,
                                     email = email,
-                                    username = "TempPass#1234",
-                                    password = "TempPass#1234",
+                                    username = null,
+                                    password = null,
                                     job = "고용주",
                                 )
                                 repo.insertUser(user)
+                                CurrentUser.setId(generatedId)
                                 val employ = EmployDto(email, bizNo)
                                 repo1.insertEmploy(employ)
                             }.onSuccess {
-                                nav.navigate(Route.EmploySignupsec.path)
+                                Log.d("EmployerSignup", "✅ onSuccess 진입, 이제 navigate 호출")
+                                nav.navigate("employsignupsec")
                             }.onFailure { e ->
+                                Log.d("EmployerSignup", "✅ onfail 진입, 이제 navigate 호출")
                                 error = e.message ?: "등록 실패"
                             }
                             loading = false

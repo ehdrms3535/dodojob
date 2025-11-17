@@ -98,7 +98,7 @@ fun PostingRegisterCompleteScreen(
         ) {
             // 좌측: 홈 버튼
             OutlinedButton(
-                onClick = { nav.navigate(Route.Announcement.path) },
+                onClick = { nav.navigate(Route.EmployerHome.path) },
                 shape = RoundedCornerShape(10.dp),
                 border = ButtonDefaults.outlinedButtonBorder.copy(
                     width = 1.dp,

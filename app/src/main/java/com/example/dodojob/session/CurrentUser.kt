@@ -24,6 +24,9 @@ object CurrentUser {
     val jobtype: String get() = _jobtype.value
     val companyid: String? get() = _comanyid.value
 
+    fun setId(ID: String){
+        _id.value = ID
+    }
 
     /** 로그인 시 (username/password) */
     fun setLogin(username: String, password: String) {
