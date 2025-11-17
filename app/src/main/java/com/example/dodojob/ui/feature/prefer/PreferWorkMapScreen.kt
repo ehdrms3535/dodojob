@@ -243,7 +243,6 @@ private fun RegionPickerContent(
             .fillMaxWidth()
             .imePadding()
             .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 18.dp)
-            .heightIn(min = 0.dp, max = 882.dp)
     ) {
         Text(
             "일 할 지역을 설정해주세요",

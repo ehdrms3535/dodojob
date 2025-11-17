@@ -190,6 +190,7 @@ fun Announcement5Screen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(SectionBg)
+                .navigationBarsPadding()
                 .padding(vertical = 20.dp)
         ) {
             Box(

@@ -358,10 +358,12 @@ private fun RecentTabBar(
                 val selected = i == selectedIndex
 
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
+                        .fillMaxHeight()
                         .padding(horizontal = 32.dp)
-                        .clickable { onSelected(i) }
+                        .clickable { onSelected(i) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom
                 ) {
                     Text(
                         text = label,
@@ -386,7 +388,6 @@ private fun RecentTabBar(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
