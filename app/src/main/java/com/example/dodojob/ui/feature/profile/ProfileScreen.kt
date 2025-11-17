@@ -59,7 +59,7 @@ fun ProfileRoute(nav: NavController) {
         senior = null
         recentError = null
 
-        // 1) 시니어 기본 정보 로드
+        // 시니어 기본 정보
         val s = runCatching {
             if (!username.isNullOrBlank()) getSeniorInformation(username) else null
         }.onFailure { t ->
@@ -68,7 +68,7 @@ fun ProfileRoute(nav: NavController) {
 
         senior = s
 
-        // 2) 최근 본 공고 개수, 지원 수, 이력서 열람 수 로드
+        // 최근 본 공고 개수, 지원 수, 이력서 열람 수 로드
         if (!username.isNullOrBlank()) {
             runCatching {
                 CountRecentView(username)
@@ -162,7 +162,8 @@ fun ProfileRoute(nav: NavController) {
                 applyWithinYear = applyWithinYear,
                 realWorkExpCount = realWorkExpCount,
                 eduCompleted = eduCompleted,
-                joinedDate = joinedDate
+                joinedDate = joinedDate,
+                profileImageUrl = profileImageUrl
             )
 
             nav.currentBackStackEntry
@@ -183,7 +184,7 @@ fun ProfileRoute(nav: NavController) {
                 "my" -> Unit
             }
         },
-        profileImageUrl = profileImageUrl // ✅ 추가
+        profileImageUrl = profileImageUrl
     )
 
     if (showLeave) {
@@ -245,7 +246,7 @@ fun ProfileScreen(
     onClickLeave: () -> Unit,
     onClickApplyStatus: () -> Unit,
     onShortcut: (String) -> Unit,
-    profileImageUrl: String? = null // ✅ 새 파라미터 (Preview에서 기본값 사용)
+    profileImageUrl: String? = null
 ) {
     val brandBlue = Color(0xFF005FFF)
     val screenBg = Color(0xFFF1F5F7)
@@ -669,6 +670,5 @@ fun ProfileScreenPreview() {
         onClickLeave = { },
         onClickApplyStatus = { },
         onShortcut = { }
-        // profileImageUrl는 기본값 null 사용
     )
 }
