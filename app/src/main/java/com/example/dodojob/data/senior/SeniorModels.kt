@@ -3,6 +3,12 @@ package com.example.dodojob.data.senior
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@Serializable
+data class UserImage(
+    @SerialName("img_url")
+    val imgUrl: String? = null
+)
+
 
 data class SeniorDto(
     val id: String,
@@ -27,7 +33,9 @@ data class UserTmpLite(
     val email: String? = null,
     val password: String? = null,
     val username: String? = null,
-    @SerialName("created_at") val created_at: String? = null
+    @SerialName("created_at") val created_at: String? = null,
+    @SerialName("user_image")
+    val userImage: UserImage? = null
 )
 
 
