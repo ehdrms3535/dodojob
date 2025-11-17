@@ -158,7 +158,7 @@ fun VerifyScreen(
         Column(
             modifier = Modifier
                 .padding(inner)
-                .imePadding()
+                .background(Color(0xFFF1F5F7))
                 .verticalScroll(scroll)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
