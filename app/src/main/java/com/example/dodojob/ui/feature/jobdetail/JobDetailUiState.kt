@@ -237,13 +237,52 @@ fun JobDetailScreen(
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
+                            val companyLogo = ui.imageUrl ?: ""   // 회사 로고 URL이 들어온다고 가정
+
+                            Row(
                                 modifier = Modifier
-                                    .size(55.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFE9EDF2)),
-                                contentAlignment = Alignment.Center
-                            ) { Text("로고", color = TextDim, fontSize = 12.sp) }
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (ui.companyId != null && ui.companyName.isNotBlank()) {
+                                        // 회사 로고 URL이 있다면 AsyncImage 로 표시
+                                        if (!ui.imageUrl.isNullOrBlank()) {
+                                            Image(
+                                                painter = rememberAsyncImagePainter(ui.imageUrl),
+                                                contentDescription = "회사 로고",
+                                                modifier = Modifier.size(60.dp),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            // 회사 로고 이미지가 없으면 → 기본 joblogo.png 표시
+                                            Image(
+                                                painter = painterResource(R.drawable.joblogo),
+                                                contentDescription = "기본 로고",
+                                                modifier = Modifier.size(60.dp),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        }
+                                    } else {
+                                        // 완전 빈 경우도 기본 로고 처리
+                                        Image(
+                                            painter = painterResource(R.drawable.joblogo),
+                                            contentDescription = "기본 로고",
+                                            modifier = Modifier.size(60.dp),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+
+                                Spacer(Modifier.width(12.dp))
+
+                                Text(
+                                    text = ui.companyName,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             Spacer(Modifier.width(12.dp))
                             Text(
                                 text = ui.companyName,
@@ -484,7 +523,11 @@ private fun BottomActionBar(
     scale: Float
 ) {
     val btnHeight = (54.48f * scale).dp
-    Surface(shadowElevation = 6.dp, color = ScreenBg) {
+    Surface(
+        modifier = Modifier.navigationBarsPadding(),
+        shadowElevation = 6.dp,
+        color = ScreenBg
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -799,52 +842,5 @@ private fun SectionSpacer() {
             .fillMaxWidth()
             .height(20.dp)
             .background(BgGray)
-    )
-}
-
-/* ======== 프리뷰 ======== */
-@Preview(showBackground = true, widthDp = 360)
-@Composable
-private fun PreviewJobDetail() {
-    val sample = JobDetailUiState(
-        announcementId = 1L,
-        companyId = "COMPANY_001",
-        title = "매장운영 및 고객관리 하는 일에 적합한 분 구해요",
-        companyName = "모던하우스",
-        chips = listOf(
-            InfoChip("급여", "월 240만원", ChipStyle.Primary, R.drawable.dollar),
-            InfoChip("시간", "시간협의", ChipStyle.Neutral, R.drawable.time),
-            InfoChip("요일", "주 4일 근무", ChipStyle.Neutral, R.drawable.calendar2),
-            InfoChip("우대사항", "경력자 우대", ChipStyle.Danger, R.drawable.suit)
-        ),
-        recruitment = listOf(
-            LabelValue("모집기간", "상시모집"),
-            LabelValue("자격요건", "중졸 / 경력자"),
-            LabelValue("모집인원", "4명"),
-            LabelValue("우대조건", "동종업계 경력자"),
-            LabelValue("기타조건", "주부 가능")
-        ),
-        workplaceMapHint = "대구 수성구 용학로 118 1,2층(두산동) 모던하우스",
-        working = listOf(
-            LabelValue("급여", "월 240만원"),
-            LabelValue("근무기간", "1년 이상"),
-            LabelValue("근무일", "주 4일 근무"),
-            LabelValue("근무시간", "시간협의")
-        ),
-        duties = listOf(
-            "매장 고객 피드백",
-            "전화 응대",
-            "진열 및 환경 관리"
-        ),
-        isLiked = false
-    )
-
-    JobDetailScreen(
-        ui = sample,
-        onBack = {},
-        onToggleLike = {},
-        onCall = {},
-        onApply = {},
-        onSimpleApply = {}
     )
 }
