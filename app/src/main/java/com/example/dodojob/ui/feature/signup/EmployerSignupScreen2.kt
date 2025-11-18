@@ -159,7 +159,6 @@ fun EmploySignUpIdPwScreen(nav: NavController) {
         Column(
             modifier = Modifier
                 .padding(inner)
-                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
